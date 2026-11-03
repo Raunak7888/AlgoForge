@@ -1,0 +1,1403 @@
+------------------------------------------------
+FILE: ./CodeEditor.tsx
+------------------------------------------------
+// filepath: src/components/CodeEditor/CodeEditor.tsx
+'use client';
+
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from 'react';
+import type { OnMount, BeforeMount } from '@monaco-editor/react';
+import type * as Monaco from 'monaco-editor';
+import dynamic from 'next/dynamic';
+import { CodeEditorProps, Language } from './types';
+import { EditorToolbar } from './EditorToolbar';
+import { registerCustomTheme } from './lib/monacoTheme';
+import { registerPythonProvider } from './lib/pythonProvider';
+import { formatCode } from './lib/formatters';
+import styles from './CodeEditor.module.css';
+
+// Lazy-load Monaco Editor — avoids SSR and reduces initial bundle
+const MonacoEditor = dynamic(
+  async () => {
+    const { default: Editor } = await import('@monaco-editor/react');
+    return { default: Editor };
+  },
+  {
+    ssr: false,
+    loading: () => (
+      <div className={styles.editorSkeleton} aria-busy aria-label="Loading editor">
+        <div className={styles.skeletonLine} style={{ width: '60%' }} />
+        <div className={styles.skeletonLine} style={{ width: '80%' }} />
+        <div className={styles.skeletonLine} style={{ width: '45%' }} />
+        <div className={styles.skeletonLine} style={{ width: '70%' }} />
+        <div className={styles.skeletonLine} style={{ width: '55%' }} />
+        <div className={styles.skeletonLine} style={{ width: '90%' }} />
+        <div className={styles.skeletonLine} style={{ width: '65%' }} />
+      </div>
+    ),
+  },
+);
+
+let pythonProviderRegistered = false;
+
+export const CodeEditor: React.FC<CodeEditorProps> = ({
+  value,
+  defaultValue,
+  language: initialLanguage = 'javascript',
+  onChange,
+  readOnly = false,
+  height = '520px',
+  className,
+}:{
+value?: string;
+defaultValue?: Record<Language, string>;
+language?: Language;
+onChange?: (value: string) => void;
+readOnly?: boolean;
+height?: number | string;
+className?: string;
+}) => {
+  const [language, setLanguage] = useState<Language>(initialLanguage);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isEditorReady, setIsEditorReady] = useState(false);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
+  const disposablesRef = useRef<Monaco.IDisposable[]>([]);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable ref so handleEditorMount (empty-dep callback) always calls the
+  // latest handleFormat without needing it in its dependency array.
+  const handleFormatRef = useRef<() => Promise<void>>(async () => {});
+
+  const isControlled = value !== undefined;
+  const [internalValue, setInternalValue] = useState<string>(
+    () => defaultValue?.[initialLanguage] ?? '',
+  );
+
+  const currentValue = isControlled ? value : internalValue;
+
+  // Sync readOnly option changes without re-mounting
+  useEffect(() => {
+    editorRef.current?.updateOptions({ readOnly });
+  }, [readOnly]);
+
+  // Sync language changes
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const model = editorRef.current.getModel();
+    if (model) {
+      monacoRef.current.editor.setModelLanguage(
+        model,
+        language === 'javascript' ? 'javascript' : 'python',
+      );
+    }
+  }, [language]);
+
+  const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    registerCustomTheme(monaco);
+
+    if (!pythonProviderRegistered) {
+      registerPythonProvider(monaco);
+      pythonProviderRegistered = true;
+    }
+
+    // JS language service: syntax highlighting + completions only.
+    // Semantic validation (TypeScript compiler worker) is explicitly OFF —
+    // this editor never compiles or type-checks user code.
+    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+      noSemanticValidation: true,   // OFF — no TS compiler runs
+      noSyntaxValidation: false,    // ON  — tokeniser-level parse errors only
+      noSuggestionDiagnostics: true, // OFF — no compiler-driven suggestions
+    });
+
+    // Minimal options so the worker starts without invoking the compiler.
+    // noEmit + noCheck means zero compilation output and zero type-checking.
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+      target: monaco.languages.typescript.ScriptTarget.ESNext,
+      allowNonTsExtensions: true,
+      allowJs: true,
+      checkJs: false,   // explicitly no type-checking
+      noEmit: true,     // no output, ever
+      noResolve: true,  // no module resolution (prevents phantom FS access)
+    });
+  }, []);
+
+  const handleEditorMount: OnMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor;
+      monacoRef.current = monaco;
+      setIsEditorReady(true);
+
+      // Keyboard shortcut: Alt+Shift+F → Format.
+      // editor.addCommand() returns string|null (the command ID), NOT an
+      // IDisposable — commands are owned by the editor and freed with it.
+      // Call via ref so this empty-dep callback always invokes the latest
+      // handleFormat without it ever appearing in the dependency array.
+      editor.addCommand(
+        monaco.KeyMod.Alt | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
+        () => void handleFormatRef.current(),
+      );
+
+      // Selection glow via CSS class injection
+      editor.onDidChangeCursorSelection(() => {
+        const sel = editor.getSelection();
+        const hasSelection =
+          sel !== null &&
+          (sel.startLineNumber !== sel.endLineNumber ||
+            sel.startColumn !== sel.endColumn);
+        editor.getDomNode()?.classList.toggle('has-selection', hasSelection);
+      });
+
+      // Auto-resize whenever the container dimensions change
+      const resizeObserver = new ResizeObserver(() => editor.layout());
+      const container = editor.getDomNode()?.parentElement;
+      if (container) resizeObserver.observe(container);
+      disposablesRef.current.push({ dispose: () => resizeObserver.disconnect() });
+    },
+    // Deliberately empty: all mutable values are accessed through refs.
+    [],
+  );
+
+  const handleFormat = useCallback(async () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    setIsFormatting(true);
+    try {
+      const raw = editor.getValue();
+      const formatted = await formatCode(raw, language);
+
+      // Preserve cursor position
+      const position = editor.getPosition();
+      editor.setValue(formatted);
+      if (position) editor.setPosition(position);
+      editor.revealPositionInCenter(editor.getPosition()!);
+
+      if (!isControlled) setInternalValue(formatted);
+      onChange?.(formatted);
+    } catch (err) {
+      console.error('[CodeEditor] Format error:', err);
+    } finally {
+      setIsFormatting(false);
+    }
+  },[isControlled, language, onChange]);
+
+  useEffect(() => {
+    handleFormatRef.current = handleFormat;
+  }, [handleFormat]);
+
+  const handleCopy = useCallback(async () => {
+    const text = editorRef.current?.getValue() ?? currentValue ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for browsers that block clipboard without user gesture
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setIsCopied(true);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setIsCopied(false), 2000);
+  }, [currentValue]);
+
+  const handleLanguageChange = useCallback(
+    (lang: Language) => {
+      setLanguage(lang);
+      if (!isControlled) {
+        if (defaultValue) {
+          setInternalValue(defaultValue[lang] ?? '');
+        } else {
+          setInternalValue('');
+        }
+      }
+    },
+    [defaultValue, isControlled],
+  );
+
+  const handleChange = useCallback(
+    (val: string | undefined) => {
+      const newVal = val ?? '';
+      if (!isControlled) setInternalValue(newVal);
+      onChange?.(newVal);
+    },
+    [isControlled, onChange],
+  );
+
+  // Cleanup
+  useEffect(() => {
+    const disposables = disposablesRef.current;
+    return () => {
+      disposables.forEach((d) => d.dispose());
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const editorOptions = useMemo<Monaco.editor.IStandaloneEditorConstructionOptions>(
+    () => ({
+      readOnly,
+      fontSize: 13.5,
+      fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "SF Mono", monospace',
+      fontLigatures: true,
+      lineHeight: 22,
+      letterSpacing: 0.3,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      padding: { top: 20, bottom: 20 },
+      lineNumbers: 'on',
+      lineNumbersMinChars: 3,
+      glyphMargin: true,
+      folding: true,
+      foldingHighlight: true,
+      lineDecorationsWidth: 6,
+      renderLineHighlight: 'gutter',
+      cursorBlinking: 'phase',
+      cursorSmoothCaretAnimation: 'on',
+      cursorStyle: 'line',
+      cursorWidth: 2,
+      smoothScrolling: true,
+      contextmenu: true,
+      suggestOnTriggerCharacters: true,
+      quickSuggestions: { other: true, comments: false, strings: true },
+      quickSuggestionsDelay: 100,
+      wordBasedSuggestions: 'allDocuments',
+      parameterHints: { enabled: true, cycle: true },
+      formatOnPaste: false,
+      formatOnType: false,
+      autoClosingBrackets: 'languageDefined',
+      autoClosingQuotes: 'languageDefined',
+      autoSurround: 'languageDefined',
+      autoIndent: 'full',
+      tabSize: language === 'python' ? 4 : 2,
+      insertSpaces: true,
+      detectIndentation: false,
+      wordWrap: 'on',
+      wordWrapColumn: 100,
+      wrappingIndent: 'indent',
+      bracketPairColorization: { enabled: true },
+      guides: {
+        bracketPairs: 'active',
+        bracketPairsHorizontal: 'active',
+        indentation: true,
+        highlightActiveBracketPair: true,
+      },
+      inlayHints: { enabled: 'on', fontSize: 11 },
+      hover: { enabled: true, delay: 300 },
+      occurrencesHighlight: 'singleFile',
+      selectionHighlight: true,
+      renderWhitespace: 'selection',
+      renderControlCharacters: false,
+      scrollbar: {
+        vertical: 'auto',
+        horizontal: 'auto',
+        useShadows: false,
+        verticalScrollbarSize: 5,
+        horizontalScrollbarSize: 5,
+        arrowSize: 0,
+      },
+      overviewRulerBorder: false,
+      overviewRulerLanes: 2,
+      hideCursorInOverviewRuler: false,
+      suggest: {
+        showKeywords: true,
+        showSnippets: true,
+        showFunctions: true,
+        showVariables: true,
+        showModules: true,
+        showClasses: true,
+        showProperties: true,
+        preview: true,
+        previewMode: 'subwordSmart',
+        insertMode: 'insert',
+        filterGraceful: true,
+        shareSuggestSelections: false,
+      },
+      acceptSuggestionOnCommitCharacter: true,
+      acceptSuggestionOnEnter: 'smart',
+    }),
+    [readOnly, language],
+  );
+
+  return (
+    <div className={`${styles.container} font-mono ${className ?? ''}`}>
+      {/* Glassmorphism ambient glow orbs */}
+      <div className={styles.glowOrb1} aria-hidden /> 
+      <div className={styles.glowOrb2} aria-hidden />
+
+      <div className={styles.editorFrame}>
+        {/* Traffic-light dots */}
+        <div className={styles.windowChrome} aria-hidden>
+          <span className={`${styles.chromeDot} ${styles.chromeDotRed}`} />
+          <span className={`${styles.chromeDot} ${styles.chromeDotYellow}`} />
+          <span className={`${styles.chromeDot} ${styles.chromeDotGreen}`} />
+          <span className={styles.chromeTitle}>
+            {language === 'javascript' ? 'index.js' : 'main.py'}
+          </span>
+        </div>
+
+        <EditorToolbar
+          language={language}
+          onLanguageChange={handleLanguageChange}
+          onFormat={handleFormat}
+          onCopy={handleCopy}
+          isFormatting={isFormatting}
+          isCopied={isCopied}
+          readOnly={readOnly}
+          isReady={isEditorReady}
+        />
+
+        <div
+          className={styles.editorWrapper}
+          style={{ height: typeof height === 'number' ? `${height}px` : height }}
+        >
+          <MonacoEditor
+            height="100%"
+            language={language === 'javascript' ? 'javascript' : 'python'}
+            value={currentValue}
+            theme="neon-dark"
+            beforeMount={handleBeforeMount}
+            onMount={handleEditorMount}
+            onChange={handleChange}
+            options={editorOptions}
+            loading={null}
+          />
+        </div>
+
+        {/* Bottom status bar */}
+        <div className={styles.statusBar} role="status" aria-live="polite">
+          <div className={styles.statusBarLeft}>
+            <span className={styles.statusItem}>
+              {language === 'javascript' ? 'JavaScript ES2024' : 'Python 3.12'}
+            </span>
+            <span className={styles.statusDivider} aria-hidden>·</span>
+            <span className={styles.statusItem}>UTF-8</span>
+            <span className={styles.statusDivider} aria-hidden>·</span>
+            <span className={styles.statusItem}>
+              {language === 'python' ? 'Spaces: 4' : 'Spaces: 2'}
+            </span>
+          </div>
+          <div className={styles.statusBarRight}>
+            {readOnly ? (
+              <span className={styles.statusReadOnly}>READ ONLY</span>
+            ) : (
+              <span className={styles.statusEditable}>EDITABLE</span>
+            )}
+            <span className={styles.statusDivider} aria-hidden>·</span>
+            <span className={styles.statusItem}>LSP {isEditorReady ? '●' : '○'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+------------------------------------------------
+FILE: ./constants.ts
+------------------------------------------------
+// filepath: src/components/CodeEditor/constants.ts
+import { Language } from './types';
+
+export const LANGUAGE_LABELS: Record<Language, string> = {
+  javascript: 'JavaScript',
+  python: 'Python',
+};
+
+export const LANGUAGE_EXTENSIONS: Record<Language, string> = {
+  javascript: '.js',
+  python: '.py',
+};
+
+------------------------------------------------
+FILE: ./EditorToolbar.tsx
+------------------------------------------------
+// filepath: src/components/CodeEditor/EditorToolbar.tsx
+'use client';
+
+import React, { useId } from 'react';
+import type { EditorToolbarProps, Language } from './types';
+import { LANGUAGE_LABELS } from './constants';
+import styles from './CodeEditor.module.css';
+
+const JSIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <rect width="16" height="16" rx="3" fill="#F7DF1E" />
+    <text x="3" y="13" fontSize="9" fontWeight="700" fill="#000" fontFamily="monospace">
+      JS
+    </text>
+  </svg>
+);
+
+const PyIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <rect width="16" height="16" rx="3" fill="#3776AB" />
+    <text x="3" y="13" fontSize="9" fontWeight="700" fill="#FFD43B" fontFamily="monospace">
+      Py
+    </text>
+  </svg>
+);
+
+const FormatIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M21 10H7M16 6H3M21 14H7M16 18H3" />
+  </svg>
+);
+
+const SpinnerIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+  </svg>
+);
+
+const ReadOnlyIcon: React.FC = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const CopyIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+  </svg>
+);
+
+const CheckIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
+const LANGUAGE_OPTIONS: Language[] = ['javascript', 'python'];
+
+export const EditorToolbar: React.FC<EditorToolbarProps> = ({
+  language,
+  onLanguageChange,
+  onFormat,
+  onCopy,
+  isFormatting,
+  isCopied,
+  readOnly,
+  isReady,
+}) => {
+  const selectId = useId();
+
+  return (
+    <div className={styles.toolbar} role="toolbar" aria-label="Editor toolbar">
+      {/* Left: Language selector */}
+      <div className={styles.toolbarLeft}>
+        <div className={styles.languageSelector}>
+          <label htmlFor={selectId} className={styles.srOnly}>
+            Select language
+          </label>
+          <div className={styles.langIcon} aria-hidden>
+            {language === 'javascript' ? <JSIcon /> : <PyIcon />}
+          </div>
+          <select
+            id={selectId}
+            value={language}
+            onChange={(e) => onLanguageChange(e.target.value as Language)}
+            className={styles.langSelect}
+            disabled={!isReady}
+            aria-label="Programming language"
+          >
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <option key={lang} value={lang}>
+                {LANGUAGE_LABELS[lang]}
+              </option>
+            ))}
+          </select>
+          <div className={styles.selectChevron} aria-hidden>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Language badge pills */}
+        <div className={styles.langPills} role="group" aria-label="Language switcher">
+          {LANGUAGE_OPTIONS.map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              className={`${styles.langPill} ${language === lang ? styles.langPillActive : ''}`}
+              onClick={() => onLanguageChange(lang)}
+              disabled={!isReady}
+              aria-pressed={language === lang}
+            >
+              {lang === 'javascript' ? <JSIcon /> : <PyIcon />}
+              <span>{LANGUAGE_LABELS[lang]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: Actions */}
+      <div className={styles.toolbarRight}>
+        {readOnly && (
+          <div className={styles.readOnlyBadge} aria-label="Read-only mode">
+            <ReadOnlyIcon />
+            <span>Read-only</span>
+          </div>
+        )}
+
+        {/* Copy button — always visible */}
+        <button
+          type="button"
+          className={`${styles.iconBtn} text-foreground ${isCopied ? styles.iconBtnSuccess : ''}`}
+          onClick={onCopy}
+          disabled={!isReady}
+          title="Copy code"
+          aria-label={isCopied ? 'Copied!' : 'Copy code'}
+        >
+          {isCopied ? <CheckIcon /> : <CopyIcon />}
+        </button>
+
+        {/* Format button — hidden in readOnly mode */}
+        {!readOnly && (
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${isFormatting ? styles.iconBtnLoading : ''}`}
+            onClick={onFormat}
+            disabled={!isReady || isFormatting}
+            title="Format code (Alt+Shift+F)"
+            aria-label="Format code"
+          >
+            {isFormatting ? (
+              <span className={styles.spinnerWrapper}><SpinnerIcon /></span>
+            ) : (
+              <FormatIcon />
+            )}
+          </button>
+        )}
+
+        {/* LSP status dot */}
+        <div
+          className={`${styles.statusDot} ${isReady ? styles.statusDotReady : styles.statusDotLoading}`}
+          title={isReady ? 'Editor ready' : 'Loading editor…'}
+          role="status"
+          aria-label={isReady ? 'Editor ready' : 'Loading editor'}
+        />
+      </div>
+    </div>
+  );
+};
+
+------------------------------------------------
+FILE: ./index.ts
+------------------------------------------------
+// filepath: src/components/CodeEditor/index.ts
+export { CodeEditor } from './CodeEditor';
+export type { CodeEditorProps, Language } from './types';
+
+------------------------------------------------
+FILE: ./lib/formatters.ts
+------------------------------------------------
+// filepath: src/components/CodeEditor/lib/formatters.ts
+//
+// IMPORTANT: This module is a FORMATTER ONLY — it does NOT compile, execute,
+// or evaluate any code. Prettier standalone runs entirely in-browser via AST
+// parse → re-print; the Python formatter is pure string manipulation.
+// No subprocess, no eval(), no Function(), no Worker with user code.
+//
+import type { Language } from '../types';
+
+// ─── JavaScript Formatter (Prettier Standalone, browser-only) ────────────────
+// Uses `prettier/standalone` which is a self-contained browser build with no
+// Node.js APIs, no fs access, and no code execution — it only parses to an
+// AST and reprints it.
+
+async function formatJavaScript(code: string): Promise<string> {
+  // Explicit plugin list prevents Prettier from loading any auto-detected
+  // plugins that could involve native binaries or network access.
+  const [prettier, babelPlugin, estreePlugin] = await Promise.all([
+    import('prettier/standalone'),
+    import('prettier/plugins/babel'),
+    import('prettier/plugins/estree'),
+  ]);
+
+  return prettier.format(code, {
+    parser: 'babel',                 // AST-only parse, no execution
+    plugins: [
+      babelPlugin.default  ?? babelPlugin,
+      estreePlugin.default ?? estreePlugin,
+    ],
+    semi: true,
+    singleQuote: true,
+    jsxSingleQuote: false,
+    trailingComma: 'all',
+    printWidth: 80,
+    tabWidth: 2,
+    useTabs: false,
+    bracketSpacing: true,
+    bracketSameLine: false,
+    arrowParens: 'always',
+    endOfLine: 'lf',
+  });
+}
+
+// ─── Python Formatter (in-browser, PEP-8 subset) ─────────────────────────────
+// Strategy: preserve the author's indentation structure — Python's indentation
+// is syntactically meaningful and cannot be safely recomputed without a real
+// parser. We only do things that are safe on raw text:
+//   1. Tabs → 4 spaces (PEP-8 §indentation)
+//   2. Strip trailing whitespace on every line
+//   3. Collapse >2 consecutive blank lines to 2 (PEP-8 §blank lines)
+//   4. Ensure exactly 2 blank lines before top-level def/class/async def
+//   5. Ensure exactly 1 blank line before nested def/class (indented)
+//   6. Spacing around binary operators outside of string literals
+//   7. Single trailing newline
+
+function detectIndentUnit(lines: string[]): string {
+  for (const line of lines) {
+    const m = line.match(/^( +|\t+)/);
+    if (!m) continue;
+    if (m[0].includes('\t')) return '    ';
+    // Take the leading-space count of the first indented line as the unit
+    return ' '.repeat(m[0].length);
+  }
+  return '    ';
+}
+
+function normalizeTabs(line: string, indentUnit: string): string {
+  // Replace only leading tabs; preserve tabs inside strings (best-effort)
+  return line.replace(/^\t+/, (tabs) => indentUnit.repeat(tabs.length));
+}
+
+function getIndentDepth(line: string): number {
+  const m = line.match(/^( *)/);
+  return m ? m[1].length : 0;
+}
+
+function spaceOperators(line: string): string {
+  // Only touch the non-string parts of the line (split on string literals)
+  // We handle single-quoted, double-quoted, but NOT triple-quoted here
+  // (triple-quoted lines are skipped by the caller).
+  const parts = line.split(/("""[^"]*"""|'''[^']*'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/);
+  return parts
+    .map((part, i) => {
+      // Even-indexed parts are outside strings
+      if (i % 2 !== 0) return part;
+      return part
+        // Ensure space around ==, !=, <=, >=  (not already spaced)
+        .replace(/([^\s=!<>])(==|!=|<=|>=)([^\s=])/g, '$1 $2 $3')
+        // Ensure space around = assignment (not inside default args or type hints)
+        // Only when not preceded by [=!<>+-*/] and not followed by =
+        .replace(/([^\s=!<>+\-*/%&|^~,:(])=(?!=)/g, '$1 =')
+        .replace(/=(?!=)([^\s=>])/g, '= $1')
+        // Space after comma (if missing)
+        .replace(/,(?=[^\s])/g, ', ')
+        // Collapse multiple spaces (outside string literals)
+        .replace(/([^\s]) {2,}([^\s])/g, '$1 $2');
+    })
+    .join('');
+}
+
+function formatPython(code: string): string {
+  const rawLines = code.split('\n');
+  const indentUnit = detectIndentUnit(rawLines);
+
+  // Pass 1: normalize tabs + strip trailing whitespace
+  const lines = rawLines.map((l) => normalizeTabs(l, indentUnit).trimEnd());
+
+  // Track multi-line string state across lines
+  let inMultilineString = false;
+  let mlDelim = '';
+
+  // Pass 2: operator spacing (skip multiline string contents)
+  const spaced = lines.map((line) => {
+    const stripped = line.trim();
+
+    if (inMultilineString) {
+      if (line.includes(mlDelim)) inMultilineString = false;
+      return line; // preserve verbatim
+    }
+
+    // Detect opening of a multiline string on this line
+    const dq = (line.match(/"""/g) ?? []).length;
+    const sq = (line.match(/'''/g) ?? []).length;
+    if (dq % 2 !== 0) { inMultilineString = true; mlDelim = '"""'; }
+    else if (sq % 2 !== 0) { inMultilineString = true; mlDelim = "'''"; }
+
+    if (stripped === '') return '';
+    return spaceOperators(line);
+  });
+
+  // Pass 3: blank-line rules
+  // Reset multiline tracker for second pass
+  inMultilineString = false;
+  mlDelim = '';
+
+  const result: string[] = [];
+
+  for (let i = 0; i < spaced.length; i++) {
+    const line = spaced[i];
+    const stripped = line.trim();
+
+    // Track multiline strings
+    if (inMultilineString) {
+      if (line.includes(mlDelim)) inMultilineString = false;
+      result.push(line);
+      continue;
+    }
+    const dq = (line.match(/"""/g) ?? []).length;
+    const sq = (line.match(/'''/g) ?? []).length;
+    if (dq % 2 !== 0) { inMultilineString = true; mlDelim = '"""'; }
+    else if (sq % 2 !== 0) { inMultilineString = true; mlDelim = "'''"; }
+
+    // Blank line: pass through (we'll deduplicate below)
+    if (stripped === '') {
+      result.push('');
+      continue;
+    }
+
+    // Is this line a def/class/async def?
+    const isTopLevelDef = /^(def |class |async def )/.test(stripped);
+    const isNestedDef   = /^ +(def |class |async def )/.test(line);
+    const depth         = getIndentDepth(line);
+
+    if (isTopLevelDef && result.length > 0) {
+      // Ensure exactly 2 blank lines before top-level def/class
+      while (result.length > 0 && result[result.length - 1] === '') result.pop();
+      result.push('', '');
+    } else if (isNestedDef && depth > 0 && result.length > 0) {
+      // Ensure exactly 1 blank line before nested def/class
+      // (only if the previous non-blank line is not an opening decorator)
+      const prevNonBlank = [...result].reverse().find((l) => l.trim() !== '');
+      if (prevNonBlank && !prevNonBlank.trim().startsWith('@')) {
+        while (result.length > 0 && result[result.length - 1] === '') result.pop();
+        result.push('');
+      }
+    }
+
+    result.push(line);
+  }
+
+  // Pass 4: collapse >2 consecutive blank lines
+  const collapsed: string[] = [];
+  let blankRun = 0;
+  for (const line of result) {
+    if (line === '') {
+      blankRun++;
+      if (blankRun <= 2) collapsed.push('');
+    } else {
+      blankRun = 0;
+      collapsed.push(line);
+    }
+  }
+
+  // Trim leading/trailing blank lines, append single newline
+  let out = collapsed.join('\n').trim();
+  if (out) out += '\n';
+  return out;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export async function formatCode(code: string, language: Language): Promise<string> {
+  switch (language) {
+    case 'javascript':
+      return formatJavaScript(code);
+    case 'python':
+      return formatPython(code);
+    default:
+      return code;
+  }
+}
+
+------------------------------------------------
+FILE: ./lib/monacoTheme.ts
+------------------------------------------------
+// filepath: src/components/CodeEditor/lib/monacoTheme.ts
+import type * as Monaco from 'monaco-editor';
+
+export function registerCustomTheme(monaco: typeof Monaco): void {
+  monaco.editor.defineTheme('neon-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: '', foreground: 'e2e8f0', background: '0a0a14' },
+      { token: 'comment', foreground: '4a5568', fontStyle: 'italic' },
+      { token: 'keyword', foreground: 'a78bfa', fontStyle: 'bold' },
+      { token: 'keyword.control', foreground: 'c084fc', fontStyle: 'bold' },
+      { token: 'keyword.operator', foreground: '818cf8' },
+      { token: 'string', foreground: '34d399' },
+      { token: 'string.escape', foreground: '6ee7b7' },
+      { token: 'number', foreground: 'fb923c' },
+      { token: 'number.float', foreground: 'fdba74' },
+      { token: 'type', foreground: '38bdf8' },
+      { token: 'type.identifier', foreground: '7dd3fc' },
+      { token: 'class', foreground: 'f472b6' },
+      { token: 'class.name', foreground: 'f9a8d4' },
+      { token: 'function', foreground: '60a5fa' },
+      { token: 'identifier', foreground: 'e2e8f0' },
+      { token: 'variable', foreground: 'e2e8f0' },
+      { token: 'variable.predefined', foreground: 'a78bfa' },
+      { token: 'operator', foreground: '818cf8' },
+      { token: 'delimiter', foreground: '64748b' },
+      { token: 'delimiter.bracket', foreground: '6366f1' },
+      { token: 'tag', foreground: 'f472b6' },
+      { token: 'attribute.name', foreground: '38bdf8' },
+      { token: 'attribute.value', foreground: '34d399' },
+      { token: 'regexp', foreground: 'f87171' },
+      { token: 'decorator', foreground: 'facc15' },
+      { token: 'annotation', foreground: 'facc15' },
+      { token: 'invalid', foreground: 'f87171', fontStyle: 'underline' },
+    ],
+    colors: {
+      'editor.background': '#08080f',
+      'editor.foreground': '#e2e8f0',
+      'editor.lineHighlightBackground': '#ffffff08',
+      'editor.lineHighlightBorder': '#ffffff00',
+      'editor.selectionBackground': '#6366f130',
+      'editor.selectionHighlightBackground': '#6366f118',
+      'editor.inactiveSelectionBackground': '#6366f120',
+      'editor.wordHighlightBackground': '#818cf820',
+      'editor.wordHighlightStrongBackground': '#818cf830',
+      'editor.findMatchBackground': '#facc1540',
+      'editor.findMatchHighlightBackground': '#facc1520',
+      'editor.rangeHighlightBackground': '#6366f115',
+      'editorCursor.foreground': '#a78bfa',
+      'editorCursor.background': '#08080f',
+      'editorLineNumber.foreground': '#2d3748',
+      'editorLineNumber.activeForeground': '#6366f1',
+      'editorIndentGuide.background1': '#1e1e2e',
+      'editorIndentGuide.activeBackground1': '#6366f140',
+      'editorBracketMatch.background': '#6366f130',
+      'editorBracketMatch.border': '#6366f180',
+      'editorGutter.background': '#08080f',
+      'editorGutter.modifiedBackground': '#818cf8',
+      'editorGutter.addedBackground': '#34d399',
+      'editorGutter.deletedBackground': '#f87171',
+      'editorError.foreground': '#f87171',
+      'editorWarning.foreground': '#facc15',
+      'editorInfo.foreground': '#38bdf8',
+      'editorHint.foreground': '#34d399',
+      'editorWidget.background': '#0d0d1a',
+      'editorWidget.border': '#6366f130',
+      'editorWidget.foreground': '#e2e8f0',
+      'editorSuggestWidget.background': '#0d0d1a',
+      'editorSuggestWidget.border': '#6366f140',
+      'editorSuggestWidget.foreground': '#e2e8f0',
+      'editorSuggestWidget.highlightForeground': '#a78bfa',
+      'editorSuggestWidget.selectedBackground': '#6366f120',
+      'editorSuggestWidget.focusHighlightForeground': '#c084fc',
+      'editorHoverWidget.background': '#0d0d1a',
+      'editorHoverWidget.border': '#6366f140',
+      'editorHoverWidget.foreground': '#e2e8f0',
+      'editorParameterHint.background': '#0d0d1a',
+      'editorParameterHint.border': '#6366f140',
+      'scrollbar.shadow': '#00000000',
+      'scrollbarSlider.background': '#6366f118',
+      'scrollbarSlider.hoverBackground': '#6366f130',
+      'scrollbarSlider.activeBackground': '#6366f145',
+      'input.background': '#0d0d1a',
+      'input.border': '#6366f140',
+      'input.foreground': '#e2e8f0',
+      'input.placeholderForeground': '#4a5568',
+      'list.hoverBackground': '#6366f115',
+      'list.activeSelectionBackground': '#6366f125',
+      'list.inactiveSelectionBackground': '#6366f118',
+      'list.highlightForeground': '#a78bfa',
+      'dropdown.background': '#0d0d1a',
+      'dropdown.border': '#6366f140',
+      'dropdown.foreground': '#e2e8f0',
+      'menu.background': '#0d0d1a',
+      'menu.foreground': '#e2e8f0',
+      'menu.selectionBackground': '#6366f125',
+      'menu.separatorBackground': '#6366f130',
+    },
+  });
+}
+
+------------------------------------------------
+FILE: ./lib/pythonProvider.ts
+------------------------------------------------
+// filepath: src/components/CodeEditor/lib/pythonProvider.ts
+import type * as Monaco from 'monaco-editor';
+
+// exec, eval, compile, breakpoint, __import__ intentionally omitted —
+// this editor is a viewer/editor only; it never runs or compiles code.
+const PYTHON_BUILTINS: string[] = [
+  'abs', 'aiter', 'all', 'anext', 'any', 'ascii', 'bin', 'bool',
+  'bytearray', 'bytes', 'callable', 'chr', 'classmethod', 'complex',
+  'delattr', 'dict', 'dir', 'divmod', 'enumerate',
+  'filter', 'float', 'format', 'frozenset', 'getattr',
+  'globals', 'hasattr', 'hash', 'help', 'hex', 'id', 'input', 'int',
+  'isinstance', 'issubclass', 'iter', 'len', 'list', 'locals', 'map', 'max',
+  'memoryview', 'min', 'next', 'object', 'oct', 'open', 'ord', 'pow', 'print',
+  'property', 'range', 'repr', 'reversed', 'round', 'set', 'setattr',
+  'slice', 'sorted', 'staticmethod', 'str', 'sum', 'super', 'tuple', 'type',
+  'vars', 'zip',
+];
+
+const PYTHON_KEYWORDS: string[] = [
+  'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break',
+  'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally',
+  'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal',
+  'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield',
+];
+
+const PYTHON_SNIPPETS: Array<{
+  label: string;
+  insertText: string;
+  documentation: string;
+  detail: string;
+}> = [
+  {
+    label: 'def',
+    insertText: 'def ${1:function_name}(${2:args}) -> ${3:None}:\n    ${4:pass}',
+    documentation: 'Define a function',
+    detail: 'snippet: function definition',
+  },
+  {
+    label: 'async def',
+    insertText: 'async def ${1:function_name}(${2:args}) -> ${3:None}:\n    ${4:pass}',
+    documentation: 'Define an async function',
+    detail: 'snippet: async function definition',
+  },
+  {
+    label: 'class',
+    insertText:
+      'class ${1:ClassName}${2:(object)}:\n    def __init__(self${3:, args}) -> None:\n        ${4:pass}',
+    documentation: 'Define a class',
+    detail: 'snippet: class definition',
+  },
+  {
+    label: 'if __main__',
+    insertText: 'if __name__ == "__main__":\n    ${1:main()}',
+    documentation: 'Python entry point guard',
+    detail: 'snippet: main guard',
+  },
+  {
+    label: 'try',
+    insertText:
+      'try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:e}:\n    ${4:raise}',
+    documentation: 'Try/except block',
+    detail: 'snippet: exception handling',
+  },
+  {
+    label: 'try/finally',
+    insertText:
+      'try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:e}:\n    ${4:raise}\nfinally:\n    ${5:pass}',
+    documentation: 'Try/except/finally block',
+    detail: 'snippet: exception handling with cleanup',
+  },
+  {
+    label: 'with',
+    insertText: 'with ${1:open}(${2:"file"}) as ${3:f}:\n    ${4:pass}',
+    documentation: 'Context manager',
+    detail: 'snippet: with statement',
+  },
+  {
+    label: 'list comprehension',
+    insertText: '[${1:expr} for ${2:item} in ${3:iterable}]',
+    documentation: 'List comprehension',
+    detail: 'snippet: list comprehension',
+  },
+  {
+    label: 'dict comprehension',
+    insertText: '{${1:key}: ${2:value} for ${3:item} in ${4:iterable}}',
+    documentation: 'Dict comprehension',
+    detail: 'snippet: dict comprehension',
+  },
+  {
+    label: 'lambda',
+    insertText: 'lambda ${1:args}: ${2:expression}',
+    documentation: 'Lambda expression',
+    detail: 'snippet: lambda',
+  },
+  {
+    label: 'dataclass',
+    insertText:
+      '@dataclass\nclass ${1:ClassName}:\n    ${2:field}: ${3:type}',
+    documentation: 'Dataclass definition (requires: from dataclasses import dataclass)',
+    detail: 'snippet: dataclass',
+  },
+  {
+    label: 'for loop',
+    insertText: 'for ${1:item} in ${2:iterable}:\n    ${3:pass}',
+    documentation: 'For loop',
+    detail: 'snippet: for loop',
+  },
+  {
+    label: 'while loop',
+    insertText: 'while ${1:condition}:\n    ${2:pass}',
+    documentation: 'While loop',
+    detail: 'snippet: while loop',
+  },
+  {
+    label: 'print',
+    insertText: 'print(${1:value})',
+    documentation: 'Print to stdout',
+    detail: 'snippet: print statement',
+  },
+  {
+    label: 'import',
+    insertText: 'import ${1:module}',
+    documentation: 'Import module',
+    detail: 'snippet: import',
+  },
+  {
+    label: 'from import',
+    insertText: 'from ${1:module} import ${2:name}',
+    documentation: 'Import from module',
+    detail: 'snippet: from import',
+  },
+  {
+    label: 'type hints',
+    insertText: '${1:variable}: ${2:type} = ${3:value}',
+    documentation: 'Type-annotated variable',
+    detail: 'snippet: type annotation',
+  },
+];
+
+const PYTHON_STDLIB_MODULES: Record<string, string[]> = {
+  os: ['path', 'getcwd', 'listdir', 'makedirs', 'remove', 'rename', 'environ', 'getenv', 'sep'],
+  sys: ['argv', 'exit', 'path', 'version', 'platform', 'stdin', 'stdout', 'stderr', 'modules'],
+  json: ['dumps', 'loads', 'dump', 'load'],
+  re: ['match', 'search', 'findall', 'sub', 'compile', 'split', 'fullmatch'],
+  datetime: ['date', 'time', 'datetime', 'timedelta', 'timezone'],
+  pathlib: ['Path'],
+  typing: ['Optional', 'Union', 'List', 'Dict', 'Tuple', 'Set', 'Any', 'Callable', 'Generator', 'AsyncGenerator', 'TypeVar', 'Generic'],
+  collections: ['defaultdict', 'Counter', 'OrderedDict', 'deque', 'namedtuple'],
+  itertools: ['chain', 'product', 'combinations', 'permutations', 'groupby', 'islice'],
+  functools: ['reduce', 'partial', 'lru_cache', 'wraps', 'cached_property'],
+  asyncio: ['run', 'gather', 'sleep', 'create_task', 'Event', 'Lock', 'Queue'],
+  dataclasses: ['dataclass', 'field', 'asdict', 'astuple'],
+  contextlib: ['contextmanager', 'asynccontextmanager', 'suppress'],
+};
+
+function makePythonDiagnostics(
+  monaco: typeof Monaco,
+  model: Monaco.editor.ITextModel,
+): Monaco.editor.IMarkerData[] {
+  const markers: Monaco.editor.IMarkerData[] = [];
+  const lines = model.getLinesContent();
+
+  lines.forEach((line, idx) => {
+    const lineNumber = idx + 1;
+    const trimmed = line.trim();
+
+    // Detect common mistakes
+    if (/^print\s+[^(]/.test(trimmed)) {
+      markers.push({
+        severity: monaco.MarkerSeverity.Error,
+        message: 'SyntaxError: Missing parentheses in call to \'print\'',
+        startLineNumber: lineNumber,
+        startColumn: 1,
+        endLineNumber: lineNumber,
+        endColumn: line.length + 1,
+        source: 'Python LSP',
+      });
+    }
+
+    if (/^\s*(def|class)\s+\w.*[^:]$/.test(trimmed)) {
+      markers.push({
+        severity: monaco.MarkerSeverity.Error,
+        message: 'SyntaxError: Expected \':\' at end of compound statement',
+        startLineNumber: lineNumber,
+        startColumn: 1,
+        endLineNumber: lineNumber,
+        endColumn: line.length + 1,
+        source: 'Python LSP',
+      });
+    }
+
+    if (/===|!==/.test(line)) {
+      const col = line.indexOf('===') !== -1 ? line.indexOf('===') : line.indexOf('!==');
+      markers.push({
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'Python uses == and != for equality, not === or !==',
+        startLineNumber: lineNumber,
+        startColumn: col + 1,
+        endLineNumber: lineNumber,
+        endColumn: col + 4,
+        source: 'Python LSP',
+      });
+    }
+
+    if (/\bvar\s+\w+/.test(trimmed)) {
+      markers.push({
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'Python does not use \'var\' for variable declarations',
+        startLineNumber: lineNumber,
+        startColumn: 1,
+        endLineNumber: lineNumber,
+        endColumn: line.length + 1,
+        source: 'Python LSP',
+      });
+    }
+
+    // Trailing whitespace hint
+    if (/\s+$/.test(line)) {
+      markers.push({
+        severity: monaco.MarkerSeverity.Hint,
+        message: 'Trailing whitespace',
+        startLineNumber: lineNumber,
+        startColumn: line.trimEnd().length + 1,
+        endLineNumber: lineNumber,
+        endColumn: line.length + 1,
+        source: 'Python LSP',
+      });
+    }
+  });
+
+  return markers;
+}
+
+export function registerPythonProvider(monaco: typeof Monaco): void {
+  // Completion provider
+  monaco.languages.registerCompletionItemProvider('python', {
+    triggerCharacters: ['.', ' ', '(', 'import', 'from'],
+    provideCompletionItems(
+      model: Monaco.editor.ITextModel,
+      position: Monaco.Position,
+    ): Monaco.languages.CompletionList {
+      const word = model.getWordUntilPosition(position);
+      const range: Monaco.IRange = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      const lineContent = model.getLineContent(position.lineNumber);
+      const textBeforeCursor = lineContent.substring(0, position.column - 1);
+
+      // Module attribute completion (e.g., os.path.<cursor>)
+      const dotMatch = textBeforeCursor.match(/(\w+)\.(\w*)$/);
+      if (dotMatch) {
+        const moduleName = dotMatch[1];
+        const attrs = PYTHON_STDLIB_MODULES[moduleName];
+        if (attrs) {
+          return {
+            suggestions: attrs.map((attr) => ({
+              label: attr,
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: attr,
+              range,
+              detail: `${moduleName}.${attr}`,
+            })),
+          };
+        }
+      }
+
+      const suggestions: Monaco.languages.CompletionItem[] = [
+        // Keywords
+        ...PYTHON_KEYWORDS.map((kw) => ({
+          label: kw,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: kw,
+          range,
+          detail: 'keyword',
+          sortText: `0_${kw}`,
+        })),
+        // Built-ins
+        ...PYTHON_BUILTINS.map((builtin) => ({
+          label: builtin,
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: `${builtin}($1)`,
+          insertTextRules:
+            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range,
+          detail: `built-in function`,
+          documentation: { value: `**${builtin}** — Python built-in` },
+          sortText: `1_${builtin}`,
+        })),
+        // Snippets
+        ...PYTHON_SNIPPETS.map((s) => ({
+          label: s.label,
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: s.insertText,
+          insertTextRules:
+            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range,
+          detail: s.detail,
+          documentation: { value: s.documentation },
+          sortText: `2_${s.label}`,
+        })),
+        // stdlib imports
+        ...Object.keys(PYTHON_STDLIB_MODULES).map((mod) => ({
+          label: mod,
+          kind: monaco.languages.CompletionItemKind.Module,
+          insertText: mod,
+          range,
+          detail: `stdlib module: ${mod}`,
+          sortText: `3_${mod}`,
+        })),
+      ];
+
+      return { suggestions };
+    },
+  });
+
+  // Hover provider
+  monaco.languages.registerHoverProvider('python', {
+    provideHover(
+      model: Monaco.editor.ITextModel,
+      position: Monaco.Position,
+    ): Monaco.languages.Hover | null {
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+
+      const HOVER_DOCS: Record<string, string> = {
+        print: '**print**(*objects, sep=\' \', end=\'\\n\', file=sys.stdout, flush=False*)\n\nPrint objects to the text stream file.',
+        len: '**len**(*s*)\n\nReturn the length (the number of items) of an object.',
+        range: '**range**(*stop*) / **range**(*start, stop[, step]*)\n\nReturn an immutable sequence of numbers.',
+        list: '**list**([*iterable*])\n\nReturn a list. If no argument, return empty list.',
+        dict: '**dict**(**kwargs) / **dict**(*mapping*, **kwargs)\n\nCreate a new dictionary.',
+        str: '**str**(*object=b\'\'*, *encoding=\'utf-8\'*, *errors=\'strict\'*)\n\nReturn a string version of object.',
+        int: '**int**(*x=0*) / **int**(*x*, *base=10*)\n\nReturn an integer object.',
+        float: '**float**(*x=0.0*)\n\nReturn a floating-point number.',
+        type: '**type**(*object*) / **type**(*name, bases, dict*)\n\nWith one argument, return the type of an object.',
+        isinstance: '**isinstance**(*object, classinfo*)\n\nReturn True if object is an instance of classinfo.',
+        enumerate: '**enumerate**(*iterable, start=0*)\n\nReturn an enumerate object.',
+        zip: '**zip**(*iterables, strict=False*)\n\nMake an iterator that aggregates elements from each iterable.',
+        map: '**map**(*function, iterable, ...*)\n\nReturn an iterator that applies function to every item of iterable.',
+        filter: '**filter**(*function, iterable*)\n\nConstruct an iterator from iterable elements for which function returns true.',
+        sorted: '**sorted**(*iterable, /, *, key=None, reverse=False*)\n\nReturn a new sorted list from the items in iterable.',
+        open: '**open**(*file, mode=\'r\', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None*)\n\nOpen a file and return a file object.',
+      };
+
+      if (HOVER_DOCS[word.word]) {
+        return {
+          range: new monaco.Range(
+            position.lineNumber,
+            word.startColumn,
+            position.lineNumber,
+            word.endColumn,
+          ),
+          contents: [{ value: HOVER_DOCS[word.word] }],
+        };
+      }
+
+      return null;
+    },
+  });
+
+  // Signature help provider
+  monaco.languages.registerSignatureHelpProvider('python', {
+    signatureHelpTriggerCharacters: ['(', ','],
+    provideSignatureHelp(
+      model: Monaco.editor.ITextModel,
+      position: Monaco.Position,
+    ): Monaco.languages.SignatureHelpResult | null {
+      const lineContent = model.getLineContent(position.lineNumber);
+      const textBefore = lineContent.substring(0, position.column - 1);
+      const funcMatch = textBefore.match(/(\w+)\s*\(([^)]*)$/);
+      if (!funcMatch) return null;
+
+      const funcName = funcMatch[1];
+
+      const SIGNATURES: Record<string, Monaco.languages.SignatureInformation[]> = {
+        print: [{
+          label: 'print(*objects, sep=\' \', end=\'\\n\', file=sys.stdout, flush=False)',
+          documentation: 'Print objects to the text stream file',
+          parameters: [
+            { label: '*objects', documentation: 'Objects to print' },
+            { label: "sep=' '", documentation: 'Separator between objects' },
+            { label: "end='\\n'", documentation: 'Appended after last object' },
+            { label: 'file=sys.stdout', documentation: 'Output stream' },
+            { label: 'flush=False', documentation: 'Whether to flush the stream' },
+          ],
+        }],
+        range: [{
+          label: 'range(stop) | range(start, stop[, step])',
+          documentation: 'Return an immutable sequence of numbers',
+          parameters: [
+            { label: 'start', documentation: 'Start of range (inclusive)' },
+            { label: 'stop', documentation: 'End of range (exclusive)' },
+            { label: 'step', documentation: 'Step size (default: 1)' },
+          ],
+        }],
+        open: [{
+          label: "open(file, mode='r', buffering=-1, encoding=None, errors=None)",
+          documentation: 'Open a file and return a file object',
+          parameters: [
+            { label: 'file', documentation: 'File path or file descriptor' },
+            { label: "mode='r'", documentation: 'File open mode (r, w, a, b, +, x)' },
+            { label: 'buffering=-1', documentation: 'Buffering policy' },
+            { label: 'encoding=None', documentation: 'Text encoding (e.g. utf-8)' },
+            { label: 'errors=None', documentation: 'Error handler (strict, ignore, replace)' },
+          ],
+        }],
+      };
+
+      const sigs = SIGNATURES[funcName];
+      if (!sigs) return null;
+
+      const commaCount = (funcMatch[2].match(/,/g) || []).length;
+
+      return {
+        value: {
+          signatures: sigs,
+          activeSignature: 0,
+          activeParameter: Math.min(commaCount, sigs[0].parameters!.length - 1),
+        },
+        dispose: () => {},
+      };
+    },
+  });
+
+  // Diagnostics (model-based)
+  let diagnosticsTimer: ReturnType<typeof setTimeout> | null = null;
+
+  monaco.editor.onDidCreateModel((model) => {
+    if (model.getLanguageId() !== 'python') return;
+
+    const updateDiagnostics = () => {
+      const markers = makePythonDiagnostics(monaco, model);
+      monaco.editor.setModelMarkers(model, 'python-lsp', markers);
+    };
+
+    updateDiagnostics();
+
+    model.onDidChangeContent(() => {
+      if (diagnosticsTimer) clearTimeout(diagnosticsTimer);
+      diagnosticsTimer = setTimeout(updateDiagnostics, 600);
+    });
+
+    model.onWillDispose(() => {
+      monaco.editor.setModelMarkers(model, 'python-lsp', []);
+    });
+  });
+} 
+
+------------------------------------------------
+FILE: ./types.ts
+------------------------------------------------
+// filepath: src/components/CodeEditor/types.ts
+export type Language = 'javascript' | 'python';
+
+export interface CodeEditorProps {
+  value?: string;
+  defaultValue?: Record<Language, string>;
+  language?: Language;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+  height?: string | number;
+  className?: string;
+}
+
+export interface EditorToolbarProps {
+  language: Language;
+  onLanguageChange: (lang: Language) => void;
+  onFormat: () => void;
+  onCopy: () => void;
+  isFormatting: boolean;
+  isCopied: boolean;
+  readOnly: boolean;
+  isReady: boolean;
+}
+

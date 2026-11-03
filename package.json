@@ -7,7 +7,11 @@
     "build": "pnpm --filter db build && pnpm --filter api build && pnpm --filter web build",
     "db:migrate": "pnpm --filter db migrate",
     "db:generate": "pnpm --filter db generate",
-    "db:studio": "pnpm --filter db studio"
+    "db:studio": "pnpm --filter db studio",
+    "dev:web": "pnpm --filter @algoforge/web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build:web": "pnpm --filter @algoforge/web build",
+    "build:api": "pnpm --filter api build"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
