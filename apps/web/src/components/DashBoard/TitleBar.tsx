@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowDown, ArrowUp, CornerDownLeft, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { AccountMenuItem, AccountUser } from "./Setting";
 import SettingsDropdown from "./Setting";
@@ -95,6 +95,8 @@ export const searchData: SearchResultItem[] = [
 
 const MAX_RESULTS = 6;
 
+const noopSubscribe = () => () => {};
+
 function escapeRegExp(s: string) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -137,7 +139,11 @@ function SearchBox({
     const [focused, setFocused] = useState(false);
     const [value, setValue] = useState("");
     const [active, setActive] = useState(-1);
-    const [isMac, setIsMac] = useState(false);
+    const isMac = useSyncExternalStore(
+        noopSubscribe,
+        () => /mac|iphone|ipad/i.test(navigator.platform),
+        () => false,
+    );
 
     const query = value.trim();
 
@@ -164,9 +170,12 @@ function SearchBox({
     const open = focused;
 
     /* Reset the highlighted row when the results change */
-    useEffect(() => {
+    const activeKey = `${query}|${results.length}`;
+    const [prevActiveKey, setPrevActiveKey] = useState(activeKey);
+    if (prevActiveKey !== activeKey) {
+        setPrevActiveKey(activeKey);
         setActive(query && results.length ? 0 : -1);
-    }, [query, results.length]);
+    }
 
     /* Keep the active row in view */
     useEffect(() => {
@@ -177,8 +186,6 @@ function SearchBox({
     }, [active]);
 
     useEffect(() => {
-        setIsMac(/mac|iphone|ipad/i.test(navigator.platform));
-
         const handleShortcut = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
 

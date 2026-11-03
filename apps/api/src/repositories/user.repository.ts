@@ -28,6 +28,22 @@ export const userRepository = {
     });
   },
 
+  /** Keyset-style page over users, newest first. `take` should be limit + 1 to detect a next page. */
+  findPage(opts: { take: number; cursor?: string }) {
+    return prisma.user.findMany({
+      take: opts.take,
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  },
+
   create(data: {
     email: string | null;
     name: string | null;

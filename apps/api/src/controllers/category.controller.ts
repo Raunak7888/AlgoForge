@@ -1,16 +1,15 @@
 import { Request, Response } from "express";
+import type { CategoryListResponse } from "@algoforge/contracts";
 import { categoryService } from "../services/category.service";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
-import {
-  parseCreateCategory,
-  parseUpdateCategory,
-} from "../validation/category";
+import { parseCreateCategory, parseUpdateCategory } from "../validation/category";
 
 class CategoryController {
   list = asyncHandler(async (_req: Request, res: Response) => {
     const categories = await categoryService.listCategories();
-    res.json(categories);
+    const body: CategoryListResponse = { data: categories };
+    res.json(body);
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {

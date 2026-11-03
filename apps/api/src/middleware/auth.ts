@@ -36,6 +36,26 @@ export async function requireAuth(
   }
 }
 
+/**
+ * Attaches `req.auth` when a valid session is present, but never rejects.
+ * Used by public routes whose output depends on who is asking (e.g. drafts for admins).
+ */
+export async function optionalAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const accessToken = getToken(req);
+  if (accessToken) {
+    try {
+      req.auth = await authService.authenticateAccessToken(accessToken);
+    } catch {
+      // invalid or expired token: treat the caller as anonymous
+    }
+  }
+  next();
+}
+
 export function requireRoles(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.auth) {

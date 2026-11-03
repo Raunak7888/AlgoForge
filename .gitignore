@@ -19,3 +19,4 @@ coverage/
 !.env.example
 *.phase1.tmp
 .phase1-backup/
+.phase2-backup/

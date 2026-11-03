@@ -13,7 +13,9 @@ export interface UiHandlers {
 /** Window-level shortcuts for the transport. Ignored while typing and inside the editor. */
 export function useTransportHotkeys(store: StoreApi<VisualizerStore>, ui: UiHandlers): void {
     const uiRef = useRef(ui);
-    uiRef.current = ui;
+    useEffect(() => {
+        uiRef.current = ui;
+    });
 
     useEffect(() => {
         const run = (cmd: Command) => {

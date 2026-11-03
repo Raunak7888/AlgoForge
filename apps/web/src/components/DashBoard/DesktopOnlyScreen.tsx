@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
-export function DesktopOnlyScreen() {
-    const [url, setUrl] = useState("");
-    const [copied, setCopied] = useState(false);
+const noopSubscribe = () => () => {};
 
-    useEffect(() => {
-        setUrl(window.location.href);
-    }, []);
+export function DesktopOnlyScreen() {
+    // "" on the server and during hydration, the real URL on the client afterwards.
+    const url = useSyncExternalStore(
+        noopSubscribe,
+        () => window.location.href,
+        () => "",
+    );
+    const [copied, setCopied] = useState(false);
 
     const copy = async () => {
         try {

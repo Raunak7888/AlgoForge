@@ -97,7 +97,7 @@ export function TreeStageView({ data, last, selectedId, anim, status, showIds, c
     reveal: (cx, cy) => api.current?.reveal(cx, cy),
     build: (c) => {
       const { m, D, plan: p, byId, edgeEls, ghostEdgeEls, ghostItems, live, chips, moved, movedPtrs } = c;
-      const { add, call, pulse, bump, soft, snap } = m;
+      const { add, pulse, bump, soft, snap } = m;
       const glidePtrs = (at: number) => add(movedPtrs, { x: c.toX, y: c.toY, ease: snap, duration: D * 0.9 }, at);
       const bumpPtr = (name: string, at: number) => {
         const pill = c.el.querySelector<HTMLElement>(`[data-ptr="${name}"] [data-ptr-pill]`);

@@ -3,7 +3,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { motion, type Variants } from "framer-motion";
 import { Check, Copy, ExternalLink, Globe, Link2, Lock, Share2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 interface ShareModalProps {
     isOpen: boolean;
@@ -16,6 +16,8 @@ interface ShareModalProps {
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const list: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } } };
 const rise: Variants = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EASE } } };
+
+const noopSubscribe = () => () => {};
 
 async function copyText(text: string): Promise<boolean> {
     try {
@@ -47,12 +49,13 @@ const ShareModal = ({ isOpen, onClose, link = null, title = "Share analysis" }: 
     const [copied, setCopied] = useState(false);
     const [failed, setFailed] = useState(false);
     const [isPublic, setIsPublic] = useState(true);
-    const [canNativeShare, setCanNativeShare] = useState(false);
+    const canNativeShare = useSyncExternalStore(
+        noopSubscribe,
+        () => typeof navigator !== "undefined" && !!navigator.share,
+        () => false,
+    );
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-        setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
-    }, []);
     useEffect(
         () => () => {
             if (timerRef.current) clearTimeout(timerRef.current);

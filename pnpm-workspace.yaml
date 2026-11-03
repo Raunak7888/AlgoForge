@@ -10,3 +10,6 @@ allowBuilds:
   protobufjs: true
   unrs-resolver: true
   esbuild: true
+
+overrides:
+  zod: "4.6.7"

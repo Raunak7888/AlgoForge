@@ -1,4 +1,4 @@
-import type { InitSpec, Primitive, Shape, TNode, TreeState, TreeType } from "./types";
+import type { InitSpec, Primitive, Shape, TreeState, TreeType } from "./types";
 import { bstViolations, placeBst } from "./bst";
 
 /**

@@ -103,7 +103,12 @@ export function connectivityOf(ids: string[], edges: Edge[]): Conn {
         const stack = [start];
         while (stack.length) {
             const c = stack.pop()!;
-            for (const n of g.get(c) ?? []) if (!seen.has(n)) (seen.add(n), stack.push(n));
+            for (const n of g.get(c) ?? []) {
+                if (!seen.has(n)) {
+                    seen.add(n);
+                    stack.push(n);
+                }
+            }
         }
         return seen;
     };

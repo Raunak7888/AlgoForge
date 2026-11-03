@@ -7,7 +7,6 @@ import {
     useScroll,
     useMotionValueEvent,
 } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 
 import React, { useRef, useState } from "react";

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
 import { visualizer } from "../engine/instance";
@@ -30,17 +30,19 @@ export function VisualizerCanvas({ store = visualizer, className }: { store?: St
     const layout = useMemo(() => stackLanes((instances ?? []).map((i) => ({ id: i.id, size: sizes[i.id] ?? NONE, at: i.at }))), [instances, sizes]);
 
     // Do not slide groups into their very first position: only animate moves after the first layout.
-    const laidOut = useRef(false);
+    const [laidOut, setLaidOut] = useState(false);
+    const hasLayout = layout.size.w > 0;
     useEffect(() => {
-        laidOut.current = layout.size.w > 0;
-    }, [layout]);
+        const id = requestAnimationFrame(() => setLaidOut(hasLayout));
+        return () => cancelAnimationFrame(id);
+    }, [hasLayout]);
 
     return (
         <Viewport content={layout.size} className={className}>
             <style>{CANVAS_CSS}</style>
             {(instances ?? []).map((inst) => {
                 const p = layout.placed[inst.id] ?? { x: 0, y: 0, w: 0, h: 0 };
-                return <Group key={inst.id} meta={inst} store={store} x={p.x} y={p.y} glide={laidOut.current && !reduced} onSize={onSize} />;
+                return <Group key={inst.id} meta={inst} store={store} x={p.x} y={p.y} glide={laidOut && !reduced} onSize={onSize} />;
             })}
         </Viewport>
     );

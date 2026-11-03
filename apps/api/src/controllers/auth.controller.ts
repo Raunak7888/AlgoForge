@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { authCookies, env } from "../config/env";
 import { authService } from "../services/auth.service";
 import { userService } from "../services/user.service";
-import { adminService } from "../services/admin.service";
 import { AppError } from "../utils/app-error";
 import { asyncHandler } from "../utils/async-handler";
 import {
@@ -12,6 +11,7 @@ import {
   setAuthCookies,
   setOAuthStateCookie,
 } from "../utils/cookies";
+import { logger, serializeError } from "../utils/logger";
 import { ensureString } from "../validation/common";
 
 class AuthController {
@@ -43,7 +43,10 @@ class AuthController {
     } catch (error) {
       clearOAuthStateCookie(res);
       clearAuthCookies(res);
-      console.error("[OAuth Callback Error]", error);
+      logger.warn("oauth callback failed", {
+        requestId: req.requestId,
+        ...serializeError(error),
+      });
       res.redirect(`${env.webAppUrl}/?authError=oauth_failed`);
     }
   });
@@ -90,11 +93,6 @@ class AuthController {
     await authService.revokeAllUserSessions(req.auth!.user.id);
     clearAuthCookies(res);
     res.status(204).send();
-  });
-
-  listUsers = asyncHandler(async (_req: Request, res: Response) => {
-    const users = await adminService.listAllUsers();
-    res.json({ users });
   });
 }
 

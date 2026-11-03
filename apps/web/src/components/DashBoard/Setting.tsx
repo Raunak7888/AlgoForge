@@ -52,12 +52,16 @@ export default function SettingsDropdown({
     const [hovered, setHovered] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Reset hover + move focus into the menu when it opens.
+    // Reset hover when the menu opens (adjusted during render, not in an effect).
+    const [prevOpen, setPrevOpen] = useState(open);
+    if (prevOpen !== open) {
+        setPrevOpen(open);
+        if (open) setHovered(null);
+    }
+
+    // Move focus into the menu when it opens.
     useEffect(() => {
-        if (open) {
-            setHovered(null);
-            requestAnimationFrame(() => menuRef.current?.focus());
-        }
+        if (open) requestAnimationFrame(() => menuRef.current?.focus());
     }, [open]);
 
     const onKeyDown = (e: React.KeyboardEvent) => {

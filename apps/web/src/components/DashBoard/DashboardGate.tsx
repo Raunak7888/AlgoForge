@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, useSyncExternalStore, type ReactNode } from "react";
 import { readUserCookie, writeUserCookie } from "@/lib/auth-cookie";
 import { signInWithGoogle } from "@/lib/auth";
 import { isMobileDevice } from "@/lib/device";
@@ -9,20 +9,31 @@ import { DesktopOnlyScreen } from "./DesktopOnlyScreen";
 
 type Status = "checking" | "mobile" | "login" | "ready";
 
-export function DashboardGate({ children }: { children: ReactNode }) {
-    const [status, setStatus] = useState<Status>("checking");
+const noopSubscribe = () => () => {};
 
-    useEffect(() => {
-        // Lock 2 first (device), then lock 1 (auth)
-        if (isMobileDevice()) setStatus("mobile");
-        else setStatus(readUserCookie() ? "ready" : "login");
-    }, []);
+export function DashboardGate({ children }: { children: ReactNode }) {
+    const [loggedIn, setLoggedIn] = useState(false);
+    // false on the server and during hydration, true on the client afterwards.
+    const mounted = useSyncExternalStore(
+        noopSubscribe,
+        () => true,
+        () => false,
+    );
 
     const handleLogin = useCallback(async () => {
         const user = await signInWithGoogle();
         writeUserCookie(user);
-        setStatus("ready");
+        setLoggedIn(true);
     }, []);
+
+    // Lock 2 first (device), then lock 1 (auth)
+    const status: Status = !mounted
+        ? "checking"
+        : isMobileDevice()
+          ? "mobile"
+          : loggedIn || readUserCookie()
+            ? "ready"
+            : "login";
 
     if (status === "checking") return <div className="min-h-dvh bg-black" />;
     if (status === "mobile") return <DesktopOnlyScreen />;

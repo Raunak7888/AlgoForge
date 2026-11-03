@@ -27,6 +27,8 @@ export function Group({ meta, store, x, y, glide, onSize }: Props) {
     // Announce this structure to the playback engine. It is brought up to date straight away.
     useEffect(() => store.getState().registerRunner(meta.id, runtime), [store, meta.id, runtime]);
 
+    const hidden = view.state === null;
+
     // Report the real size so lanes can be stacked without gaps or overlaps.
     useLayoutEffect(() => {
         const el = box.current;
@@ -37,9 +39,8 @@ export function Group({ meta, store, x, y, glide, onSize }: Props) {
         const ro = new ResizeObserver(report);
         ro.observe(el);
         return () => ro.disconnect();
-    }, [meta.id, onSize, view.state === null]);
+    }, [meta.id, onSize, hidden]);
 
-    const hidden = view.state === null;
     return (
         <div
             data-canvas-group={meta.id}

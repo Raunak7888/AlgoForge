@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 
 export interface AnimationSettings {
@@ -37,15 +37,18 @@ export const useAnimationSettings = create<SettingsStore>((set) => ({
   update: (patch) => set(patch),
 }));
 
+const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReduced(onChange: () => void) {
+  const mq = window.matchMedia(REDUCED_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+const getReduced = () => window.matchMedia(REDUCED_QUERY).matches;
+const getReducedServer = () => false;
+
 export function useReducedMotion(): boolean {
   const override = useAnimationSettings((s) => s.reducedMotion);
-  const [system, setSystem] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setSystem(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setSystem(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
+  const system = useSyncExternalStore(subscribeReduced, getReduced, getReducedServer);
   return override ?? system;
 }

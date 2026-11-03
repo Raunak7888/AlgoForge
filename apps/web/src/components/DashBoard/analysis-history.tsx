@@ -251,6 +251,7 @@ const StateMessage = ({
     </div>
 );
 
+/* eslint-disable react/display-name -- generic memo component */
 const Segmented = memo(
     <T extends string>({
         value,
@@ -309,6 +310,7 @@ const Segmented = memo(
     label: string;
     id: string;
 }) => React.ReactElement;
+/* eslint-enable react/display-name */
 
 // ─── History Item ─────────────────────────────────────────────────────────────
 
@@ -637,23 +639,34 @@ export default function AnalysisHistory({
         }
     }, [onLastLoadedPage, goTo, currentPage, canFetchMore, loadingMore, onLoadMore]);
 
-    // Once the requested batch arrives, move to the first new page
-    const prevCount = useRef(items.length);
-    useEffect(() => {
-        if (awaitingMore && items.length > prevCount.current) {
+    // Once the requested batch arrives, move to the first new page.
+    // State is adjusted while rendering (React's pattern for reacting to prop changes), not in an effect.
+    const [prevCount, setPrevCount] = useState(items.length);
+    if (prevCount !== items.length) {
+        setPrevCount(items.length);
+        if (awaitingMore && items.length > prevCount) {
             setAwaitingMore(false);
             setPage(currentPage + 1);
-            scrollTop();
         }
+    }
+    const [prevError, setPrevError] = useState(error);
+    if (prevError !== error) {
+        setPrevError(error);
         if (awaitingMore && error) setAwaitingMore(false);
-        prevCount.current = items.length;
+    }
+    // Scroll the list back to the top whenever the page changes.
+    useEffect(() => {
+        scrollTop();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [items.length, error]);
+    }, [currentPage]);
 
     // Reset to page 1 when filters change
-    useEffect(() => {
+    const filterKey = `${query}|${language}|${sort}`;
+    const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+    if (prevFilterKey !== filterKey) {
+        setPrevFilterKey(filterKey);
         setPage(1);
-    }, [query, language, sort]);
+    }
 
     // Selection
     const handleSelect = useCallback(
@@ -673,6 +686,7 @@ export default function AnalysisHistory({
     // Drop the selection when its row is no longer on the visible page
     useEffect(() => {
         if (selectedId && !pageItems.some((i) => i.id === selectedId)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedId(null);
             onSelect?.(null);
         }
@@ -720,7 +734,6 @@ export default function AnalysisHistory({
     );
 
     let runningIndex = 0;
-    const rangeEnd = start + pageItems.length;
     const pages = pageWindow(currentPage, totalPages);
 
     return (

@@ -1,15 +1,17 @@
 /**
  * All cache key builders for algorithms in one place.
- * Changing a key format here automatically fixes every caller.
+ *
+ * Every key embeds:
+ *   - the namespace version (see services/lib/cache-version.ts), so a write invalidates all keys, and
+ *   - the visibility scope, so a draft cached for an admin can never be served to the public.
  */
+export type CacheScope = "public" | "admin";
+
+export const ALGO_CACHE_NAMESPACE = "algo";
+
 export const algorithmCacheKeys = {
-  // List keys are JSON-stringified query objects (hashed by cacheService internally)
-  list:    (query: object)                  => `algo:list:${JSON.stringify(query)}`,
-
-  // Detail keys are structured so we can invalidate by id/slug without re-hashing
-  byId:    (id: string,   lang = "default") => `algo:id:${id}:${lang}`,
-  bySlug:  (slug: string, lang = "default") => `algo:slug:${slug}:${lang}`,
-
-  // Visualisation / forge config
-  viz:     (id: string)                     => `viz:${id}`,
+  list:   (v: number, scope: CacheScope, query: object)                => `algo:v${v}:${scope}:list:${JSON.stringify(query)}`,
+  byId:   (v: number, scope: CacheScope, id: string,   lang = "default") => `algo:v${v}:${scope}:id:${id}:${lang}`,
+  bySlug: (v: number, scope: CacheScope, slug: string, lang = "default") => `algo:v${v}:${scope}:slug:${slug}:${lang}`,
+  viz:    (v: number, scope: CacheScope, id: string)                   => `viz:v${v}:${scope}:${id}`,
 };

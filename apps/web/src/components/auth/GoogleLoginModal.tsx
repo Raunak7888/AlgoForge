@@ -21,31 +21,6 @@ interface GoogleLoginModalProps {
     onGoogleLogin?: () => Promise<void>;
 }
 
-// Replaces SOC2 badges — live activity strip
-const ACTIVITY_ITEMS = [
-    {
-        user: "M",
-        name: "marcos_k",
-        action: "deployed main",
-        ago: "2m ago",
-        dot: "#22c55e",
-    },
-    {
-        user: "A",
-        name: "aiko.dev",
-        action: "opened PR #318",
-        ago: "8m ago",
-        dot: "#ff4d00",
-    },
-    {
-        user: "R",
-        name: "r_santos",
-        action: "merged to prod",
-        ago: "14m ago",
-        dot: "#facc15",
-    },
-];
-
 const cardVariants: Variants = {
     hidden: { opacity: 0, scale: 0.88, y: 32, rotateX: 6 },
     visible: {

@@ -57,9 +57,11 @@ export function ScriptEditor({
     const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<typeof Monaco | null>(null);
     const diagRef = useRef(diagnostics);
-    diagRef.current = diagnostics;
     const runRef = useRef(onRun);
-    runRef.current = onRun;
+    useEffect(() => {
+        diagRef.current = diagnostics;
+        runRef.current = onRun;
+    });
     const disposables = useRef<Monaco.IDisposable[]>([]);
 
     const applyMarkers = useCallback(() => {

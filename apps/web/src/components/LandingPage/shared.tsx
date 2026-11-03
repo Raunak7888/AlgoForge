@@ -128,11 +128,12 @@ export function Buddy({ size = 72, track = true }: { size?: number; track?: bool
         <div className="af-float relative shrink-0" style={{ width: size, height: size }} aria-hidden>
             <div className="absolute inset-0 rounded-[30%] bg-accent shadow-[0_8px_16px_-10px_rgba(0,0,0,0.7)]" />
             <div className="absolute left-1/2 top-[34%] flex -translate-x-1/2" style={{ gap: size * 0.16 }}>
-                {[left, right].map((r, i) => (
-                    <span key={i} className="af-eye flex items-center justify-center rounded-full bg-white" style={{ width: eye, height: eye }}>
-                        <span ref={r} className="block rounded-full bg-black" style={{ width: eye * 0.5, height: eye * 0.5 }} />
-                    </span>
-                ))}
+                <span className="af-eye flex items-center justify-center rounded-full bg-white" style={{ width: eye, height: eye }}>
+                    <span ref={left} className="block rounded-full bg-black" style={{ width: eye * 0.5, height: eye * 0.5 }} />
+                </span>
+                <span className="af-eye flex items-center justify-center rounded-full bg-white" style={{ width: eye, height: eye }}>
+                    <span ref={right} className="block rounded-full bg-black" style={{ width: eye * 0.5, height: eye * 0.5 }} />
+                </span>
             </div>
             <span className="absolute left-1/2 -translate-x-1/2 rounded-b-full border-b-[3px] border-black" style={{ top: "62%", width: size * 0.22, height: size * 0.11 }} />
             <span className="absolute rounded-full bg-white/30" style={{ left: "14%", top: "58%", width: size * 0.13, height: size * 0.08 }} />

@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 echo "Restoring AlgoForge files..."
 
-mkdir -p ./apps/api
-cat > ./apps/api/package.json <<'__ALGOFORGE_FILE_6816687afd5e8d87__'
+mkdir -p ./.phase1-backup/20261103-201941/apps/api
+cat > ./.phase1-backup/20261103-201941/apps/api/package.json <<'__ALGOFORGE_FILE_5fa7fe54eb8a13d4__'
 {
   "name": "api",
   "version": "1.0.0",
@@ -39,12 +39,3546 @@ cat > ./apps/api/package.json <<'__ALGOFORGE_FILE_6816687afd5e8d87__'
     "typescript": "^5.3.3"
   }
 }
+__ALGOFORGE_FILE_5fa7fe54eb8a13d4__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/ai
+cat > ./.phase1-backup/20261103-201941/apps/api/src/ai/context-builder.ts <<'__ALGOFORGE_FILE_c885856c0aaebdfe__'
+import { prisma } from "@algoforge/db";
+import { layeredCache } from "../services/lib/Layered.cache";
+
+export type CodebaseContext = {
+  algorithms: AlgorithmContext[];
+  schema: SchemaContext;
+  apiRoutes: RouteContext[];
+};
+
+type AlgorithmContext = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  difficulty: string;
+  category: string;
+  displayCode: { language: string; code: string } | null;
+  complexity: {
+    timeBest: string | null;
+    timeAverage: string | null;
+    timeWorst: string | null;
+    space: string | null;
+  } | null;
+};
+
+type SchemaContext = {
+  models: ModelContext[];
+};
+
+type ModelContext = {
+  name: string;
+  fields: string[];
+};
+
+type RouteContext = {
+  method: string;
+  path: string;
+  description: string;
+};
+
+const STATIC_SCHEMA: SchemaContext = {
+  models: [
+    {
+      name: "User",
+      fields: ["id", "email", "username", "name", "image", "role", "createdAt", "updatedAt"],
+    },
+    {
+      name: "Session",
+      fields: ["id", "userId", "tokenHash", "expiresAt", "revokedAt", "ipAddress", "userAgent"],
+    },
+    {
+      name: "Analysis",
+      fields: ["id", "userId", "code", "language", "complexity", "suggestion", "result", "shareId", "isPublic", "createdAt"],
+    },
+    {
+      name: "Algorithm",
+      fields: ["id", "slug", "name", "description", "categoryId", "difficulty", "isPublished", "timeBest", "timeAverage", "timeWorst", "spaceComplexity"],
+    },
+    {
+      name: "Category",
+      fields: ["id", "label", "description", "iconName", "sortOrder"],
+    },
+    {
+      name: "ForgeConfig",
+      fields: ["id", "algorithmId", "forgeCode", "inputSchema", "guardRanges", "version"],
+    },
+    {
+      name: "DisplayCode",
+      fields: ["id", "algorithmId", "language", "code"],
+    },
+  ],
+};
+
+const STATIC_ROUTES: RouteContext[] = [
+  { method: "GET",  path: "/api/auth/me",                    description: "Returns authenticated user profile from JWT session" },
+  { method: "POST", path: "/api/auth/refresh",               description: "Rotates refresh token and issues new access token via cookie" },
+  { method: "POST", path: "/api/auth/logout",                description: "Revokes current session and clears auth cookies" },
+  { method: "GET",  path: "/api/algorithms",                 description: "Lists published algorithms with optional categoryId, difficulty, search filters" },
+  { method: "GET",  path: "/api/algorithms/id/:id",          description: "Fetches full algorithm detail by UUID" },
+  { method: "GET",  path: "/api/algorithms/slug/:slug",      description: "Fetches algorithm detail by slug" },
+  { method: "GET",  path: "/api/algorithms/id/:id/visualize",description: "Returns forge execution config for algorithm visualization" },
+  { method: "POST", path: "/api/analysis",                   description: "Runs AI code analysis and stores result for authenticated user" },
+  { method: "GET",  path: "/api/analysis",                   description: "Lists paginated analysis history for authenticated user" },
+  { method: "GET",  path: "/api/analysis/:id",               description: "Fetches a single analysis by ID for authenticated user" },
+  { method: "POST", path: "/api/analysis/:id/share",         description: "Makes an analysis public and returns a share URL" },
+  { method: "GET",  path: "/api/share/:shareId",             description: "Returns publicly shared analysis by shareId" },
+  { method: "GET",  path: "/api/categories",                 description: "Lists all categories sorted by sortOrder" },
+  { method: "POST", path: "/api/explain",                    description: "Accepts natural language query and returns AI explanation mapped to codebase" },
+  { method: "POST", path: "/api/explain-sessions",           description: "Creates a persistent AI explanation chat session" },
+  { method: "POST", path: "/api/explain-sessions/:id/messages", description: "Sends a message in a persistent explanation session" },
+];
+
+const CONTEXT_CACHE_TTL = 60; // seconds
+
+export async function buildCodebaseContext(slugs?: string[]): Promise<CodebaseContext> {
+  const cacheKey = `ctx:${(slugs ?? []).slice().sort().join(",")}`;
+
+  const cached = await layeredCache.get<CodebaseContext>(cacheKey);
+  if (cached) return cached;
+
+  const where = slugs?.length
+    ? { slug: { in: slugs }, isPublished: true }
+    : { isPublished: true };
+
+  const algorithms = await prisma.algorithm.findMany({
+    where,
+    take: 10,
+    include: {
+      category:     { select: { label: true } },
+      displayCodes: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const algorithmContexts: AlgorithmContext[] = algorithms.map((algo) => {
+    const jsCode    = algo.displayCodes.find((dc) => dc.language === "javascript");
+    const firstCode = algo.displayCodes[0] ?? null;
+
+    return {
+      id:          algo.id,
+      slug:        algo.slug,
+      name:        algo.name,
+      description: algo.description,
+      difficulty:  algo.difficulty,
+      category:    algo.category.label,
+      displayCode: jsCode ?? (firstCode ? { language: firstCode.language, code: firstCode.code } : null),
+      complexity:
+        algo.timeBest || algo.timeAverage || algo.timeWorst || algo.spaceComplexity
+          ? {
+              timeBest:    algo.timeBest,
+              timeAverage: algo.timeAverage,
+              timeWorst:   algo.timeWorst,
+              space:       algo.spaceComplexity,
+            }
+          : null,
+    };
+  });
+
+  const result: CodebaseContext = {
+    algorithms: algorithmContexts,
+    schema:     STATIC_SCHEMA,
+    apiRoutes:  STATIC_ROUTES,
+  };
+
+  await layeredCache.set(cacheKey, result, CONTEXT_CACHE_TTL);
+  return result;
+}
+
+export function serializeContext(ctx: CodebaseContext): string {
+  const sections: string[] = [];
+
+  sections.push("=== DATABASE SCHEMA ===");
+  for (const model of ctx.schema.models) {
+    sections.push(`Model ${model.name}: [${model.fields.join(", ")}]`);
+  }
+
+  sections.push("\n=== API ROUTES ===");
+  for (const route of ctx.apiRoutes) {
+    sections.push(`${route.method} ${route.path} — ${route.description}`);
+  }
+
+  if (ctx.algorithms.length > 0) {
+    sections.push("\n=== ALGORITHMS ===");
+    for (const algo of ctx.algorithms) {
+      sections.push(`[${algo.slug}] ${algo.name} (${algo.difficulty}, category: ${algo.category})`);
+      sections.push(`  Description: ${algo.description}`);
+      if (algo.complexity) {
+        sections.push(
+          `  Complexity: time=${algo.complexity.timeAverage ?? "?"}, space=${algo.complexity.space ?? "?"}`,
+        );
+      }
+      if (algo.displayCode) {
+        const snippet = algo.displayCode.code.slice(0, 600);
+        sections.push(`  Code (${algo.displayCode.language}):\n${snippet}${algo.displayCode.code.length > 600 ? "\n  [truncated]" : ""}`);
+      }
+    }
+  }
+
+  return sections.join("\n");
+}
+__ALGOFORGE_FILE_c885856c0aaebdfe__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/ai
+cat > ./.phase1-backup/20261103-201941/apps/api/src/ai/query-processor.ts <<'__ALGOFORGE_FILE_890ae053b04cd0ba__'
+import { prisma } from "@algoforge/db";
+import { layeredCache } from "../services/lib/Layered.cache";
+
+export type QueryScope = {
+  intent: "explain_flow" | "explain_failure" | "explain_algorithm" | "explain_api" | "general";
+  keywords: string[];
+  targetSlugs: string[];
+  targetRoutes: string[];
+  rawQuery: string;
+};
+
+const ROUTE_KEYWORDS: Record<string, string[]> = {
+  "/api/auth":       ["auth", "login", "logout", "session", "token", "refresh", "google", "oauth"],
+  "/api/analysis":   ["analysis", "analyze", "ai", "code analysis"],
+  "/api/algorithms": ["algorithm", "visualize", "forge"],
+  "/api/categories": ["category", "categories"],
+  "/api/share":      ["share", "public", "shareId"],
+  "/api/explain":    ["explain", "explanation"],
+};
+
+const SLUGS_CACHE_KEY = "meta:slugs";
+const SLUGS_CACHE_TTL = 300; // 5 minutes
+
+export async function getKnownSlugs(): Promise<string[]> {
+  const cached = await layeredCache.get<string[]>(SLUGS_CACHE_KEY);
+  if (cached) return cached;
+
+  const rows = await prisma.algorithm.findMany({
+    where:  { isPublished: true },
+    select: { slug: true },
+  });
+  const result = rows.map((r) => r.slug);
+  await layeredCache.set(SLUGS_CACHE_KEY, result, SLUGS_CACHE_TTL);
+  return result;
+}
+
+export async function processQuery(query: string): Promise<QueryScope> {
+  const lower = query.toLowerCase();
+
+  const intent       = detectIntent(lower);
+  const keywords     = extractKeywords(lower);
+  const targetSlugs  = await matchSlugs(lower);
+  const targetRoutes = matchRoutes(lower);
+
+  return {
+    intent,
+    keywords,
+    targetSlugs,
+    targetRoutes,
+    rawQuery: query,
+  };
+}
+
+function detectIntent(query: string): QueryScope["intent"] {
+  if (/why.*(fail|error|broken|wrong|crash|not work)/i.test(query)) {
+    return "explain_failure";
+  }
+  if (/how.*(happen|work|flow|process|execut)/i.test(query)) {
+    return "explain_flow";
+  }
+  if (/api|endpoint|route|request|response/i.test(query)) {
+    return "explain_api";
+  }
+  if (/algorithm|sort|search|graph|tree|heap|stack|queue/i.test(query)) {
+    return "explain_algorithm";
+  }
+  return "general";
+}
+
+function extractKeywords(query: string): string[] {
+  const stopWords = new Set([
+    "this", "that", "the", "is", "are", "was", "were", "a", "an", "and",
+    "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+    "how", "why", "what", "when", "where", "which", "who",
+  ]);
+  return query
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z0-9-]/g, ""))
+    .filter((w) => w.length > 2 && !stopWords.has(w));
+}
+
+async function matchSlugs(query: string): Promise<string[]> {
+  const knownSlugs = await getKnownSlugs();
+  return knownSlugs.filter((slug) => {
+    const normalized = slug.replace(/-/g, " ");
+    return query.includes(slug) || query.includes(normalized);
+  });
+}
+
+function matchRoutes(query: string): string[] {
+  const matched: string[] = [];
+  for (const [route, keywords] of Object.entries(ROUTE_KEYWORDS)) {
+    if (keywords.some((kw) => query.includes(kw))) {
+      matched.push(route);
+    }
+  }
+  return matched;
+}
+__ALGOFORGE_FILE_890ae053b04cd0ba__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src
+cat > ./.phase1-backup/20261103-201941/apps/api/src/app.ts <<'__ALGOFORGE_FILE_47309e7cfbd5cabe__'
+import cors from "cors";
+import express from "express";
+import { env } from "./config/env";
+import { errorHandler } from "./middleware/error-handler";
+import { notFoundHandler } from "./middleware/not-found";
+import { securityHeaders } from "./middleware/security-headers";
+import { generalRateLimiter } from "./middleware/rate-limit";
+
+import adminRouter              from "./routes/admin";
+import algorithmRouter          from "./routes/algorithm";
+import analysisRouter           from "./routes/analysis";
+import authRouter               from "./routes/auth";
+import categoryRouter           from "./routes/category";
+import shareRouter              from "./routes/share";
+import explanationRouter        from "./routes/exaplantion";
+import explanationSessionRouter from "./routes/explanation-session";
+
+const app = express();
+
+app.set("trust proxy", 1);
+
+app.use(securityHeaders);
+app.use(
+  cors({
+    origin:         env.webAppUrl,
+    credentials:    true,
+    methods:        ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Admin-Secret"],
+  }),
+);
+app.use(express.json({ limit: "256kb" }));
+
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.use("/api/auth", authRouter);
+app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
+app.use("/api/categories", categoryRouter);
+app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
+app.use("/api/analyses",  generalRateLimiter(), analysisRouter);
+
+// Sessions mounted at a path that cannot be prefix-matched by the explain router.
+app.use("/api/explain-sessions", explanationSessionRouter);
+app.use("/api/explain",          explanationRouter);
+
+app.use("/api/share", shareRouter);
+app.use("/api/admin", adminRouter);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export { app };
+__ALGOFORGE_FILE_47309e7cfbd5cabe__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/config
+cat > ./.phase1-backup/20261103-201941/apps/api/src/config/env.ts <<'__ALGOFORGE_FILE_e3ece7ca31b08a9f__'
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const AI_PROVIDERS = ["gemini", "openrouter"] as const;
+type AIProvider = (typeof AI_PROVIDERS)[number];
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function parseInteger(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+  const parsed = Number(rawValue);
+  // if (!Number.isInteger(parsed) || parsed <= 0)
+  //   throw new Error(`Environment variable ${name} must be a positive integer.`);
+  return parsed;
+}
+
+function parseStringEnum<T extends string>(
+  name: string,
+  allowedValues: readonly T[],
+  fallback: T,
+): T {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+  if (!allowedValues.includes(rawValue as T))
+    throw new Error(
+      `Environment variable ${name} must be one of: ${allowedValues.join(", ")}.`,
+    );
+  return rawValue as T;
+}
+
+function parseList(name: string): string[] {
+  const rawValue = process.env[name];
+  if (!rawValue) return [];
+  return rawValue
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+const port = parseInteger("PORT", 4000);
+const nodeEnv = process.env.NODE_ENV ?? "development";
+const isProduction = nodeEnv === "production";
+const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
+const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
+
+export const env = {
+  nodeEnv,
+  isProduction,
+  port,
+  apiBaseUrl,
+  webAppUrl: process.env.WEB_APP_URL ?? "http://localhost:3000",
+  cookieDomain: process.env.COOKIE_DOMAIN,
+  googleClientId: requireEnv("GOOGLE_CLIENT_ID"),
+  googleClientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
+  jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
+  jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
+  accessTokenTtlMinutes: parseInteger("ACCESS_TOKEN_TTL_MINUTES", 15),
+  refreshTokenTtlDays: parseInteger("REFRESH_TOKEN_TTL_DAYS", 30),
+  authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
+  authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
+  geminiApiKey: requireEnv("GEMINI_API_KEY"),
+  adminUpgradeSecret:
+    process.env.ADMIN_UPGRADE_SECRET ?? "1d201bf1-eb81-42ec-bd13-3e627b0fc4e9",
+  ai: {
+    provider: aiProvider as AIProvider,
+    model: process.env.AI_MODEL ?? "gemini-2.0-flash",
+    timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
+    maxRetries: parseInteger("AI_MAX_RETRIES", 1),
+  },
+  openRouter: {
+    baseUrl:
+      process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+    apiKeys: parseList("OPENROUTER_API_KEYS"),
+    freeModels: parseList("OPENROUTER_FREE_MODELS"),
+    appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
+    siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
+  },
+  redis: {
+    url: process.env.REDIS_URL ?? "redis://localhost:6379",
+    ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
+    aiRateLimitPerHour: parseInteger("AI_RATE_LIMIT_PER_HOUR", 5),
+    defaultRateLimitPerMinute: parseInteger("DEFAULT_RATE_LIMIT_PER_MINUTE", 10),
+  },
+};
+
+export const authCookies = {
+  accessToken: "af_access",
+  refreshToken: "af_refresh",
+  csrfToken: "af_csrf",
+  oauthState: "af_oauth_state",
+} as const;
+
+export const googleOAuthConfig = {
+  redirectUri: `${apiBaseUrl}/api/auth/google/callback`,
+  scopes: ["openid", "email", "profile"],
+};
+__ALGOFORGE_FILE_e3ece7ca31b08a9f__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/prompts
+cat > ./.phase1-backup/20261103-201941/apps/api/src/prompts/explanation.prompts.ts <<'__ALGOFORGE_FILE_3ae2542bc919ae5e__'
+
+__ALGOFORGE_FILE_3ae2542bc919ae5e__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/repositories
+cat > ./.phase1-backup/20261103-201941/apps/api/src/repositories/explanation.repository.ts <<'__ALGOFORGE_FILE_8f94caebffecffe0__'
+
+__ALGOFORGE_FILE_8f94caebffecffe0__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/repositories
+cat > ./.phase1-backup/20261103-201941/apps/api/src/repositories/explanation-session.repository.ts <<'__ALGOFORGE_FILE_8105c0cce70603da__'
+import { prisma, Prisma } from "@algoforge/db";
+import type { SessionMessage } from "../services/explanation-session.service";
+
+export const explanationSessionRepository = {
+  // ─── Create ────────────────────────────────────────────────────────────────
+
+  create(userId: string, title?: string) {
+    return prisma.explanationSession.create({
+      data: { userId, title: title ?? null, messages: [] },
+    });
+  },
+
+  // ─── Read ──────────────────────────────────────────────────────────────────
+
+  /** Paginated list — keyset by id (cursor = last seen id). */
+  findManyByUser(userId: string, opts: { take: number; cursor?: string }) {
+    return prisma.explanationSession.findMany({
+      where: {
+        userId,
+        ...(opts.cursor ? { id: { lt: opts.cursor } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take:    opts.take,
+      select:  {
+        id:        true,
+        title:     true,
+        isPublic:  true,
+        shareId:   true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  },
+
+  /** Full session including messages — only accessible by owner. */
+  findOneByUser(id: string, userId: string) {
+    return prisma.explanationSession.findFirst({
+      where: { id, userId },
+    });
+  },
+
+  /** Public session by shareId — includes basic creator info. */
+  findPublicByShareId(shareId: string) {
+    return prisma.explanationSession.findUnique({
+      where:   { shareId, isPublic: true },
+      include: {
+        user: { select: { id: true, name: true, username: true, image: true } },
+      },
+    });
+  },
+
+  // ─── Update ────────────────────────────────────────────────────────────────
+
+  /** Replace the messages array and optionally update the title. */
+  appendMessages(id: string, messages: SessionMessage[], title?: string) {
+    return prisma.explanationSession.update({
+      where: { id },
+      data:  {
+        messages: messages as object[],
+        ...(title ? { title } : {}),
+      },
+    });
+  },
+
+  /** Make the session public and set its shareId. */
+  share(id: string, shareId: string) {
+    return prisma.explanationSession.update({
+      where: { id },
+      data:  { shareId, isPublic: true },
+    });
+  },
+
+  // ─── Delete ────────────────────────────────────────────────────────────────
+
+  /** Hard-delete — returns count so callers can detect not-found. */
+  delete(id: string, userId: string) {
+    return prisma.explanationSession.deleteMany({ where: { id, userId } });
+  },
+};
+__ALGOFORGE_FILE_8105c0cce70603da__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/routes
+cat > ./.phase1-backup/20261103-201941/apps/api/src/routes/exaplantion.ts <<'__ALGOFORGE_FILE_217d581c755b6ac3__'
+import { Router } from "express";
+import { explanationController } from "../controllers/explanation.controller";
+import { requireAuth } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+import { aiRateLimiter } from "../middleware/rate-limit";
+
+const router = Router();
+
+router.post(
+  "/",
+  requireAuth,
+  requireCsrf,
+  aiRateLimiter(),
+  explanationController.explain,
+);
+
+export default router;
+__ALGOFORGE_FILE_217d581c755b6ac3__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/routes
+cat > ./.phase1-backup/20261103-201941/apps/api/src/routes/explanation.ts <<'__ALGOFORGE_FILE_2088166f94493b34__'
+import { Router } from "express";
+import { explanationController } from "../controllers/explanation.controller";
+import { requireAuth } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+import { aiRateLimiter } from "../middleware/rate-limit";
+
+const router = Router();
+
+router.post(
+  "/",
+  requireAuth,
+  requireCsrf,
+  aiRateLimiter(),
+  explanationController.explain,
+);
+
+export default router;
+__ALGOFORGE_FILE_2088166f94493b34__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm/detail.service.ts <<'__ALGOFORGE_FILE_37867cdac435c14f__'
+/**
+ * Fetches a single algorithm by id or slug.
+ * Each (id/slug + language) combination gets its own cache entry
+ * so switching display language doesn't cause a cache miss cascade.
+ */
+import { AlgorithmDetailSchema, type AlgorithmDetail } from "@algoforge/forge";
+import { algorithmRepository, type AlgorithmDetailRow } from "../../repositories/algorithm.repository";
+import { layeredCache } from "../lib/Layered.cache";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+
+export async function getAlgorithmById(id: string, lang?: string): Promise<AlgorithmDetail> {
+  const key    = algorithmCacheKeys.byId(id, lang);
+  const cached = await layeredCache.get<AlgorithmDetail>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findById(id);
+  if (!row) throw AppError.notFound("Algorithm not found.");
+
+  const result = toAlgorithmDetail(row, lang);
+  await layeredCache.set(key, result);
+  return result;
+}
+
+export async function getAlgorithmBySlug(slug: string, lang?: string): Promise<AlgorithmDetail> {
+  const key    = algorithmCacheKeys.bySlug(slug, lang);
+  const cached = await layeredCache.get<AlgorithmDetail>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findBySlug(slug);
+  if (!row) throw AppError.notFound("Algorithm not found.");
+
+  const result = toAlgorithmDetail(row, lang);
+  await layeredCache.set(key, result);
+  return result;
+}
+
+// ─── Private ──────────────────────────────────────────────────────────────────
+
+/**
+ * Choose the best display code for the requested language.
+ * Priority: requested lang → javascript → first available.
+ */
+function pickDisplayCode(
+  codes: { language: string; code: string }[],
+  lang?: string,
+): { language: string; code: string } | null {
+  if (!codes.length) return null;
+  const preferred = lang ?? "javascript";
+  return (
+    codes.find((c) => c.language === preferred) ??
+    codes.find((c) => c.language === "javascript") ??
+    codes[0]
+  );
+}
+
+function toAlgorithmDetail(
+  row: NonNullable<AlgorithmDetailRow>,
+  lang?: string,
+): AlgorithmDetail {
+  return AlgorithmDetailSchema.parse({
+    id:          row.id,
+    slug:        row.slug,
+    name:        row.name,
+    description: row.description,
+    difficulty:  row.difficulty,
+    complexity:
+      row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity
+        ? {
+            timeBest:    row.timeBest,
+            timeAverage: row.timeAverage,
+            timeWorst:   row.timeWorst,
+            space:       row.spaceComplexity,
+          }
+        : null,
+    displayCode: pickDisplayCode(row.displayCodes, lang),
+    tags:        row.tags.map((t: { tag: { id: string; label: string } }) => t.tag),
+    forge:       row.forge
+      ? {
+          forgeCode:   row.forge.forgeCode,
+          inputSchema: row.forge.inputSchema,
+          guardRanges: row.forge.guardRanges,
+          version:     row.forge.version,
+        }
+      : null,
+  });
+}
+__ALGOFORGE_FILE_37867cdac435c14f__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm/mutation.service.ts <<'__ALGOFORGE_FILE_b6221cd3f188f955__'
+import { Prisma, Difficulty } from "@algoforge/db";
+import {
+  ForgeCodeSchema,
+  GuardRangesSchema,
+  InputSchema,
+  type CreateAlgorithm,
+  type UpdateAlgorithm,
+} from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { categoryRepository } from "../../repositories/category.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+import { layeredCache } from "../lib/Layered.cache";
+
+type ExistingForge = {
+  forgeCode:   Prisma.JsonValue;
+  inputSchema: Prisma.JsonValue;
+  guardRanges: Prisma.JsonValue;
+  version:     number;
+} | null;
+
+export async function createAlgorithm(input: CreateAlgorithm) {
+  if (input.forge) validateForge(input.forge);
+  const category = await resolveCategory(input.categoryId);
+  return algorithmRepository.create(toCreateData(input, category.id));
+}
+
+export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
+  const existing = await algorithmRepository.findById(id);
+  if (!existing) throw AppError.notFound("Algorithm not found.");
+
+  if (input.forge) {
+    validateForge(input.forge);
+    if (!existing.forge) {
+      if (!input.forge.forgeCode || !input.forge.inputSchema || !input.forge.guardRanges) {
+        throw AppError.badRequest(
+          "forgeCode, inputSchema, and guardRanges are all required when adding forge configuration for the first time.",
+        );
+      }
+    }
+  }
+
+  const categoryId = input.categoryId
+    ? (await resolveCategory(input.categoryId)).id
+    : undefined;
+
+  const updated = await algorithmRepository.update(
+    id,
+    toUpdateData(input, existing.forge ?? null, categoryId),
+  );
+  await bustCache(id, existing.slug);
+  return updated;
+}
+
+export async function deleteAlgorithm(id: string): Promise<void> {
+  const existing = await algorithmRepository.findById(id);
+  if (!existing) throw AppError.notFound("Algorithm not found.");
+
+  await algorithmRepository.delete(id);
+  await bustCache(id, existing.slug);
+}
+
+async function bustCache(id: string, slug: string): Promise<void> {
+  await Promise.all([
+    layeredCache.del(algorithmCacheKeys.byId(id)),
+    layeredCache.del(algorithmCacheKeys.bySlug(slug)),
+    layeredCache.del(algorithmCacheKeys.viz(id)),
+    layeredCache.del("meta:slugs"),
+  ]);
+}
+
+function validateForge(
+  forge: { forgeCode?: unknown; guardRanges?: unknown; inputSchema?: unknown },
+): void {
+  try {
+    if (forge.forgeCode   !== undefined) ForgeCodeSchema.parse(forge.forgeCode);
+    if (forge.guardRanges !== undefined) GuardRangesSchema.parse(forge.guardRanges);
+    if (forge.inputSchema !== undefined) InputSchema.parse(forge.inputSchema);
+  } catch (err) {
+    throw AppError.badRequest(
+      "Invalid forge configuration: " + (err instanceof Error ? err.message : "unknown"),
+    );
+  }
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue;
+}
+
+function toCreateData(input: CreateAlgorithm, categoryId: string) {
+  return {
+    slug:            input.slug,
+    name:            input.name,
+    description:     input.description,
+    categoryId,
+    difficulty:      input.difficulty as Difficulty,
+    isPublished:     input.isPublished ?? false,
+    timeBest:        input.complexity?.time?.best    ?? null,
+    timeAverage:     input.complexity?.time?.average ?? null,
+    timeWorst:       input.complexity?.time?.worst   ?? null,
+    spaceComplexity: input.complexity?.space         ?? null,
+    displayCodes:    input.displayCodes,
+    forge: {
+      forgeCode:   toJsonValue(input.forge.forgeCode),
+      inputSchema: toJsonValue(input.forge.inputSchema),
+      guardRanges: toJsonValue(input.forge.guardRanges),
+    },
+    tags: input.tags,
+  };
+}
+
+function toUpdateData(
+  input: UpdateAlgorithm,
+  existingForge: ExistingForge,
+  categoryId?: string,
+): Prisma.AlgorithmUpdateInput & {
+  displayCodes?: { language: string; code: string }[];
+  tags?:         string[];
+} {
+  return {
+    ...(input.slug        && { slug:        input.slug }),
+    ...(input.name        && { name:        input.name }),
+    ...(input.description && { description: input.description }),
+    ...(categoryId && { categoryId }),
+    ...(input.difficulty  && { difficulty:  input.difficulty as Difficulty }),
+    ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
+    ...(input.complexity  && {
+      timeBest:        input.complexity.time?.best    ?? null,
+      timeAverage:     input.complexity.time?.average ?? null,
+      timeWorst:       input.complexity.time?.worst   ?? null,
+      spaceComplexity: input.complexity.space         ?? null,
+    }),
+    ...(input.displayCodes && { displayCodes: input.displayCodes }),
+    ...(input.tags         && { tags:         input.tags }),
+    ...(input.forge        && buildForgeWrite(input.forge, existingForge)),
+  };
+}
+
+function buildForgeWrite(
+  forgeInput: NonNullable<UpdateAlgorithm["forge"]>,
+  existingForge: ExistingForge,
+): Pick<Prisma.AlgorithmUpdateInput, "forge"> {
+  if (!existingForge) {
+    return {
+      forge: {
+        create: {
+          forgeCode:   toJsonValue(forgeInput.forgeCode),
+          inputSchema: toJsonValue(forgeInput.inputSchema),
+          guardRanges: toJsonValue(forgeInput.guardRanges),
+          version:     1,
+        },
+      },
+    };
+  }
+
+  return {
+    forge: {
+      update: {
+        ...(forgeInput.forgeCode   !== undefined && { forgeCode:   toJsonValue(forgeInput.forgeCode) }),
+        ...(forgeInput.inputSchema !== undefined && { inputSchema: toJsonValue(forgeInput.inputSchema) }),
+        ...(forgeInput.guardRanges !== undefined && { guardRanges: toJsonValue(forgeInput.guardRanges) }),
+      },
+    },
+  };
+}
+
+async function resolveCategory(categoryIdOrLabel: string) {
+  const category = await categoryRepository.findByIdentifier(categoryIdOrLabel);
+  if (!category) {
+    throw AppError.badRequest(`Category "${categoryIdOrLabel}" does not exist.`);
+  }
+  return category;
+}
+__ALGOFORGE_FILE_b6221cd3f188f955__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm/query.service.ts <<'__ALGOFORGE_FILE_9d7c3477294e989f__'
+/**
+ * Lists and searches algorithms.
+ * Results are cached; the cache is busted on any mutation via mutation.service.ts.
+ */
+import { Prisma, Difficulty } from "@algoforge/db";
+import { AlgorithmListItemSchema, type AlgorithmListItem } from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { layeredCache } from "../lib/Layered.cache";
+import type { AlgorithmQuery } from "../../types/algorithm.types";
+
+export async function listAlgorithms(query: AlgorithmQuery): Promise<AlgorithmListItem[]> {
+  const key    = algorithmCacheKeys.list(query);
+  const cached = await layeredCache.get<AlgorithmListItem[]>(key);
+  if (cached) return cached;
+
+  const rows   = await algorithmRepository.findMany(buildWhere(query));
+
+  // The DB returns flat complexity fields; the schema expects a nested object.
+  const result = rows.map((row) =>
+    AlgorithmListItemSchema.parse({
+      id:         row.id,
+      slug:       row.slug,
+      name:       row.name,
+      categoryId: row.categoryId,
+      difficulty: row.difficulty,
+      complexity:
+        row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity
+          ? {
+              timeBest:    row.timeBest,
+              timeAverage: row.timeAverage,
+              timeWorst:   row.timeWorst,
+              space:       row.spaceComplexity,
+            }
+          : null,
+    }),
+  );
+
+  await layeredCache.set(key, result);
+  return result;
+}
+
+// ─── Private ──────────────────────────────────────────────────────────────────
+
+function buildWhere(query: AlgorithmQuery): Prisma.AlgorithmWhereInput {
+  return {
+    ...(query.categoryId                ? { categoryId:  query.categoryId }                : {}),
+    ...(query.difficulty                ? { difficulty:  query.difficulty as Difficulty }  : {}),
+    ...(query.isPublished !== undefined ? { isPublished: query.isPublished }               : {}),
+    ...(query.search ? {
+      OR: [
+        { name:        { contains: query.search, mode: Prisma.QueryMode.insensitive } },
+        { description: { contains: query.search, mode: Prisma.QueryMode.insensitive } },
+      ],
+    } : {}),
+  };
+}
+__ALGOFORGE_FILE_9d7c3477294e989f__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/algorithm/viz.service.ts <<'__ALGOFORGE_FILE_d184fabe50595b7b__'
+/**
+ * Returns the forge / visualisation config for an algorithm.
+ * The forge config is the most frequently read object for the visualiser UI
+ * so it gets its own dedicated cache key.
+ */
+import { AlgorithmExecutionSchema, type AlgorithmExecution } from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+import { layeredCache } from "../lib/Layered.cache";
+
+export async function getAlgorithmVisualization(id: string): Promise<AlgorithmExecution> {
+  const key    = algorithmCacheKeys.viz(id);
+  const cached = await layeredCache.get<AlgorithmExecution>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findById(id);
+  if (!row)       throw AppError.notFound("Algorithm not found.");
+  if (!row.forge) throw AppError.notFound("No forge configuration found for this algorithm.");
+
+  const result = AlgorithmExecutionSchema.parse({
+    algorithmId: row.id,
+    name:        row.name,
+    forge: {
+      forgeCode:   row.forge.forgeCode,
+      inputSchema: row.forge.inputSchema,
+      guardRanges: row.forge.guardRanges,
+      version:     row.forge.version,
+    },
+  });
+
+  await layeredCache.set(key, result);
+  return result;
+}
+__ALGOFORGE_FILE_d184fabe50595b7b__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/analysis.service.ts <<'__ALGOFORGE_FILE_8a44c88a4d2e3fcb__'
+/**
+ * Analysis service.
+ *
+ * Cache strategy (two-layer LRU + Redis):
+ *   - AI result is cached by SHA-256 of (language + code) so identical
+ *     submissions never hit the AI provider twice.
+ *   - The DB record is always written — cache only shields the AI call.
+ */
+import { createHash, randomBytes } from "crypto";
+import type { Prisma } from "@algoforge/db";
+import { env } from "../config/env";
+import { analysisRepository } from "../repositories/analysis.repository";
+import { aiService } from "./ai.service";
+import { AppError } from "../utils/app-error";
+import { SharedAnalysisSchema, type AnalysisResult } from "@algoforge/analysis";
+import type { AnalysisInput, AnalysisHistoryQuery } from "../validation/analysis";
+import { layeredCache } from "./lib/layered-cache";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function aiCacheKey(language: string, code: string): string {
+  const hash = createHash("sha256").update(`${language}:${code}`).digest("hex").slice(0, 32);
+  return `ai:analysis:${hash}`;
+}
+
+function generateShareId(): string {
+  return randomBytes(9).toString("base64url");
+}
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
+class AnalysisService {
+  async createAnalysis(userId: string, input: AnalysisInput) {
+    const key = aiCacheKey(input.language, input.code);
+
+    // Try cache first — avoids calling the AI provider for duplicate code
+    let aiResult = await layeredCache.get<AnalysisResult>(key);
+
+    if (!aiResult) {
+      aiResult = await aiService.analyzeCode({
+        code:     input.code,
+        language: input.language,
+      });
+      await layeredCache.set(key, aiResult);
+    }
+
+    return analysisRepository.create({
+      userId,
+      code:       input.code,
+      language:   input.language,
+      complexity: aiResult.complexity?.time?.average ?? null,
+      suggestion: aiResult.improvements?.[0]?.suggestion ?? null,
+      result:     aiResult as object,
+    });
+  }
+
+  async listUserAnalyses(userId: string, query: AnalysisHistoryQuery) {
+    const rows = await analysisRepository.findManyByUser(userId, {
+      cursorCreatedAt: query.cursorCreatedAt,
+      cursorId:        query.cursorId,
+      take:            query.limit,
+    });
+    return { analyses: rows };
+  }
+
+  async getUserAnalysisById(userId: string, analysisId: string) {
+    const analysis = await analysisRepository.findOneByUser(userId, analysisId);
+    if (!analysis) throw AppError.notFound("Analysis not found.");
+    return analysis;
+  }
+
+  async shareAnalysis(userId: string, analysisId: string) {
+    const analysis = await analysisRepository.findForShare(analysisId, userId);
+    if (!analysis) throw AppError.notFound("Analysis not found.");
+
+    // Idempotent — return existing share URL if already public
+    if (analysis.shareId && analysis.isPublic) {
+      return { shareUrl: `${env.webAppUrl}/share/analysis/${analysis.shareId}` };
+    }
+
+    const shareId = generateShareId();
+    await analysisRepository.setPublic(analysisId, shareId);
+    return { shareUrl: `${env.webAppUrl}/share/analysis/${shareId}` };
+  }
+
+  async getPublicAnalysis(shareId: string) {
+    const analysis = await analysisRepository.findPublicByShareId(shareId);
+    if (!analysis) throw AppError.notFound("Analysis not found or not public.");
+
+    return SharedAnalysisSchema.parse({
+      id:        analysis.id,
+      code:      analysis.code,
+      language:  analysis.language,
+      result:    analysis.result,
+      createdAt: analysis.createdAt.toISOString(),
+      creator:   analysis.user
+        ? {
+            id:        analysis.user.id,
+            name:      analysis.user.name,
+            username:  analysis.user.username ?? analysis.user.name,
+            avatarUrl: analysis.user.image,
+          }
+        : undefined,
+    });
+  }
+}
+
+export const analysisService = new AnalysisService();
+__ALGOFORGE_FILE_8a44c88a4d2e3fcb__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/cache.service.ts <<'__ALGOFORGE_FILE_84b468e0bbbd084a__'
+/**
+ * Backward-compatible cache wrapper used by analysis and explanation services.
+ * Internally delegates to the layered (LRU + Redis) cache.
+ * Keys are SHA-256 hashed so arbitrarily long inputs (e.g. source code) stay
+ * within Redis key-length limits.
+ */
+import { createHash } from "crypto";
+import { layeredCache } from "./lib/layered-cache";
+import { env } from "../config/env";
+
+export type CacheNamespace = "ai" | "viz" | "algo";
+
+function buildKey(namespace: CacheNamespace, raw: string): string {
+  const hashed = createHash("sha256").update(raw).digest("hex").slice(0, 32);
+  return `${namespace}:${hashed}`;
+}
+
+export const cacheService = {
+  async get<T>(namespace: CacheNamespace, input: string): Promise<T | null> {
+    return layeredCache.get<T>(buildKey(namespace, input));
+  },
+
+  async set(
+    namespace: CacheNamespace,
+    input: string,
+    value: unknown,
+    ttlSeconds = env.redis.ttlSeconds,
+  ): Promise<void> {
+    await layeredCache.set(buildKey(namespace, input), value, ttlSeconds);
+  },
+
+  async del(namespace: CacheNamespace, input: string): Promise<void> {
+    await layeredCache.del(buildKey(namespace, input));
+  },
+};
+__ALGOFORGE_FILE_84b468e0bbbd084a__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/category.service.ts <<'__ALGOFORGE_FILE_b0cfe5c32de660ec__'
+//# filename: apps/api/src/services/category.service.ts
+
+import {
+  CategoryResponseSchema,
+  type CreateCategory,
+  type UpdateCategory,
+  type CategoryResponse,
+} from "@algoforge/forge";
+import { categoryRepository } from "../repositories/category.repository";
+import { AppError } from "../utils/app-error";
+
+function serialize(category: {
+  id: string;
+  label: string;
+  description: string | null;
+  iconName: string | null;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): CategoryResponse {
+  return CategoryResponseSchema.parse({
+    id: category.id,
+    label: category.label,
+    description: category.description,
+    iconName: category.iconName,
+    sortOrder: category.sortOrder,
+    createdAt: category.createdAt.toISOString(),
+    updatedAt: category.updatedAt.toISOString(),
+  });
+}
+
+class CategoryService {
+  async listCategories(): Promise<CategoryResponse[]> {
+    const rows = await categoryRepository.findAll();
+    return rows.map(serialize);
+  }
+
+  async getCategoryById(id: string): Promise<CategoryResponse> {
+    const row = await categoryRepository.findByIdentifier(id);
+    if (!row) throw AppError.notFound("Category not found.");
+    return serialize(row);
+  }
+
+  async createCategory(input: CreateCategory): Promise<CategoryResponse> {
+
+    
+    console.log("Creating category with input:", input);
+    const normalizedId = normalizeCategoryId(input.id ?? input.label);
+    console.log("Normalized category ID:", normalizedId);
+
+    const existing = await categoryRepository.findByIdentifier(normalizedId);
+    if (existing) throw AppError.badRequest("Category already exists.");
+
+    const row = await categoryRepository.create({
+      id: normalizedId,
+      label: input.label,
+      description: input.description,
+      iconName: input.iconName,
+      sortOrder: input.sortOrder,
+    });
+    return serialize(row);
+  }
+
+  async updateCategory(id: string, input: UpdateCategory): Promise<CategoryResponse> {
+    const existing = await categoryRepository.findByIdentifier(id);
+    if (!existing) throw AppError.notFound("Category not found.");
+
+    const row = await categoryRepository.update(existing.id, {
+      label: input.label,
+      description: input.description,
+      iconName: input.iconName,
+      sortOrder: input.sortOrder,
+    });
+    return serialize(row);
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    const existing = await categoryRepository.findByIdentifier(id);
+    if (!existing) throw AppError.notFound("Category not found.");
+
+    const count = await categoryRepository.countAlgorithmsInCategory(existing.id);
+    if (count > 0) {
+      throw AppError.badRequest(
+        "Cannot delete category with associated algorithms.",
+      );
+    }
+    await categoryRepository.delete(existing.id);
+  }
+}
+
+export const categoryService = new CategoryService();
+
+function normalizeCategoryId(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+
+/*
+
+
+*/
+__ALGOFORGE_FILE_b0cfe5c32de660ec__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/explanation.service.ts <<'__ALGOFORGE_FILE_f03abf60435974e2__'
+import { createHash } from "crypto";
+import { aiService } from "./ai.service";
+import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
+import { processQuery, type QueryScope } from "../ai/query-processor";
+import { buildExplanationPrompt } from "../prompts/explanation.prompt";
+import { formatExplanationResponse, type ExplanationResponse } from "../ai/response-formatter";
+import { AppError } from "../utils/app-error";
+import { layeredCache } from "./lib/Layered.cache";
+
+const EXPLAIN_CACHE_PREFIX = "ai:explain:";
+const MAX_QUERY_LENGTH = 2000;
+
+class ExplanationService {
+  async explain(query: string): Promise<ExplanationResponse> {
+    const trimmed = query.trim();
+
+    if (trimmed.length < 5) {
+      throw AppError.badRequest("Query must be at least 5 characters.");
+    }
+
+    if (trimmed.length > MAX_QUERY_LENGTH) {
+      throw AppError.badRequest(`Query cannot exceed ${MAX_QUERY_LENGTH} characters.`);
+    }
+
+    const cacheKey =
+      EXPLAIN_CACHE_PREFIX +
+      createHash("sha256").update(trimmed.toLowerCase()).digest("hex").slice(0, 32);
+
+    const cached = await layeredCache.get<ExplanationResponse>(cacheKey);
+    if (cached) {
+      return { ...cached, cachedAt: new Date().toISOString() };
+    }
+
+    const scope       = await processQuery(trimmed);
+    const context     = await buildCodebaseContext(scope.targetSlugs);
+    const contextText = serializeContext(context);
+    const prompt      = buildExplanationPrompt(contextText, scope);
+    const raw         = await aiService.generateText([{ role: "user", content: prompt }]);
+
+    const result = formatExplanationResponse(raw, scope, scope.targetRoutes);
+    await layeredCache.set(cacheKey, result);
+
+    return result;
+  }
+}
+
+export const explanationService = new ExplanationService();
+__ALGOFORGE_FILE_f03abf60435974e2__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/explanation-session.service.ts <<'__ALGOFORGE_FILE_29cce2f6a64201ba__'
+import { randomBytes } from "crypto";
+import { explanationSessionRepository } from "../repositories/explanation-session.repository";
+import { processQuery } from "../ai/query-processor";
+import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
+import { buildExplanationPrompt } from "../prompts/explanation.prompt";
+import { aiService } from "./ai.service";
+import { AppError } from "../utils/app-error";
+import { env } from "../config/env";
+import type {
+  CreateSessionInput,
+  SendMessageInput,
+  ListSessionsQuery,
+} from "../validation/explanation-session";
+import { layeredCache } from "./lib/Layered.cache";
+
+export type SessionMessage = {
+  id:        string;
+  role:      "user" | "assistant";
+  content:   string;
+  intent?:   string;
+  createdAt: string;
+};
+
+const SESSION_CACHE_TTL_SECONDS = 300;
+const MAX_STORED_MESSAGES       = 100; // 50 exchanges
+const AI_HISTORY_MESSAGES       = 10;  // last 5 exchanges sent to AI
+
+function sessionCacheKey(id: string): string {
+  return `explain:session:${id}`;
+}
+
+function newMessageId(): string {
+  return randomBytes(6).toString("hex");
+}
+
+function newShareId(): string {
+  return randomBytes(9).toString("base64url");
+}
+
+function buildShareUrl(shareId: string): string {
+  return `${env.webAppUrl}/share/explain/${shareId}`;
+}
+
+class ExplanationSessionService {
+  async createSession(userId: string, input: CreateSessionInput) {
+    return explanationSessionRepository.create(userId, input.title);
+  }
+
+  async listSessions(userId: string, query: ListSessionsQuery) {
+    const sessions = await explanationSessionRepository.findManyByUser(userId, {
+      take:   query.limit,
+      cursor: query.cursor,
+    });
+
+    const nextCursor = sessions.length === query.limit
+      ? (sessions[sessions.length - 1]?.id ?? null)
+      : null;
+
+    return { sessions, nextCursor };
+  }
+
+  async getSession(userId: string, id: string) {
+    const cached = await layeredCache.get<
+      Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
+    >(sessionCacheKey(id));
+
+    if (cached) return cached;
+
+    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
+    await layeredCache.set(sessionCacheKey(id), session, SESSION_CACHE_TTL_SECONDS);
+    return session;
+  }
+
+  async sendMessage(userId: string, sessionId: string, input: SendMessageInput) {
+    const session = await explanationSessionRepository.findOneByUser(sessionId, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
+    const existingMessages = (session.messages as unknown as SessionMessage[]) ?? [];
+
+    const userMessage: SessionMessage = {
+      id:        newMessageId(),
+      role:      "user",
+      content:   input.query,
+      createdAt: new Date().toISOString(),
+    };
+
+    const scope       = await processQuery(input.query);
+    const context     = await buildCodebaseContext(scope.targetSlugs);
+    const contextText = serializeContext(context);
+    const prompt      = buildExplanationPrompt(contextText, scope);
+
+    // Include prior conversation history so the AI has multi-turn context.
+    const history = existingMessages
+      .slice(-AI_HISTORY_MESSAGES)
+      .map((m) => ({
+        role:    m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    const rawAnswer = await aiService.generateText([
+      ...history,
+      { role: "user", content: prompt },
+    ]);
+
+    const assistantMessage: SessionMessage = {
+      id:        newMessageId(),
+      role:      "assistant",
+      content:   rawAnswer.trim(),
+      intent:    scope.intent,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Cap stored history to MAX_STORED_MESSAGES (drop oldest when over limit)
+    const updatedMessages: SessionMessage[] = [
+      ...existingMessages.slice(-(MAX_STORED_MESSAGES - 2)),
+      userMessage,
+      assistantMessage,
+    ];
+
+    const title = session.title ?? input.query.slice(0, 80);
+    await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
+    await layeredCache.del(sessionCacheKey(sessionId));
+
+    return { userMessage, assistantMessage };
+  }
+
+  async deleteSession(userId: string, id: string): Promise<void> {
+    const result = await explanationSessionRepository.delete(id, userId);
+    if (result.count === 0) throw AppError.notFound("Session not found.");
+    await layeredCache.del(sessionCacheKey(id));
+  }
+
+  async shareSession(userId: string, id: string) {
+    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
+    if (session.shareId && session.isPublic) {
+      return { shareUrl: buildShareUrl(session.shareId) };
+    }
+
+    const shareId = newShareId();
+    await explanationSessionRepository.share(id, shareId);
+    await layeredCache.del(sessionCacheKey(id));
+
+    return { shareUrl: buildShareUrl(shareId) };
+  }
+
+  async getPublicSession(shareId: string) {
+    const cacheKey = `explain:public:${shareId}`;
+
+    const cached = await layeredCache.get<
+      Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>
+    >(cacheKey);
+    if (cached) return cached;
+
+    const session = await explanationSessionRepository.findPublicByShareId(shareId);
+    if (!session) throw AppError.notFound("Session not found or not public.");
+
+    await layeredCache.set(cacheKey, session, SESSION_CACHE_TTL_SECONDS * 2);
+    return session;
+  }
+}
+
+export const explanationSessionService = new ExplanationSessionService();
+__ALGOFORGE_FILE_29cce2f6a64201ba__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/lib
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/lib/index.ts <<'__ALGOFORGE_FILE_1e5769a816e55301__'
+export { layeredCache as cache } from "./layered-cache";
+__ALGOFORGE_FILE_1e5769a816e55301__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/lib
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/lib/Layered.cache.ts <<'__ALGOFORGE_FILE_10df855dc8b8556a__'
+/**
+ * Layered cache — L1 (LRU) + L2 (Redis).
+ *
+ * Read path:
+ *   1. Check LRU — return immediately on hit (no network).
+ *   2. Check Redis — warm LRU on hit using the remaining Redis TTL, then return.
+ *      (Using remaining TTL prevents L1 from serving data after L2 has expired it.)
+ *   3. Return null (caller fetches from source of truth).
+ *
+ * Write path: write to both layers atomically (LRU first, then Redis).
+ * Delete path: evict from both layers.
+ */
+import { lruCache } from "./lru.cache";
+import { redisCache } from "./redis.cache";
+import { env } from "../../config/env";
+
+const DEFAULT_TTL_SECONDS = env.redis.ttlSeconds;
+
+export const layeredCache = {
+  async get<T>(key: string): Promise<T | null> {
+    // L1 hit
+    const l1 = lruCache.get(key);
+    if (l1 !== null) return JSON.parse(l1) as T;
+
+    // L2 hit — warm L1 for the next request on this instance.
+    // Use the remaining Redis TTL so L1 never outlives L2.
+    const l2 = await redisCache.get(key);
+    if (l2 !== null) {
+      const remainingTtlSeconds = await redisCache.getTtl(key);
+      const ttlMs =
+        remainingTtlSeconds > 0
+          ? remainingTtlSeconds * 1000
+          : DEFAULT_TTL_SECONDS * 1000;
+      lruCache.set(key, l2, ttlMs);
+      return JSON.parse(l2) as T;
+    }
+
+    return null;
+  },
+
+  async set(key: string, value: unknown, ttlSeconds = DEFAULT_TTL_SECONDS): Promise<void> {
+    const serialised = JSON.stringify(value);
+    lruCache.set(key, serialised, ttlSeconds * 1000);
+    await redisCache.set(key, serialised, ttlSeconds);
+  },
+
+  async del(key: string): Promise<void> {
+    lruCache.del(key);
+    await redisCache.del(key);
+  },
+};
+__ALGOFORGE_FILE_10df855dc8b8556a__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/api/src/services/providers
+cat > ./.phase1-backup/20261103-201941/apps/api/src/services/providers/openrouter.provider.ts <<'__ALGOFORGE_FILE_0d6e11f8e351467d__'
+import OpenAI from "openai";
+import { env } from "../../config/env";
+import { AppError } from "../../utils/app-error";
+import type {
+  AIGenerateRequest,
+  AIGenerateResponse,
+  AIMessage,
+  AIProvider,
+} from "./ai-provider";
+
+type OpenRouterMessage = {
+  role: AIMessage["role"];
+  content: string;
+  reasoning_details?: unknown;
+};
+
+type OpenRouterChoiceMessage = {
+  content?: unknown;
+  reasoning_details?: unknown;
+};
+
+type OpenRouterCompletionResponse = {
+  choices?: Array<{ message?: OpenRouterChoiceMessage }>;
+};
+
+type OpenRouterChatRequest = {
+  model: string;
+  messages: OpenRouterMessage[];
+  reasoning: { enabled: boolean };
+};
+
+export class OpenRouterProvider implements AIProvider {
+  readonly name = "openrouter";
+
+  private readonly clientsByKey = new Map<string, OpenAI>();
+  private readonly keyIndexByModel = new Map<string, number>();
+  private modelIndex = 0;
+
+  constructor(
+    private readonly config: {
+      apiKeys: string[];
+      freeModels: string[];
+      baseUrl: string;
+      appName?: string;
+      siteUrl?: string;
+    },
+  ) {
+    if (!config.apiKeys.length) {
+      throw AppError.internal("Missing OpenRouter API keys.");
+    }
+    if (!config.freeModels.length) {
+      throw AppError.internal("Missing OpenRouter free models.");
+    }
+  }
+
+  async generate(request: AIGenerateRequest): Promise<AIGenerateResponse> {
+    if (!request.messages.length) {
+      throw AppError.badRequest("AI request must include at least one message.");
+    }
+
+    let lastRetriableError: unknown;
+
+    for (let modelOffset = 0; modelOffset < this.config.freeModels.length; modelOffset++) {
+      const modelState = this.getModelState(modelOffset);
+
+      for (let keyOffset = 0; keyOffset < this.config.apiKeys.length; keyOffset++) {
+        const keyState = this.getKeyState(modelState.model, keyOffset);
+
+        try {
+          const client = this.getClient(keyState.apiKey);
+          const completion = await client.chat.completions.create({
+            model: modelState.model,
+            messages: this.toOpenRouterMessages(request.messages),
+            reasoning: { enabled: true },
+          } as OpenRouterChatRequest);
+
+          const assistantMessage = this.toAssistantMessage(
+            completion as unknown as OpenRouterCompletionResponse,
+          );
+
+          this.modelIndex = modelState.actualIndex;
+          this.keyIndexByModel.set(
+            modelState.model,
+            (keyState.actualIndex + 1) % this.config.apiKeys.length,
+          );
+
+          return {
+            model: modelState.model,
+            message: assistantMessage,
+            history: [...request.messages, assistantMessage],
+          };
+        } catch (error) {
+          const statusCode = getStatusCode(error);
+
+          if (statusCode === 429 || statusCode === 503) {
+            lastRetriableError = error;
+            this.keyIndexByModel.set(
+              modelState.model,
+              (keyState.actualIndex + 1) % this.config.apiKeys.length,
+            );
+            if (!env.isProduction) {
+              console.warn(
+                `[AI][openrouter] Key ${keyState.actualIndex} throttled for model "${modelState.model}". Rotating.`,
+              );
+            }
+            continue;
+          }
+
+          throw this.normalizeFatalError(error);
+        }
+      }
+
+      if (!env.isProduction) {
+        console.warn(`[AI][openrouter] All keys exhausted for model "${modelState.model}". Rotating model.`);
+      }
+      this.modelIndex = (modelState.actualIndex + 1) % this.config.freeModels.length;
+    }
+
+    throw this.normalizeRetriableError(lastRetriableError);
+  }
+
+  private getModelState(offset: number): { actualIndex: number; model: string } {
+    const actualIndex = (this.modelIndex + offset) % this.config.freeModels.length;
+    return { actualIndex, model: this.config.freeModels[actualIndex] };
+  }
+
+  private getKeyState(model: string, offset: number): { actualIndex: number; apiKey: string } {
+    const startIndex = this.keyIndexByModel.get(model) ?? 0;
+    const actualIndex = (startIndex + offset) % this.config.apiKeys.length;
+    return { actualIndex, apiKey: this.config.apiKeys[actualIndex] };
+  }
+
+  private getClient(apiKey: string): OpenAI {
+    const cached = this.clientsByKey.get(apiKey);
+    if (cached) return cached;
+
+    const client = new OpenAI({
+      apiKey,
+      baseURL: this.config.baseUrl,
+      defaultHeaders: {
+        ...(this.config.siteUrl ? { "HTTP-Referer": this.config.siteUrl } : {}),
+        ...(this.config.appName ? { "X-Title": this.config.appName } : {}),
+      },
+    });
+
+    this.clientsByKey.set(apiKey, client);
+    return client;
+  }
+
+  private toOpenRouterMessages(messages: AIMessage[]): OpenRouterMessage[] {
+    return messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      ...(m.reasoning_details !== undefined ? { reasoning_details: m.reasoning_details } : {}),
+    }));
+  }
+
+  private toAssistantMessage(response: OpenRouterCompletionResponse): AIMessage {
+    const message = response.choices?.[0]?.message;
+    const content = this.extractContent(message?.content);
+    if (!content) throw AppError.badGateway("Empty response from OpenRouter.");
+    return {
+      role: "assistant",
+      content,
+      ...(message?.reasoning_details !== undefined ? { reasoning_details: message.reasoning_details } : {}),
+    };
+  }
+
+  private extractContent(content: unknown): string {
+    if (typeof content === "string") return content.trim();
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => {
+          if (typeof part === "string") return part;
+          if (part && typeof part === "object" && "text" in part) {
+            return (part as { text: string }).text;
+          }
+          return "";
+        })
+        .join("")
+        .trim();
+    }
+    return "";
+  }
+
+  private normalizeFatalError(error: unknown): AppError {
+    const statusCode = getStatusCode(error);
+    if (statusCode === 401 || statusCode === 403) {
+      return AppError.badGateway("OpenRouter authentication failed.");
+    }
+    return AppError.badGateway("OpenRouter request failed.");
+  }
+
+  private normalizeRetriableError(_error: unknown): AppError {
+    return AppError.badGateway("All OpenRouter keys and models are currently exhausted.");
+  }
+}
+
+function getStatusCode(error: unknown): number | undefined {
+  if (error && typeof error === "object") {
+    const err = error as Record<string, unknown>;
+    const status = err["status"] ?? err["statusCode"];
+    return typeof status === "number" ? status : undefined;
+  }
+  return undefined;
+}
+__ALGOFORGE_FILE_0d6e11f8e351467d__
+
+mkdir -p ./.phase1-backup/20261103-201941/apps/web
+cat > ./.phase1-backup/20261103-201941/apps/web/next.config.ts <<'__ALGOFORGE_FILE_7cd01a73f2708a82__'
+import path from "node:path";
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(process.cwd(), "../.."),
+  },
+};
+
+export default nextConfig;
+__ALGOFORGE_FILE_7cd01a73f2708a82__
+
+mkdir -p ./.phase1-backup/20261103-201941
+cat > ./.phase1-backup/20261103-201941/package.json <<'__ALGOFORGE_FILE_7013ef55b29f593f__'
+{
+  "name": "algoforge",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
+    "build": "pnpm --filter db build && pnpm --filter api build && pnpm --filter web build",
+    "db:migrate": "pnpm --filter db migrate",
+    "db:generate": "pnpm --filter db generate",
+    "db:studio": "pnpm --filter db studio",
+    "dev:web": "pnpm --filter @algoforge/web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build:web": "pnpm --filter @algoforge/web build",
+    "build:api": "pnpm --filter api build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.9.3"
+  }
+}
+
+__ALGOFORGE_FILE_7013ef55b29f593f__
+
+mkdir -p ./.phase1-backup/20261103-201941/packages/analysis/src
+cat > ./.phase1-backup/20261103-201941/packages/analysis/src/analysis.schema.ts <<'__ALGOFORGE_FILE_379c1b0288b42b89__'
+// This file is intentionally empty.
+// SharedAnalysisSchema and all other analysis types are defined in ./schema.ts
+// and re-exported from ./index.ts. Import from "@algoforge/analysis" directly.
+__ALGOFORGE_FILE_379c1b0288b42b89__
+
+mkdir -p ./.phase1-backup/20261103-201941/packages/db
+cat > ./.phase1-backup/20261103-201941/packages/db/package.json <<'__ALGOFORGE_FILE_b3aaed2ab0a94e33__'
+{
+  "name": "@algoforge/db",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "migrate": "prisma migrate dev --name init",
+    "generate": "prisma generate",
+    "studio": "prisma studio",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "prisma": "^5.22.0",
+    "typescript": "^5.3.3"
+  }
+}
+
+__ALGOFORGE_FILE_b3aaed2ab0a94e33__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api
+cat > ./.phase2-backup/20261103-210030/apps/api/package.json <<'__ALGOFORGE_FILE_0932cdf0c92d8daa__'
+{
+  "name": "api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsup",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@google/genai": "^1.50.1",
+    "@prisma/client": "5.22.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "google-auth-library": "^10.6.2",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
+    "lru-cache": "^11.3.5",
+    "openai": "^4.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@algoforge/analysis": "workspace:*",
+    "@algoforge/db": "workspace:*",
+    "@algoforge/forge": "workspace:*",
+    "@eslint/js": "^9.39.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.39.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^5.0.5"
+  }
+}
+
+__ALGOFORGE_FILE_0932cdf0c92d8daa__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src
+cat > ./.phase2-backup/20261103-210030/apps/api/src/app.ts <<'__ALGOFORGE_FILE_45cae6dbc65340c4__'
+import cors from "cors";
+import express from "express";
+import { env } from "./config/env";
+import { errorHandler } from "./middleware/error-handler";
+import { notFoundHandler } from "./middleware/not-found";
+import { securityHeaders } from "./middleware/security-headers";
+import { generalRateLimiter } from "./middleware/rate-limit";
+
+import adminRouter              from "./routes/admin";
+import algorithmRouter          from "./routes/algorithm";
+import analysisRouter           from "./routes/analysis";
+import authRouter               from "./routes/auth";
+import categoryRouter           from "./routes/category";
+import healthRouter             from "./routes/health";
+import shareRouter              from "./routes/share";
+import explanationRouter        from "./routes/explanation";
+import explanationSessionRouter from "./routes/explanation-session";
+
+const app = express();
+
+app.set("trust proxy", 1);
+
+app.use(securityHeaders);
+app.use(
+  cors({
+    origin:         env.webAppUrl,
+    credentials:    true,
+    methods:        ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Admin-Secret"],
+  }),
+);
+app.use(express.json({ limit: "256kb" }));
+
+// Liveness (/health) and readiness (/ready)
+app.use(healthRouter);
+
+app.use("/api/auth", authRouter);
+app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
+app.use("/api/categories", categoryRouter);
+app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
+app.use("/api/analyses",  generalRateLimiter(), analysisRouter);
+
+// Sessions mounted at a path that cannot be prefix-matched by the explain router.
+app.use("/api/explain-sessions", explanationSessionRouter);
+app.use("/api/explain",          explanationRouter);
+
+app.use("/api/share", shareRouter);
+app.use("/api/admin", adminRouter);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export { app };
+
+__ALGOFORGE_FILE_45cae6dbc65340c4__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/config
+cat > ./.phase2-backup/20261103-210030/apps/api/src/config/env.ts <<'__ALGOFORGE_FILE_072722a592339897__'
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const AI_PROVIDERS = ["gemini", "openrouter"] as const;
+type AIProvider = (typeof AI_PROVIDERS)[number];
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function parseInteger(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (rawValue === undefined || rawValue.trim() === "") return fallback;
+  const parsed = Number(rawValue);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(
+      `Environment variable ${name} must be a positive integer (got "${rawValue}").`,
+    );
+  }
+  return parsed;
+}
+
+function parseStringEnum<T extends string>(
+  name: string,
+  allowedValues: readonly T[],
+  fallback: T,
+): T {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+  if (!allowedValues.includes(rawValue as T))
+    throw new Error(
+      `Environment variable ${name} must be one of: ${allowedValues.join(", ")}.`,
+    );
+  return rawValue as T;
+}
+
+function parseList(name: string): string[] {
+  const rawValue = process.env[name];
+  if (!rawValue) return [];
+  return rawValue
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+const port = parseInteger("PORT", 4000);
+const nodeEnv = process.env.NODE_ENV ?? "development";
+const isProduction = nodeEnv === "production";
+const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
+const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
+
+// Provider-specific validation: only the selected provider's settings are required.
+const openRouterApiKeys = parseList("OPENROUTER_API_KEYS");
+const openRouterFreeModels = parseList("OPENROUTER_FREE_MODELS");
+if (aiProvider === "openrouter") {
+  if (openRouterApiKeys.length === 0)
+    throw new Error("OPENROUTER_API_KEYS must be set when AI_PROVIDER=openrouter.");
+  if (openRouterFreeModels.length === 0)
+    throw new Error("OPENROUTER_FREE_MODELS must be set when AI_PROVIDER=openrouter.");
+}
+const geminiApiKey =
+  aiProvider === "gemini" ? requireEnv("GEMINI_API_KEY") : (process.env.GEMINI_API_KEY ?? "");
+// No hard-coded model: it must be chosen explicitly when Gemini is the provider.
+const aiModel = aiProvider === "gemini" ? requireEnv("AI_MODEL") : (process.env.AI_MODEL ?? "");
+
+export const env = {
+  nodeEnv,
+  isProduction,
+  port,
+  apiBaseUrl,
+  webAppUrl: process.env.WEB_APP_URL ?? "http://localhost:3000",
+  cookieDomain: process.env.COOKIE_DOMAIN,
+  googleClientId: requireEnv("GOOGLE_CLIENT_ID"),
+  googleClientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
+  jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
+  jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
+  accessTokenTtlMinutes: parseInteger("ACCESS_TOKEN_TTL_MINUTES", 15),
+  refreshTokenTtlDays: parseInteger("REFRESH_TOKEN_TTL_DAYS", 30),
+  authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
+  authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
+  geminiApiKey,
+  // NOTE: hard-coded default kept on purpose; removed in Phase 2 (S-04).
+  adminUpgradeSecret:
+    process.env.ADMIN_UPGRADE_SECRET ?? "1d201bf1-eb81-42ec-bd13-3e627b0fc4e9",
+  ai: {
+    provider: aiProvider as AIProvider,
+    model: aiModel,
+    timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
+    maxRetries: parseInteger("AI_MAX_RETRIES", 1),
+  },
+  openRouter: {
+    baseUrl:
+      process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+    apiKeys: openRouterApiKeys,
+    freeModels: openRouterFreeModels,
+    appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
+    siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
+  },
+  redis: {
+    url: process.env.REDIS_URL ?? "redis://localhost:6379",
+    ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
+    aiRateLimitPerHour: parseInteger("AI_RATE_LIMIT_PER_HOUR", 5),
+    defaultRateLimitPerMinute: parseInteger("DEFAULT_RATE_LIMIT_PER_MINUTE", 10),
+  },
+};
+
+export const authCookies = {
+  accessToken: "af_access",
+  refreshToken: "af_refresh",
+  csrfToken: "af_csrf",
+  oauthState: "af_oauth_state",
+} as const;
+
+export const googleOAuthConfig = {
+  redirectUri: `${apiBaseUrl}/api/auth/google/callback`,
+  scopes: ["openid", "email", "profile"],
+};
+
+__ALGOFORGE_FILE_072722a592339897__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/controllers
+cat > ./.phase2-backup/20261103-210030/apps/api/src/controllers/admin.controller.ts <<'__ALGOFORGE_FILE_5b1ba918afc2dc3a__'
+//# filename: apps/api/src/controllers/admin.controller.ts
+
+import { Request, Response } from "express";
+import { adminService } from "../services/admin.service";
+import { asyncHandler } from "../utils/async-handler";
+import { AppError } from "../utils/app-error";
+
+class AdminController {
+  /**
+   * POST /api/admin/upgrade-user
+   * Body: { userId: string }
+   * Role is always hardcoded server-side. Never read from body.
+   */
+  upgradeUser = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.body as { userId?: unknown };
+    if (typeof userId !== "string" || !userId.trim()) {
+      throw AppError.badRequest("userId is required.");
+    }
+    const result = await adminService.upgradeToAdmin(userId.trim());
+    res.json({
+      changed: result.changed,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+      },
+    });
+  });
+
+  /**
+   * POST /api/admin/downgrade-user
+   * Body: { userId: string }
+   */
+  downgradeUser = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.body as { userId?: unknown };
+    if (typeof userId !== "string" || !userId.trim()) {
+      throw AppError.badRequest("userId is required.");
+    }
+    const result = await adminService.downgradeToUser(userId.trim());
+    res.json({
+      changed: result.changed,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+      },
+    });
+  });
+
+  listUsers = asyncHandler(async (_req: Request, res: Response) => {
+    const users = await adminService.listAllUsers();
+    res.json({ users });
+  });
+}
+
+export const adminController = new AdminController();
+__ALGOFORGE_FILE_5b1ba918afc2dc3a__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/controllers
+cat > ./.phase2-backup/20261103-210030/apps/api/src/controllers/algorithm.controller.ts <<'__ALGOFORGE_FILE_3b5000cad2fe2c57__'
+import { Request, Response } from "express";
+import { algorithmService } from "../services/algorithm/index";
+import { asyncHandler } from "../utils/async-handler";
+import { ensureString } from "../validation/common";
+import {
+  parseCreateAlgorithm,
+  parseUpdateAlgorithm,
+  parseAlgorithmQuery,
+} from "../validation/algorithm";
+
+class AlgorithmController {
+  list = asyncHandler(async (req: Request, res: Response) => {
+    const query      = parseAlgorithmQuery(req.query);
+    const algorithms = await algorithmService.listAlgorithms(query);
+    res.json(algorithms);
+  });
+
+  getById = asyncHandler(async (req: Request, res: Response) => {
+    const id        = ensureString(req.params.id, "Algorithm ID is required.");
+    const lang      = typeof req.query.lang === "string" ? req.query.lang : undefined;
+    const algorithm = await algorithmService.getAlgorithmById(id, lang);
+    res.json(algorithm);
+  });
+
+  getBySlug = asyncHandler(async (req: Request, res: Response) => {
+    const slug      = ensureString(req.params.slug, "Algorithm slug is required.");
+    const lang      = typeof req.query.lang === "string" ? req.query.lang : undefined;
+    const algorithm = await algorithmService.getAlgorithmBySlug(slug, lang);
+    res.json(algorithm);
+  });
+
+  getVisualize = asyncHandler(async (req: Request, res: Response) => {
+    const id        = ensureString(req.params.id, "Algorithm ID is required.");
+    const execution = await algorithmService.getAlgorithmExecution(id);
+    res.json(execution);
+  });
+
+  create = asyncHandler(async (req: Request, res: Response) => {
+    const input   = parseCreateAlgorithm(req.body);
+    const created = await algorithmService.createAlgorithm(input);
+    res.status(201).json(created);
+  });
+
+  update = asyncHandler(async (req: Request, res: Response) => {
+    const id      = ensureString(req.params.id, "Algorithm ID is required.");
+    const input   = parseUpdateAlgorithm(req.body);
+    const updated = await algorithmService.updateAlgorithm(id, input);
+    res.status(200).json(updated);
+  });
+
+  delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Algorithm ID is required.");
+    await algorithmService.deleteAlgorithm(id);
+    res.status(204).send();
+  });
+}
+
+export const algorithmController = new AlgorithmController();
+__ALGOFORGE_FILE_3b5000cad2fe2c57__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/controllers
+cat > ./.phase2-backup/20261103-210030/apps/api/src/controllers/auth.controller.ts <<'__ALGOFORGE_FILE_0a1dd2758f0b303d__'
+import { Request, Response } from "express";
+import { authCookies, env } from "../config/env";
+import { authService } from "../services/auth.service";
+import { userService } from "../services/user.service";
+import { adminService } from "../services/admin.service";
+import { AppError } from "../utils/app-error";
+import { asyncHandler } from "../utils/async-handler";
+import {
+  clearAuthCookies,
+  clearOAuthStateCookie,
+  getCookie,
+  setAuthCookies,
+  setOAuthStateCookie,
+} from "../utils/cookies";
+import { ensureString } from "../validation/common";
+
+class AuthController {
+  startGoogleAuth = asyncHandler(async (_req: Request, res: Response) => {
+    const { url, state } = authService.buildGoogleAuthorizationUrl();
+    setOAuthStateCookie(res, state);
+    res.redirect(url);
+  });
+
+  handleGoogleCallback = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const state         = ensureString(req.query.state, "OAuth state is missing.");
+      const code          = ensureString(req.query.code, "Authorization code is missing.");
+      const expectedState = getCookie(req, authCookies.oauthState);
+
+      clearOAuthStateCookie(res);
+
+      if (!expectedState || expectedState !== state) {
+        throw AppError.unauthorized("Invalid OAuth state.");
+      }
+
+      const authResult = await authService.authenticateGoogleCallback(code, {
+        ipAddress: req.ip ?? null,
+        userAgent: req.get("user-agent") ?? null,
+      });
+
+      setAuthCookies(res, authResult);
+      res.redirect(`${env.webAppUrl}/`);
+    } catch (error) {
+      clearOAuthStateCookie(res);
+      clearAuthCookies(res);
+      console.error("[OAuth Callback Error]", error);
+      res.redirect(`${env.webAppUrl}/?authError=oauth_failed`);
+    }
+  });
+
+  getMe = asyncHandler(async (req: Request, res: Response) => {
+    const user = await userService.getUserById(req.auth!.user.id);
+
+    if (!user) {
+      throw AppError.notFound("User not found.");
+    }
+
+    res.json({ user });
+  });
+
+  refreshSession = asyncHandler(async (req: Request, res: Response) => {
+    const refreshToken = getCookie(req, authCookies.refreshToken);
+
+    if (!refreshToken) {
+      clearAuthCookies(res);
+      throw AppError.unauthorized("Refresh token is missing.");
+    }
+
+    const authResult = await authService.rotateRefreshToken(refreshToken, {
+      ipAddress: req.ip ?? null,
+      userAgent: req.get("user-agent") ?? null,
+    });
+
+    setAuthCookies(res, authResult);
+    res.json({ user: authResult.user });
+  });
+
+  logout = asyncHandler(async (req: Request, res: Response) => {
+    const refreshToken = getCookie(req, authCookies.refreshToken);
+
+    if (refreshToken) {
+      await authService.revokeSessionByRefreshToken(refreshToken);
+    }
+
+    clearAuthCookies(res);
+    res.status(204).send();
+  });
+
+  logoutAll = asyncHandler(async (req: Request, res: Response) => {
+    await authService.revokeAllUserSessions(req.auth!.user.id);
+    clearAuthCookies(res);
+    res.status(204).send();
+  });
+
+  listUsers = asyncHandler(async (_req: Request, res: Response) => {
+    const users = await adminService.listAllUsers();
+    res.json({ users });
+  });
+}
+
+export const authController = new AuthController();
+__ALGOFORGE_FILE_0a1dd2758f0b303d__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/middleware
+cat > ./.phase2-backup/20261103-210030/apps/api/src/middleware/admin-secret.ts <<'__ALGOFORGE_FILE_4516119917046a1b__'
+//# filename: apps/api/src/middleware/admin-secret.ts
+
+import { NextFunction, Request, Response } from "express";
+import { Role } from "@algoforge/db";
+import { env } from "../config/env";
+import { authService } from "../services/auth.service";
+import { AppError } from "../utils/app-error";
+import { getToken } from "./auth";
+
+/**
+ * Grants access if EITHER:
+ *   1. X-Admin-Secret header matches ADMIN_UPGRADE_SECRET env var (non-empty).
+ *   2. The request carries a valid JWT for an ADMIN user.
+ *
+ * Role is NEVER read from the request body. The secret must come from the
+ * environment; a blank env var disables secret-based access entirely.
+ */
+export async function requireAdminAccess(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    // Path 1 — env secret
+    const headerSecret = req.get("X-Admin-Secret");
+    if (
+      headerSecret &&
+      env.adminUpgradeSecret.length > 0 &&
+      headerSecret === env.adminUpgradeSecret
+    ) {
+      req.adminViaSecret = true;
+      return next();
+    }
+
+    // Path 2 — authenticated admin JWT
+    const accessToken = getToken(req);
+    if (!accessToken) {
+      return next(AppError.unauthorized("Authentication required."));
+    }
+
+    const auth = await authService.authenticateAccessToken(accessToken);
+
+    if (auth.user.role !== Role.ADMIN) {
+      return next(AppError.forbidden("Insufficient permissions."));
+    }
+
+    req.auth = auth;
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+__ALGOFORGE_FILE_4516119917046a1b__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/middleware
+cat > ./.phase2-backup/20261103-210030/apps/api/src/middleware/auth.ts <<'__ALGOFORGE_FILE_cb6a6ff0a1498c88__'
+//# filename: apps/api/src/middleware/auth.ts
+
+import { NextFunction, Request, Response } from "express";
+import { Role } from "@algoforge/db";
+import { authCookies } from "../config/env";
+import { authService } from "../services/auth.service";
+import { AppError } from "../utils/app-error";
+import { getCookie } from "../utils/cookies";
+
+export function getToken(req: Request): string | null {
+  const cookieToken = getCookie(req, authCookies.accessToken);
+  if (cookieToken) return cookieToken;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.split(" ")[1];
+  }
+
+  return null;
+}
+
+export async function requireAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const accessToken = getToken(req);
+    if (!accessToken) {
+      return next(AppError.unauthorized("Authentication required."));
+    }
+    req.auth = await authService.authenticateAccessToken(accessToken);
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function requireRoles(...roles: Role[]) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.auth) {
+      return next(AppError.unauthorized("Authentication required."));
+    }
+    if (!roles.includes(req.auth.user.role)) {
+      return next(AppError.forbidden("Insufficient permissions."));
+    }
+    next();
+  };
+}
+__ALGOFORGE_FILE_cb6a6ff0a1498c88__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/middleware
+cat > ./.phase2-backup/20261103-210030/apps/api/src/middleware/error-handler.ts <<'__ALGOFORGE_FILE_1721f2f64f41418a__'
+import { NextFunction, Request, Response } from "express";
+import { AppError } from "../utils/app-error";
+import { env } from "../config/env";
+
+export function errorHandler(
+  err: unknown,
+  _req: Request,
+  res: Response,
+  _next: NextFunction,
+): void {
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      error: {
+        code: err.code,
+        message: err.message,
+      },
+    });
+    return;
+  }
+
+  if (!env.isProduction) {
+    console.error("[Unhandled Error]", err);
+  }
+
+  res.status(500).json({
+    error: {
+      code: "INTERNAL_ERROR",
+      message: "An unexpected error occurred.",
+    },
+  });
+}
+__ALGOFORGE_FILE_1721f2f64f41418a__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/middleware
+cat > ./.phase2-backup/20261103-210030/apps/api/src/middleware/not-found.ts <<'__ALGOFORGE_FILE_3f6ee38583701136__'
+import { Request, Response } from "express";
+
+export function notFoundHandler(_req: Request, res: Response): void {
+  res.status(404).json({
+    error: "Route not found.",
+    code: "NOT_FOUND",
+  });
+}
+
+__ALGOFORGE_FILE_3f6ee38583701136__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/middleware
+cat > ./.phase2-backup/20261103-210030/apps/api/src/middleware/rate-limit.ts <<'__ALGOFORGE_FILE_c21fc2a258260ec3__'
+import { NextFunction, Request, Response } from "express";
+import { getRedisClient } from "../config/redis";
+import { env } from "../config/env";
+import { AppError } from "../utils/app-error";
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.ip ?? "unknown";
+}
+
+const FIXED_WINDOW_SCRIPT = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+  redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1]))
+end
+return current
+`;
+
+export function aiRateLimiter(feature: "explain" | "session") {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const ip = getClientIp(req);
+    const windowSeconds = 3600;
+    const windowSlot = Math.floor(Date.now() / (windowSeconds * 1000));
+    const key = `rl:ai:${feature}:${ip}:${windowSlot}`;
+    const limit = env.redis.aiRateLimitPerHour;
+
+    try {
+      const redis = getRedisClient();
+      const count = await redis.eval(
+        FIXED_WINDOW_SCRIPT,
+        1,
+        key,
+        String(windowSeconds),
+      ) as number;
+
+      if (count > limit) {
+        const ttl = await redis.ttl(key);
+        next(
+          AppError.tooManyRequests(
+            `AI rate limit exceeded. Limit: ${limit}/hour. Retry in ${ttl}s.`,
+          ),
+        );
+        return;
+      }
+
+      next();
+    } catch (err) {
+      if (err instanceof AppError) {
+        next(err);
+        return;
+      }
+      console.error(`[RateLimit][AI:${feature}] Redis error — failing open:`, err);
+      next();
+    }
+  };
+}
+
+const SLIDING_WINDOW_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local windowMs = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+local member = ARGV[4]
+local cutoff = now - windowMs
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+redis.call('ZADD', key, now, member)
+redis.call('PEXPIRE', key, windowMs)
+return redis.call('ZCARD', key)
+`;
+
+export function generalRateLimiter() {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const ip = getClientIp(req);
+    const windowMs = 60_000;
+    const limit = env.redis.defaultRateLimitPerMinute;
+    const key = `rl:general:${ip}`;
+    const now = Date.now();
+    const member = `${now}:${process.hrtime.bigint().toString()}`;
+
+    try {
+      const redis = getRedisClient();
+      const count = await redis.eval(
+        SLIDING_WINDOW_SCRIPT,
+        1,
+        key,
+        String(now),
+        String(windowMs),
+        String(limit),
+        member,
+      ) as number;
+
+      if (count > limit) {
+        next(
+          AppError.tooManyRequests(
+            `Rate limit exceeded. Limit: ${limit} requests/minute.`,
+          ),
+        );
+        return;
+      }
+
+      next();
+    } catch (err) {
+      if (err instanceof AppError) {
+        next(err);
+        return;
+      }
+      console.error("[RateLimit] Redis error — failing open:", err);
+      next();
+    }
+  };
+} 
+__ALGOFORGE_FILE_c21fc2a258260ec3__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/middleware
+cat > ./.phase2-backup/20261103-210030/apps/api/src/middleware/security-headers.ts <<'__ALGOFORGE_FILE_4a6902217dcfde0e__'
+import { NextFunction, Request, Response } from "express";
+
+export function securityHeaders(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+}
+
+__ALGOFORGE_FILE_4a6902217dcfde0e__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/repositories
+cat > ./.phase2-backup/20261103-210030/apps/api/src/repositories/user.repository.ts <<'__ALGOFORGE_FILE_ae290541aaeef23f__'
+//# filename: apps/api/src/repositories/user.repository.ts
+
+import { prisma } from "@algoforge/db";
+import { Role } from "@algoforge/db";
+
+const userSelect = {
+  id: true,
+  email: true,
+  username: true,
+  name: true,
+  image: true,
+  role: true,
+} as const;
+
+export const userRepository = {
+  findById(id: string) {
+    return prisma.user.findUnique({ where: { id }, select: userSelect });
+  },
+
+  findByEmail(email: string) {
+    return prisma.user.findUnique({ where: { email }, select: userSelect });
+  },
+
+  findPublicById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, username: true, image: true },
+    });
+  },
+
+  create(data: {
+    email: string | null;
+    name: string | null;
+    image: string | null;
+    role: Role;
+  }) {
+    return prisma.user.create({ data, select: userSelect });
+  },
+
+  updateProfile(
+    id: string,
+    data: { email?: string | null; name?: string | null; image?: string | null },
+  ) {
+    return prisma.user.update({ where: { id }, data, select: userSelect });
+  },
+
+  setRole(id: string, role: Role) {
+    return prisma.user.update({ where: { id }, data: { role }, select: userSelect });
+  },
+};
+__ALGOFORGE_FILE_ae290541aaeef23f__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/routes
+cat > ./.phase2-backup/20261103-210030/apps/api/src/routes/admin.ts <<'__ALGOFORGE_FILE_94bf135989d1974c__'
+//# filename: apps/api/src/routes/admin.ts
+
+import { Router } from "express";
+import { adminController } from "../controllers/admin.controller";
+import { requireAdminAccess } from "../middleware/admin-secret";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+// All admin management routes require admin access (JWT admin OR env secret).
+// CSRF is also required to protect against cross-site requests.
+// Role is never accepted from any request body — it is hardcoded per endpoint.
+
+router.get("/users", requireAdminAccess, adminController.listUsers);
+
+router.post(
+  "/upgrade-user",
+  requireAdminAccess,
+  requireCsrf,
+  adminController.upgradeUser,
+);
+
+router.post(
+  "/downgrade-user",
+  requireAdminAccess,
+  requireCsrf,
+  adminController.downgradeUser,
+);
+
+export default router;
+__ALGOFORGE_FILE_94bf135989d1974c__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/routes
+cat > ./.phase2-backup/20261103-210030/apps/api/src/routes/algorithm.ts <<'__ALGOFORGE_FILE_f8f8ca5f5c4fd2f3__'
+//# filename: apps/api/src/routes/algorithm.ts
+
+import { Router } from "express";
+import { Role } from "@algoforge/db";
+import { algorithmController } from "../controllers/algorithm.controller";
+import { requireAuth, requireRoles } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+import { validateIdParam, validateSlugParam } from "../validation/algorithm";
+
+const router = Router();
+
+// Public reads — optional ?lang=javascript|python query param
+router.get("/", algorithmController.list);
+router.get("/slug/:slug", validateSlugParam, algorithmController.getBySlug);
+router.get("/id/:id/visualize", validateIdParam, algorithmController.getVisualize);
+router.get("/id/:id", validateIdParam, algorithmController.getById);
+
+// Admin writes
+router.post(
+  "/",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  algorithmController.create,
+);
+
+router.patch(
+  "/id/:id",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  validateIdParam,
+  algorithmController.update,
+);
+
+router.delete(
+  "/id/:id",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  validateIdParam,
+  algorithmController.delete,
+);
+
+export default router;
+__ALGOFORGE_FILE_f8f8ca5f5c4fd2f3__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/routes
+cat > ./.phase2-backup/20261103-210030/apps/api/src/routes/analysis.ts <<'__ALGOFORGE_FILE_a00232d31f9c5191__'
+import { Router } from "express";
+import { analysisController } from "../controllers/analysis.controller";
+import { requireAuth } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+router.get("/", requireAuth, analysisController.listAnalyses);
+router.get("/:id", requireAuth, analysisController.getAnalysisById);
+router.post("/", requireAuth, requireCsrf, analysisController.createAnalysis);
+router.post(
+  "/:id/share",
+  requireAuth,
+  requireCsrf,
+  analysisController.shareAnalysis,
+);
+
+export default router;
+__ALGOFORGE_FILE_a00232d31f9c5191__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/routes
+cat > ./.phase2-backup/20261103-210030/apps/api/src/routes/auth.ts <<'__ALGOFORGE_FILE_508dc821ca2313e8__'
+import { Router } from "express";
+import { Role } from "@algoforge/db";
+import { authController } from "../controllers/auth.controller";
+import { requireAuth, requireRoles } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+router.get("/google/start", authController.startGoogleAuth);
+router.get("/google/callback", authController.handleGoogleCallback);
+router.get("/me", requireAuth, authController.getMe);
+router.post("/refresh", authController.refreshSession);
+router.post("/logout", requireCsrf, authController.logout);
+router.post("/logout-all", requireAuth, requireCsrf, authController.logoutAll);
+router.get(
+  "/admin/users",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  authController.listUsers,
+);
+
+export default router;
+__ALGOFORGE_FILE_508dc821ca2313e8__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/admin.service.ts <<'__ALGOFORGE_FILE_e781950266fb1aac__'
+//# filename: apps/api/src/services/admin.service.ts
+
+import { Role } from "@algoforge/db";
+import { userRepository } from "../repositories/user.repository";
+import { AppError } from "../utils/app-error";
+
+class AdminService {
+  /**
+   * Promotes userId to ADMIN.
+   * Role is always hardcoded here — it is never accepted from the request body.
+   */
+  async upgradeToAdmin(userId: string) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw AppError.notFound("User not found.");
+
+    if (user.role === Role.ADMIN) {
+      return { user, changed: false };
+    }
+
+    const updated = await userRepository.setRole(userId, Role.ADMIN);
+    return { user: updated, changed: true };
+  }
+
+  /**
+   * Demotes userId to USER.
+   * Role is always hardcoded here — it is never accepted from the request body.
+   */
+  async downgradeToUser(userId: string) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw AppError.notFound("User not found.");
+
+    if (user.role === Role.USER) {
+      return { user, changed: false };
+    }
+
+    const updated = await userRepository.setRole(userId, Role.USER);
+    return { user: updated, changed: true };
+  }
+
+  async listAllUsers() {
+    const { prisma } = await import("@algoforge/db");
+    return prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  }
+}
+
+export const adminService = new AdminService();
+__ALGOFORGE_FILE_e781950266fb1aac__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm/cache-keys.ts <<'__ALGOFORGE_FILE_68c370efd061a817__'
+/**
+ * All cache key builders for algorithms in one place.
+ * Changing a key format here automatically fixes every caller.
+ */
+export const algorithmCacheKeys = {
+  // List keys are JSON-stringified query objects (hashed by cacheService internally)
+  list:    (query: object)                  => `algo:list:${JSON.stringify(query)}`,
+
+  // Detail keys are structured so we can invalidate by id/slug without re-hashing
+  byId:    (id: string,   lang = "default") => `algo:id:${id}:${lang}`,
+  bySlug:  (slug: string, lang = "default") => `algo:slug:${slug}:${lang}`,
+
+  // Visualisation / forge config
+  viz:     (id: string)                     => `viz:${id}`,
+};
+__ALGOFORGE_FILE_68c370efd061a817__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm/detail.service.ts <<'__ALGOFORGE_FILE_09796e5f040c2972__'
+/**
+ * Fetches a single algorithm by id or slug.
+ * Each (id/slug + language) combination gets its own cache entry
+ * so switching display language doesn't cause a cache miss cascade.
+ */
+import { AlgorithmDetailSchema, type AlgorithmDetail } from "@algoforge/forge";
+import { algorithmRepository, type AlgorithmDetailRow } from "../../repositories/algorithm.repository";
+import { layeredCache } from "../lib/layered-cache";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+
+export async function getAlgorithmById(id: string, lang?: string): Promise<AlgorithmDetail> {
+  const key    = algorithmCacheKeys.byId(id, lang);
+  const cached = await layeredCache.get<AlgorithmDetail>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findById(id);
+  if (!row) throw AppError.notFound("Algorithm not found.");
+
+  const result = toAlgorithmDetail(row, lang);
+  await layeredCache.set(key, result);
+  return result;
+}
+
+export async function getAlgorithmBySlug(slug: string, lang?: string): Promise<AlgorithmDetail> {
+  const key    = algorithmCacheKeys.bySlug(slug, lang);
+  const cached = await layeredCache.get<AlgorithmDetail>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findBySlug(slug);
+  if (!row) throw AppError.notFound("Algorithm not found.");
+
+  const result = toAlgorithmDetail(row, lang);
+  await layeredCache.set(key, result);
+  return result;
+}
+
+// ─── Private ──────────────────────────────────────────────────────────────────
+
+/**
+ * Choose the best display code for the requested language.
+ * Priority: requested lang → javascript → first available.
+ */
+function pickDisplayCode(
+  codes: { language: string; code: string }[],
+  lang?: string,
+): { language: string; code: string } | null {
+  if (!codes.length) return null;
+  const preferred = lang ?? "javascript";
+  return (
+    codes.find((c) => c.language === preferred) ??
+    codes.find((c) => c.language === "javascript") ??
+    codes[0]
+  );
+}
+
+function toAlgorithmDetail(
+  row: NonNullable<AlgorithmDetailRow>,
+  lang?: string,
+): AlgorithmDetail {
+  return AlgorithmDetailSchema.parse({
+    id:          row.id,
+    slug:        row.slug,
+    name:        row.name,
+    description: row.description,
+    difficulty:  row.difficulty,
+    complexity:
+      row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity
+        ? {
+            timeBest:    row.timeBest,
+            timeAverage: row.timeAverage,
+            timeWorst:   row.timeWorst,
+            space:       row.spaceComplexity,
+          }
+        : null,
+    displayCode: pickDisplayCode(row.displayCodes, lang),
+    tags:        row.tags.map((t: { tag: { id: string; label: string } }) => t.tag),
+    forge:       row.forge
+      ? {
+          forgeCode:   row.forge.forgeCode,
+          inputSchema: row.forge.inputSchema,
+          guardRanges: row.forge.guardRanges,
+          version:     row.forge.version,
+        }
+      : null,
+  });
+}
+__ALGOFORGE_FILE_09796e5f040c2972__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm/mutation.service.ts <<'__ALGOFORGE_FILE_badce0450414a57f__'
+import { Prisma, Difficulty } from "@algoforge/db";
+import {
+  ForgeCodeSchema,
+  GuardRangesSchema,
+  InputSchema,
+  type CreateAlgorithm,
+  type UpdateAlgorithm,
+} from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { categoryRepository } from "../../repositories/category.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+import { layeredCache } from "../lib/layered-cache";
+
+type ExistingForge = {
+  forgeCode:   Prisma.JsonValue;
+  inputSchema: Prisma.JsonValue;
+  guardRanges: Prisma.JsonValue;
+  version:     number;
+} | null;
+
+export async function createAlgorithm(input: CreateAlgorithm) {
+  if (input.forge) validateForge(input.forge);
+  const category = await resolveCategory(input.categoryId);
+  return algorithmRepository.create(toCreateData(input, category.id));
+}
+
+export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
+  const existing = await algorithmRepository.findById(id);
+  if (!existing) throw AppError.notFound("Algorithm not found.");
+
+  if (input.forge) {
+    validateForge(input.forge);
+    if (!existing.forge) {
+      if (!input.forge.forgeCode || !input.forge.inputSchema || !input.forge.guardRanges) {
+        throw AppError.badRequest(
+          "forgeCode, inputSchema, and guardRanges are all required when adding forge configuration for the first time.",
+        );
+      }
+    }
+  }
+
+  const categoryId = input.categoryId
+    ? (await resolveCategory(input.categoryId)).id
+    : undefined;
+
+  const updated = await algorithmRepository.update(
+    id,
+    toUpdateData(input, existing.forge ?? null, categoryId),
+  );
+  await bustCache(id, existing.slug);
+  return updated;
+}
+
+export async function deleteAlgorithm(id: string): Promise<void> {
+  const existing = await algorithmRepository.findById(id);
+  if (!existing) throw AppError.notFound("Algorithm not found.");
+
+  await algorithmRepository.delete(id);
+  await bustCache(id, existing.slug);
+}
+
+async function bustCache(id: string, slug: string): Promise<void> {
+  await Promise.all([
+    layeredCache.del(algorithmCacheKeys.byId(id)),
+    layeredCache.del(algorithmCacheKeys.bySlug(slug)),
+    layeredCache.del(algorithmCacheKeys.viz(id)),
+    layeredCache.del("meta:slugs"),
+  ]);
+}
+
+function validateForge(
+  forge: { forgeCode?: unknown; guardRanges?: unknown; inputSchema?: unknown },
+): void {
+  try {
+    if (forge.forgeCode   !== undefined) ForgeCodeSchema.parse(forge.forgeCode);
+    if (forge.guardRanges !== undefined) GuardRangesSchema.parse(forge.guardRanges);
+    if (forge.inputSchema !== undefined) InputSchema.parse(forge.inputSchema);
+  } catch (err) {
+    throw AppError.badRequest(
+      "Invalid forge configuration: " + (err instanceof Error ? err.message : "unknown"),
+    );
+  }
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue;
+}
+
+function toCreateData(input: CreateAlgorithm, categoryId: string) {
+  return {
+    slug:            input.slug,
+    name:            input.name,
+    description:     input.description,
+    categoryId,
+    difficulty:      input.difficulty as Difficulty,
+    isPublished:     input.isPublished ?? false,
+    timeBest:        input.complexity?.time?.best    ?? null,
+    timeAverage:     input.complexity?.time?.average ?? null,
+    timeWorst:       input.complexity?.time?.worst   ?? null,
+    spaceComplexity: input.complexity?.space         ?? null,
+    displayCodes:    input.displayCodes,
+    forge: {
+      forgeCode:   toJsonValue(input.forge.forgeCode),
+      inputSchema: toJsonValue(input.forge.inputSchema),
+      guardRanges: toJsonValue(input.forge.guardRanges),
+    },
+    tags: input.tags,
+  };
+}
+
+function toUpdateData(
+  input: UpdateAlgorithm,
+  existingForge: ExistingForge,
+  categoryId?: string,
+): Prisma.AlgorithmUpdateInput & {
+  displayCodes?: { language: string; code: string }[];
+  tags?:         string[];
+} {
+  return {
+    ...(input.slug        && { slug:        input.slug }),
+    ...(input.name        && { name:        input.name }),
+    ...(input.description && { description: input.description }),
+    ...(categoryId && { categoryId }),
+    ...(input.difficulty  && { difficulty:  input.difficulty as Difficulty }),
+    ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
+    ...(input.complexity  && {
+      timeBest:        input.complexity.time?.best    ?? null,
+      timeAverage:     input.complexity.time?.average ?? null,
+      timeWorst:       input.complexity.time?.worst   ?? null,
+      spaceComplexity: input.complexity.space         ?? null,
+    }),
+    ...(input.displayCodes && { displayCodes: input.displayCodes }),
+    ...(input.tags         && { tags:         input.tags }),
+    ...(input.forge        && buildForgeWrite(input.forge, existingForge)),
+  };
+}
+
+function buildForgeWrite(
+  forgeInput: NonNullable<UpdateAlgorithm["forge"]>,
+  existingForge: ExistingForge,
+): Pick<Prisma.AlgorithmUpdateInput, "forge"> {
+  if (!existingForge) {
+    return {
+      forge: {
+        create: {
+          forgeCode:   toJsonValue(forgeInput.forgeCode),
+          inputSchema: toJsonValue(forgeInput.inputSchema),
+          guardRanges: toJsonValue(forgeInput.guardRanges),
+          version:     1,
+        },
+      },
+    };
+  }
+
+  return {
+    forge: {
+      update: {
+        ...(forgeInput.forgeCode   !== undefined && { forgeCode:   toJsonValue(forgeInput.forgeCode) }),
+        ...(forgeInput.inputSchema !== undefined && { inputSchema: toJsonValue(forgeInput.inputSchema) }),
+        ...(forgeInput.guardRanges !== undefined && { guardRanges: toJsonValue(forgeInput.guardRanges) }),
+      },
+    },
+  };
+}
+
+async function resolveCategory(categoryIdOrLabel: string) {
+  const category = await categoryRepository.findByIdentifier(categoryIdOrLabel);
+  if (!category) {
+    throw AppError.badRequest(`Category "${categoryIdOrLabel}" does not exist.`);
+  }
+  return category;
+}
+__ALGOFORGE_FILE_badce0450414a57f__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm/query.service.ts <<'__ALGOFORGE_FILE_1b85826b89dda1b3__'
+/**
+ * Lists and searches algorithms.
+ * Results are cached; the cache is busted on any mutation via mutation.service.ts.
+ */
+import { Prisma, Difficulty } from "@algoforge/db";
+import { AlgorithmListItemSchema, type AlgorithmListItem } from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { layeredCache } from "../lib/layered-cache";
+import type { AlgorithmQuery } from "../../types/algorithm.types";
+
+export async function listAlgorithms(query: AlgorithmQuery): Promise<AlgorithmListItem[]> {
+  const key    = algorithmCacheKeys.list(query);
+  const cached = await layeredCache.get<AlgorithmListItem[]>(key);
+  if (cached) return cached;
+
+  const rows   = await algorithmRepository.findMany(buildWhere(query));
+
+  // The DB returns flat complexity fields; the schema expects a nested object.
+  const result = rows.map((row) =>
+    AlgorithmListItemSchema.parse({
+      id:         row.id,
+      slug:       row.slug,
+      name:       row.name,
+      categoryId: row.categoryId,
+      difficulty: row.difficulty,
+      complexity:
+        row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity
+          ? {
+              timeBest:    row.timeBest,
+              timeAverage: row.timeAverage,
+              timeWorst:   row.timeWorst,
+              space:       row.spaceComplexity,
+            }
+          : null,
+    }),
+  );
+
+  await layeredCache.set(key, result);
+  return result;
+}
+
+// ─── Private ──────────────────────────────────────────────────────────────────
+
+function buildWhere(query: AlgorithmQuery): Prisma.AlgorithmWhereInput {
+  return {
+    ...(query.categoryId                ? { categoryId:  query.categoryId }                : {}),
+    ...(query.difficulty                ? { difficulty:  query.difficulty as Difficulty }  : {}),
+    ...(query.isPublished !== undefined ? { isPublished: query.isPublished }               : {}),
+    ...(query.search ? {
+      OR: [
+        { name:        { contains: query.search, mode: Prisma.QueryMode.insensitive } },
+        { description: { contains: query.search, mode: Prisma.QueryMode.insensitive } },
+      ],
+    } : {}),
+  };
+}
+__ALGOFORGE_FILE_1b85826b89dda1b3__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/algorithm/viz.service.ts <<'__ALGOFORGE_FILE_ad2fdb251759e521__'
+/**
+ * Returns the forge / visualisation config for an algorithm.
+ * The forge config is the most frequently read object for the visualiser UI
+ * so it gets its own dedicated cache key.
+ */
+import { AlgorithmExecutionSchema, type AlgorithmExecution } from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+import { layeredCache } from "../lib/layered-cache";
+
+export async function getAlgorithmVisualization(id: string): Promise<AlgorithmExecution> {
+  const key    = algorithmCacheKeys.viz(id);
+  const cached = await layeredCache.get<AlgorithmExecution>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findById(id);
+  if (!row)       throw AppError.notFound("Algorithm not found.");
+  if (!row.forge) throw AppError.notFound("No forge configuration found for this algorithm.");
+
+  const result = AlgorithmExecutionSchema.parse({
+    algorithmId: row.id,
+    name:        row.name,
+    forge: {
+      forgeCode:   row.forge.forgeCode,
+      inputSchema: row.forge.inputSchema,
+      guardRanges: row.forge.guardRanges,
+      version:     row.forge.version,
+    },
+  });
+
+  await layeredCache.set(key, result);
+  return result;
+}
+__ALGOFORGE_FILE_ad2fdb251759e521__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/services
+cat > ./.phase2-backup/20261103-210030/apps/api/src/services/explanation-session.service.ts <<'__ALGOFORGE_FILE_c9ce9e00f0044ef9__'
+import { randomBytes } from "crypto";
+import { explanationSessionRepository } from "../repositories/explanation-session.repository";
+import { processQuery } from "../ai/query-processor";
+import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
+import { buildExplanationPrompt } from "../prompts/explanation.prompt";
+import { aiService } from "./ai.service";
+import { AppError } from "../utils/app-error";
+import { env } from "../config/env";
+import type {
+  CreateSessionInput,
+  SendMessageInput,
+  ListSessionsQuery,
+} from "../validation/explanation-session";
+import { layeredCache } from "./lib/layered-cache";
+
+export type SessionMessage = {
+  id:        string;
+  role:      "user" | "assistant";
+  content:   string;
+  intent?:   string;
+  createdAt: string;
+};
+
+const SESSION_CACHE_TTL_SECONDS = 300;
+const MAX_STORED_MESSAGES       = 100; // 50 exchanges
+const AI_HISTORY_MESSAGES       = 10;  // last 5 exchanges sent to AI
+
+function sessionCacheKey(id: string): string {
+  return `explain:session:${id}`;
+}
+
+function newMessageId(): string {
+  return randomBytes(6).toString("hex");
+}
+
+function newShareId(): string {
+  return randomBytes(9).toString("base64url");
+}
+
+function buildShareUrl(shareId: string): string {
+  return `${env.webAppUrl}/share/explain/${shareId}`;
+}
+
+class ExplanationSessionService {
+  async createSession(userId: string, input: CreateSessionInput) {
+    return explanationSessionRepository.create(userId, input.title);
+  }
+
+  async listSessions(userId: string, query: ListSessionsQuery) {
+    const sessions = await explanationSessionRepository.findManyByUser(userId, {
+      take:   query.limit,
+      cursor: query.cursor,
+    });
+
+    const nextCursor = sessions.length === query.limit
+      ? (sessions[sessions.length - 1]?.id ?? null)
+      : null;
+
+    return { sessions, nextCursor };
+  }
+
+  async getSession(userId: string, id: string) {
+    const cached = await layeredCache.get<
+      Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
+    >(sessionCacheKey(id));
+
+    if (cached) return cached;
+
+    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
+    await layeredCache.set(sessionCacheKey(id), session, SESSION_CACHE_TTL_SECONDS);
+    return session;
+  }
+
+  async sendMessage(userId: string, sessionId: string, input: SendMessageInput) {
+    const session = await explanationSessionRepository.findOneByUser(sessionId, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
+    const existingMessages = (session.messages as unknown as SessionMessage[]) ?? [];
+
+    const userMessage: SessionMessage = {
+      id:        newMessageId(),
+      role:      "user",
+      content:   input.query,
+      createdAt: new Date().toISOString(),
+    };
+
+    const scope       = await processQuery(input.query);
+    const context     = await buildCodebaseContext(scope.targetSlugs);
+    const contextText = serializeContext(context);
+    const prompt      = buildExplanationPrompt(contextText, scope);
+
+    // Include prior conversation history so the AI has multi-turn context.
+    const history = existingMessages
+      .slice(-AI_HISTORY_MESSAGES)
+      .map((m) => ({
+        role:    m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    const rawAnswer = await aiService.generateText([
+      ...history,
+      { role: "user", content: prompt },
+    ]);
+
+    const assistantMessage: SessionMessage = {
+      id:        newMessageId(),
+      role:      "assistant",
+      content:   rawAnswer.trim(),
+      intent:    scope.intent,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Cap stored history to MAX_STORED_MESSAGES (drop oldest when over limit)
+    const updatedMessages: SessionMessage[] = [
+      ...existingMessages.slice(-(MAX_STORED_MESSAGES - 2)),
+      userMessage,
+      assistantMessage,
+    ];
+
+    const title = session.title ?? input.query.slice(0, 80);
+    await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
+    await layeredCache.del(sessionCacheKey(sessionId));
+
+    return { userMessage, assistantMessage };
+  }
+
+  async deleteSession(userId: string, id: string): Promise<void> {
+    const result = await explanationSessionRepository.delete(id, userId);
+    if (result.count === 0) throw AppError.notFound("Session not found.");
+    await layeredCache.del(sessionCacheKey(id));
+  }
+
+  async shareSession(userId: string, id: string) {
+    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
+    if (session.shareId && session.isPublic) {
+      return { shareUrl: buildShareUrl(session.shareId) };
+    }
+
+    const shareId = newShareId();
+    await explanationSessionRepository.share(id, shareId);
+    await layeredCache.del(sessionCacheKey(id));
+
+    return { shareUrl: buildShareUrl(shareId) };
+  }
+
+  async getPublicSession(shareId: string) {
+    const cacheKey = `explain:public:${shareId}`;
+
+    const cached = await layeredCache.get<
+      Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>
+    >(cacheKey);
+    if (cached) return cached;
+
+    const session = await explanationSessionRepository.findPublicByShareId(shareId);
+    if (!session) throw AppError.notFound("Session not found or not public.");
+
+    await layeredCache.set(cacheKey, session, SESSION_CACHE_TTL_SECONDS * 2);
+    return session;
+  }
+}
+
+export const explanationSessionService = new ExplanationSessionService();
+__ALGOFORGE_FILE_c9ce9e00f0044ef9__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/types
+cat > ./.phase2-backup/20261103-210030/apps/api/src/types/algorithm.types.ts <<'__ALGOFORGE_FILE_39f6b70095f09625__'
+// Shared types for the algorithm service modules.
+
+export type AlgorithmQuery = {
+  categoryId?:  string;
+  difficulty?:  string;
+  isPublished?: boolean;
+  search?:      string;
+};
+__ALGOFORGE_FILE_39f6b70095f09625__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/types
+cat > ./.phase2-backup/20261103-210030/apps/api/src/types/express.d.ts <<'__ALGOFORGE_FILE_a7f250b49588233b__'
+import { Role } from "@algoforge/db";
+
+declare global {
+  namespace Express {
+    interface Request {
+      auth?: {
+        user: {
+          id:       string;
+          email:    string | null;
+          username: string | null;
+          name:     string | null;
+          image:    string | null;
+          role:     Role;
+        };
+        session: {
+          id:        string;
+          expiresAt: Date;
+        };
+      };
+      // Set by requireAdminSecret middleware when the X-Admin-Secret header
+      // is valid. Allows the admin endpoint without a user JWT.
+      adminViaSecret?: true;
+    }
+  }
+}
+
+export {};
+__ALGOFORGE_FILE_a7f250b49588233b__
+
+mkdir -p ./.phase2-backup/20261103-210030/apps/api/src/utils
+cat > ./.phase2-backup/20261103-210030/apps/api/src/utils/app-error.ts <<'__ALGOFORGE_FILE_2aedf378e1b5f8ec__'
+export class AppError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    message: string,
+    public readonly code: string,
+  ) {
+    super(message);
+    this.name = "AppError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static badRequest(message: string): AppError {
+    return new AppError(400, message, "BAD_REQUEST");
+  }
+
+  static unauthorized(message: string): AppError {
+    return new AppError(401, message, "UNAUTHORIZED");
+  }
+
+  static forbidden(message: string): AppError {
+    return new AppError(403, message, "FORBIDDEN");
+  }
+
+  static notFound(message: string): AppError {
+    return new AppError(404, message, "NOT_FOUND");
+  }
+
+  static tooManyRequests(message: string): AppError {
+    return new AppError(429, message, "TOO_MANY_REQUESTS");
+  }
+
+  static badGateway(message: string): AppError {
+    return new AppError(502, message, "BAD_GATEWAY");
+  }
+
+  static internal(message: string): AppError {
+    return new AppError(500, message, "INTERNAL_ERROR");
+  }
+}
+__ALGOFORGE_FILE_2aedf378e1b5f8ec__
+
+mkdir -p ./.phase2-backup/20261103-210030
+cat > ./.phase2-backup/20261103-210030/package.json <<'__ALGOFORGE_FILE_a9e2111da82329a4__'
+{
+  "name": "algoforge",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "build": "pnpm db:generate && pnpm build:api && pnpm build:web",
+    "db:migrate": "pnpm --filter @algoforge/db migrate:dev",
+    "db:generate": "pnpm --filter @algoforge/db generate",
+    "db:studio": "pnpm --filter @algoforge/db studio",
+    "dev:web": "pnpm --filter @algoforge/web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build:web": "pnpm --filter @algoforge/web build",
+    "build:api": "pnpm --filter api build",
+    "typecheck": "pnpm --filter @algoforge/db typecheck && pnpm --filter api typecheck",
+    "typecheck:web": "pnpm --filter @algoforge/web typecheck",
+    "lint": "pnpm --filter api lint",
+    "lint:web": "pnpm --filter @algoforge/web lint",
+    "ci": "pnpm db:generate && pnpm typecheck && pnpm lint && pnpm build:api",
+    "db:migrate:dev": "pnpm --filter @algoforge/db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @algoforge/db migrate:deploy",
+    "db:seed": "pnpm --filter @algoforge/db seed",
+    "db:reset": "pnpm --filter @algoforge/db reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24.15.0"
+  }
+}
+
+__ALGOFORGE_FILE_a9e2111da82329a4__
+
+mkdir -p ./.phase2-backup/20261103-210030/packages/db
+cat > ./.phase2-backup/20261103-210030/packages/db/package.json <<'__ALGOFORGE_FILE_f3ab47201ab1602f__'
+{
+  "name": "@algoforge/db",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "migrate": "prisma migrate dev",
+    "generate": "prisma generate",
+    "studio": "prisma studio",
+    "build": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "reset": "prisma migrate reset",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prisma": "^5.22.0",
+    "typescript": "^5.9.3",
+    "tsx": "^4.20.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
+
+__ALGOFORGE_FILE_f3ab47201ab1602f__
+
+mkdir -p ./apps/api
+cat > ./apps/api/package.json <<'__ALGOFORGE_FILE_6816687afd5e8d87__'
+{
+  "name": "api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsup",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@google/genai": "^1.50.1",
+    "@prisma/client": "5.22.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "google-auth-library": "^10.6.2",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
+    "lru-cache": "^11.3.5",
+    "openai": "^4.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@algoforge/analysis": "workspace:*",
+    "@algoforge/db": "workspace:*",
+    "@algoforge/forge": "workspace:*",
+    "@eslint/js": "^9.39.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.39.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^5.0.5"
+  }
+}
+
 __ALGOFORGE_FILE_6816687afd5e8d87__
 
 mkdir -p ./apps/api/src/ai
 cat > ./apps/api/src/ai/context-builder.ts <<'__ALGOFORGE_FILE_b33f04ad7cf59ada__'
 import { prisma } from "@algoforge/db";
-import { layeredCache } from "../services/lib/Layered.cache";
+import { layeredCache } from "../services/lib/layered-cache";
 
 export type CodebaseContext = {
   algorithms: AlgorithmContext[];
@@ -228,7 +3762,7 @@ __ALGOFORGE_FILE_b33f04ad7cf59ada__
 mkdir -p ./apps/api/src/ai
 cat > ./apps/api/src/ai/query-processor.ts <<'__ALGOFORGE_FILE_d3958f554cb506dc__'
 import { prisma } from "@algoforge/db";
-import { layeredCache } from "../services/lib/Layered.cache";
+import { layeredCache } from "../services/lib/layered-cache";
 
 export type QueryScope = {
   intent: "explain_flow" | "explain_failure" | "explain_algorithm" | "explain_api" | "general";
@@ -364,6 +3898,7 @@ import express from "express";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
+import { requestId } from "./middleware/request-id";
 import { securityHeaders } from "./middleware/security-headers";
 import { generalRateLimiter } from "./middleware/rate-limit";
 
@@ -372,34 +3907,36 @@ import algorithmRouter          from "./routes/algorithm";
 import analysisRouter           from "./routes/analysis";
 import authRouter               from "./routes/auth";
 import categoryRouter           from "./routes/category";
+import healthRouter             from "./routes/health";
 import shareRouter              from "./routes/share";
-import explanationRouter        from "./routes/exaplantion";
+import explanationRouter        from "./routes/explanation";
 import explanationSessionRouter from "./routes/explanation-session";
 
 const app = express();
 
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
+app.use(requestId);
 app.use(securityHeaders);
 app.use(
   cors({
     origin:         env.webAppUrl,
     credentials:    true,
     methods:        ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Admin-Secret"],
+    allowedHeaders: ["Content-Type", "X-CSRF-Token"],
+    exposedHeaders: ["X-Request-Id"],
   }),
 );
 app.use(express.json({ limit: "256kb" }));
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+// Liveness (/health) and readiness (/ready)
+app.use(healthRouter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
-app.use("/api/analyses",  generalRateLimiter(), analysisRouter);
 
 // Sessions mounted at a path that cannot be prefix-matched by the explain router.
 app.use("/api/explain-sessions", explanationSessionRouter);
@@ -412,6 +3949,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 export { app };
+
 __ALGOFORGE_FILE_5985e1157e537700__
 
 mkdir -p ./apps/api/src/config
@@ -431,10 +3969,13 @@ function requireEnv(name: string): string {
 
 function parseInteger(name: string, fallback: number): number {
   const rawValue = process.env[name];
-  if (!rawValue) return fallback;
+  if (rawValue === undefined || rawValue.trim() === "") return fallback;
   const parsed = Number(rawValue);
-  // if (!Number.isInteger(parsed) || parsed <= 0)
-  //   throw new Error(`Environment variable ${name} must be a positive integer.`);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(
+      `Environment variable ${name} must be a positive integer (got "${rawValue}").`,
+    );
+  }
   return parsed;
 }
 
@@ -467,6 +4008,20 @@ const isProduction = nodeEnv === "production";
 const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
 const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
 
+// Provider-specific validation: only the selected provider's settings are required.
+const openRouterApiKeys = parseList("OPENROUTER_API_KEYS");
+const openRouterFreeModels = parseList("OPENROUTER_FREE_MODELS");
+if (aiProvider === "openrouter") {
+  if (openRouterApiKeys.length === 0)
+    throw new Error("OPENROUTER_API_KEYS must be set when AI_PROVIDER=openrouter.");
+  if (openRouterFreeModels.length === 0)
+    throw new Error("OPENROUTER_FREE_MODELS must be set when AI_PROVIDER=openrouter.");
+}
+const geminiApiKey =
+  aiProvider === "gemini" ? requireEnv("GEMINI_API_KEY") : (process.env.GEMINI_API_KEY ?? "");
+// No hard-coded model: it must be chosen explicitly when Gemini is the provider.
+const aiModel = aiProvider === "gemini" ? requireEnv("AI_MODEL") : (process.env.AI_MODEL ?? "");
+
 export const env = {
   nodeEnv,
   isProduction,
@@ -482,20 +4037,18 @@ export const env = {
   refreshTokenTtlDays: parseInteger("REFRESH_TOKEN_TTL_DAYS", 30),
   authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
   authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
-  geminiApiKey: requireEnv("GEMINI_API_KEY"),
-  adminUpgradeSecret:
-    process.env.ADMIN_UPGRADE_SECRET ?? "1d201bf1-eb81-42ec-bd13-3e627b0fc4e9",
+  geminiApiKey,
   ai: {
     provider: aiProvider as AIProvider,
-    model: process.env.AI_MODEL ?? "gemini-2.0-flash",
+    model: aiModel,
     timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
     maxRetries: parseInteger("AI_MAX_RETRIES", 1),
   },
   openRouter: {
     baseUrl:
       process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-    apiKeys: parseList("OPENROUTER_API_KEYS"),
-    freeModels: parseList("OPENROUTER_FREE_MODELS"),
+    apiKeys: openRouterApiKeys,
+    freeModels: openRouterFreeModels,
     appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
     siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
   },
@@ -518,6 +4071,7 @@ export const googleOAuthConfig = {
   redirectUri: `${apiBaseUrl}/api/auth/google/callback`,
   scopes: ["openid", "email", "profile"],
 };
+
 __ALGOFORGE_FILE_0b0e408bc15dbf87__
 
 mkdir -p ./apps/api/src/config
@@ -593,6 +4147,18 @@ import { adminService } from "../services/admin.service";
 import { asyncHandler } from "../utils/async-handler";
 import { AppError } from "../utils/app-error";
 
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 100;
+
+function parseLimit(value: unknown): number {
+  if (value === undefined) return DEFAULT_PAGE_SIZE;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > MAX_PAGE_SIZE) {
+    throw AppError.badRequest(`limit must be an integer between 1 and ${MAX_PAGE_SIZE}.`);
+  }
+  return n;
+}
+
 class AdminController {
   /**
    * POST /api/admin/upgrade-user
@@ -635,19 +4201,28 @@ class AdminController {
     });
   });
 
-  listUsers = asyncHandler(async (_req: Request, res: Response) => {
-    const users = await adminService.listAllUsers();
-    res.json({ users });
+  /** GET /api/admin/users?limit=50&cursor=<userId> */
+  listUsers = asyncHandler(async (req: Request, res: Response) => {
+    const limit = parseLimit(req.query.limit);
+    const cursor =
+      typeof req.query.cursor === "string" && req.query.cursor.trim()
+        ? req.query.cursor.trim()
+        : undefined;
+    const result = await adminService.listUsers(limit, cursor);
+    res.json(result);
   });
 }
 
 export const adminController = new AdminController();
+
 __ALGOFORGE_FILE_096fd217536999e6__
 
 mkdir -p ./apps/api/src/controllers
 cat > ./apps/api/src/controllers/algorithm.controller.ts <<'__ALGOFORGE_FILE_fb670efacf1530ba__'
 import { Request, Response } from "express";
+import { Role } from "@algoforge/db";
 import { algorithmService } from "../services/algorithm/index";
+import type { AlgorithmVisibility } from "../types/algorithm.types";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
 import {
@@ -656,30 +4231,34 @@ import {
   parseAlgorithmQuery,
 } from "../validation/algorithm";
 
+function visibilityOf(req: Request): AlgorithmVisibility {
+  return { isAdmin: req.auth?.user.role === Role.ADMIN };
+}
+
 class AlgorithmController {
   list = asyncHandler(async (req: Request, res: Response) => {
     const query      = parseAlgorithmQuery(req.query);
-    const algorithms = await algorithmService.listAlgorithms(query);
+    const algorithms = await algorithmService.listAlgorithms(query, visibilityOf(req));
     res.json(algorithms);
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
     const id        = ensureString(req.params.id, "Algorithm ID is required.");
     const lang      = typeof req.query.lang === "string" ? req.query.lang : undefined;
-    const algorithm = await algorithmService.getAlgorithmById(id, lang);
+    const algorithm = await algorithmService.getAlgorithmById(id, lang, visibilityOf(req));
     res.json(algorithm);
   });
 
   getBySlug = asyncHandler(async (req: Request, res: Response) => {
     const slug      = ensureString(req.params.slug, "Algorithm slug is required.");
     const lang      = typeof req.query.lang === "string" ? req.query.lang : undefined;
-    const algorithm = await algorithmService.getAlgorithmBySlug(slug, lang);
+    const algorithm = await algorithmService.getAlgorithmBySlug(slug, lang, visibilityOf(req));
     res.json(algorithm);
   });
 
   getVisualize = asyncHandler(async (req: Request, res: Response) => {
     const id        = ensureString(req.params.id, "Algorithm ID is required.");
-    const execution = await algorithmService.getAlgorithmExecution(id);
+    const execution = await algorithmService.getAlgorithmExecution(id, visibilityOf(req));
     res.json(execution);
   });
 
@@ -704,6 +4283,7 @@ class AlgorithmController {
 }
 
 export const algorithmController = new AlgorithmController();
+
 __ALGOFORGE_FILE_fb670efacf1530ba__
 
 mkdir -p ./apps/api/src/controllers
@@ -755,7 +4335,6 @@ import { Request, Response } from "express";
 import { authCookies, env } from "../config/env";
 import { authService } from "../services/auth.service";
 import { userService } from "../services/user.service";
-import { adminService } from "../services/admin.service";
 import { AppError } from "../utils/app-error";
 import { asyncHandler } from "../utils/async-handler";
 import {
@@ -765,6 +4344,7 @@ import {
   setAuthCookies,
   setOAuthStateCookie,
 } from "../utils/cookies";
+import { logger, serializeError } from "../utils/logger";
 import { ensureString } from "../validation/common";
 
 class AuthController {
@@ -796,7 +4376,10 @@ class AuthController {
     } catch (error) {
       clearOAuthStateCookie(res);
       clearAuthCookies(res);
-      console.error("[OAuth Callback Error]", error);
+      logger.warn("oauth callback failed", {
+        requestId: req.requestId,
+        ...serializeError(error),
+      });
       res.redirect(`${env.webAppUrl}/?authError=oauth_failed`);
     }
   });
@@ -844,14 +4427,10 @@ class AuthController {
     clearAuthCookies(res);
     res.status(204).send();
   });
-
-  listUsers = asyncHandler(async (_req: Request, res: Response) => {
-    const users = await adminService.listAllUsers();
-    res.json({ users });
-  });
 }
 
 export const authController = new AuthController();
+
 __ALGOFORGE_FILE_0dc06100ecb5537e__
 
 mkdir -p ./apps/api/src/controllers
@@ -982,60 +4561,71 @@ export const explanationSessionController = new ExplanationSessionController();
 __ALGOFORGE_FILE_2caba3df26ad07c4__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/admin-secret.ts <<'__ALGOFORGE_FILE_6943c536902d75ba__'
-//# filename: apps/api/src/middleware/admin-secret.ts
-
-import { NextFunction, Request, Response } from "express";
+cat > ./apps/api/src/middleware/auth.test.ts <<'__ALGOFORGE_FILE_1329bd1124118dd3__'
+import type { NextFunction, Request, Response } from "express";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@algoforge/db";
-import { env } from "../config/env";
+
+vi.mock("@algoforge/db", () => ({ Role: { USER: "USER", ADMIN: "ADMIN" } }));
+vi.mock("../config/env", () => ({
+  authCookies: {
+    accessToken: "af_access",
+    refreshToken: "af_refresh",
+    csrfToken: "af_csrf",
+    oauthState: "af_oauth_state",
+  },
+  env: { cookieDomain: undefined, isProduction: false, accessTokenTtlMinutes: 15, refreshTokenTtlDays: 30 },
+}));
+vi.mock("../services/auth.service", () => ({
+  authService: { authenticateAccessToken: vi.fn() },
+}));
+
 import { authService } from "../services/auth.service";
-import { AppError } from "../utils/app-error";
-import { getToken } from "./auth";
+import { optionalAuth, requireAuth, requireRoles } from "./auth";
 
-/**
- * Grants access if EITHER:
- *   1. X-Admin-Secret header matches ADMIN_UPGRADE_SECRET env var (non-empty).
- *   2. The request carries a valid JWT for an ADMIN user.
- *
- * Role is NEVER read from the request body. The secret must come from the
- * environment; a blank env var disables secret-based access entirely.
- */
-export async function requireAdminAccess(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    // Path 1 — env secret
-    const headerSecret = req.get("X-Admin-Secret");
-    if (
-      headerSecret &&
-      env.adminUpgradeSecret.length > 0 &&
-      headerSecret === env.adminUpgradeSecret
-    ) {
-      req.adminViaSecret = true;
-      return next();
-    }
+const res = {} as unknown as Response;
 
-    // Path 2 — authenticated admin JWT
-    const accessToken = getToken(req);
-    if (!accessToken) {
-      return next(AppError.unauthorized("Authentication required."));
-    }
+beforeEach(() => {
+  vi.mocked(authService.authenticateAccessToken).mockReset();
+});
 
-    const auth = await authService.authenticateAccessToken(accessToken);
+describe("S-04: no secret-header admin access", () => {
+  it("requireAuth ignores X-Admin-Secret and still demands a session", async () => {
+    const req = { headers: { "x-admin-secret": "anything" }, get: () => "anything" } as unknown as Request;
+    const next = vi.fn();
+    await requireAuth(req, res, next as unknown as NextFunction);
+    expect(next.mock.calls[0]?.[0]).toMatchObject({ statusCode: 401 });
+    expect(req.auth).toBeUndefined();
+  });
 
-    if (auth.user.role !== Role.ADMIN) {
-      return next(AppError.forbidden("Insufficient permissions."));
-    }
+  it("requireRoles(ADMIN) rejects a normal user", () => {
+    const req = { auth: { user: { role: "USER" } } } as unknown as Request;
+    const next = vi.fn();
+    requireRoles(Role.ADMIN)(req, res, next as unknown as NextFunction);
+    expect(next.mock.calls[0]?.[0]).toMatchObject({ statusCode: 403 });
+  });
+});
 
-    req.auth = auth;
-    next();
-  } catch (error) {
-    next(error);
-  }
-}
-__ALGOFORGE_FILE_6943c536902d75ba__
+describe("optionalAuth", () => {
+  it("continues anonymously when there is no token", async () => {
+    const req = { headers: {} } as unknown as Request;
+    const next = vi.fn();
+    await optionalAuth(req, res, next as unknown as NextFunction);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.auth).toBeUndefined();
+  });
+
+  it("continues anonymously when the token is invalid", async () => {
+    vi.mocked(authService.authenticateAccessToken).mockRejectedValue(new Error("bad token"));
+    const req = { headers: { cookie: "af_access=bad" } } as unknown as Request;
+    const next = vi.fn();
+    await optionalAuth(req, res, next as unknown as NextFunction);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.auth).toBeUndefined();
+  });
+});
+
+__ALGOFORGE_FILE_1329bd1124118dd3__
 
 mkdir -p ./apps/api/src/middleware
 cat > ./apps/api/src/middleware/auth.ts <<'__ALGOFORGE_FILE_a5b6fb55913e91f3__'
@@ -1077,6 +4667,26 @@ export async function requireAuth(
   }
 }
 
+/**
+ * Attaches `req.auth` when a valid session is present, but never rejects.
+ * Used by public routes whose output depends on who is asking (e.g. drafts for admins).
+ */
+export async function optionalAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const accessToken = getToken(req);
+  if (accessToken) {
+    try {
+      req.auth = await authService.authenticateAccessToken(accessToken);
+    } catch {
+      // invalid or expired token: treat the caller as anonymous
+    }
+  }
+  next();
+}
+
 export function requireRoles(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.auth) {
@@ -1088,6 +4698,7 @@ export function requireRoles(...roles: Role[]) {
     next();
   };
 }
+
 __ALGOFORGE_FILE_a5b6fb55913e91f3__
 
 mkdir -p ./apps/api/src/middleware
@@ -1114,38 +4725,185 @@ export function requireCsrf(
 __ALGOFORGE_FILE_2829d97986026030__
 
 mkdir -p ./apps/api/src/middleware
+cat > ./apps/api/src/middleware/error-handler.test.ts <<'__ALGOFORGE_FILE_679cee10e4defba5__'
+import type { NextFunction, Request, Response } from "express";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@algoforge/db";
+
+vi.mock("@algoforge/db", () => {
+  class PrismaClientKnownRequestError extends Error {
+    code: string;
+    constructor(message: string, init: { code: string }) {
+      super(message);
+      this.code = init.code;
+    }
+  }
+  return { Prisma: { PrismaClientKnownRequestError } };
+});
+
+import { errorHandler } from "./error-handler";
+import { notFoundHandler } from "./not-found";
+import { AppError } from "../utils/app-error";
+
+function run(err: unknown) {
+  const codes: number[] = [];
+  const json = vi.fn();
+  const res = {
+    headersSent: false,
+    status: (code: number) => {
+      codes.push(code);
+      return { json };
+    },
+  } as unknown as Response;
+  const req = { method: "POST", originalUrl: "/api/x?y=1", requestId: "rid-12345678" } as unknown as Request;
+  errorHandler(err, req, res, vi.fn() as unknown as NextFunction);
+  return { status: codes[0], body: json.mock.calls[0]?.[0] as unknown };
+}
+
+beforeEach(() => {
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("A-01 / A-02: one error envelope, correct status mapping", () => {
+  it("passes AppError through", () => {
+    const r = run(AppError.badRequest("nope"));
+    expect(r.status).toBe(400);
+    expect(r.body).toEqual({ error: { code: "BAD_REQUEST", message: "nope" } });
+  });
+
+  it("maps malformed JSON to 400", () => {
+    const err = Object.assign(new SyntaxError("Unexpected token"), { type: "entity.parse.failed", status: 400 });
+    const r = run(err);
+    expect(r.status).toBe(400);
+    expect(r.body).toEqual({ error: { code: "BAD_REQUEST", message: "Malformed JSON body." } });
+  });
+
+  it("maps an oversized body to 413", () => {
+    const err = Object.assign(new Error("too big"), { type: "entity.too.large", status: 413 });
+    expect(run(err).status).toBe(413);
+  });
+
+  it("maps Prisma P2002 to 409 and P2025 to 404", () => {
+    expect(run(new Prisma.PrismaClientKnownRequestError("dup", { code: "P2002", clientVersion: "test" })).status).toBe(409);
+    expect(run(new Prisma.PrismaClientKnownRequestError("gone", { code: "P2025", clientVersion: "test" })).status).toBe(404);
+  });
+
+  it("returns 500 without leaking details, and always logs the error", () => {
+    const r = run(new Error("secret internal detail"));
+    expect(r.status).toBe(500);
+    expect(JSON.stringify(r.body)).not.toContain("secret internal detail");
+    expect(console.error).toHaveBeenCalledTimes(1);
+    const logged = String(vi.mocked(console.error).mock.calls[0]?.[0]);
+    expect(logged).toContain("request failed");
+    expect(logged).toContain("rid-12345678");
+  });
+
+  it("uses the same envelope for unknown routes", () => {
+    const json = vi.fn();
+    const codes: number[] = [];
+    const res = {
+      status: (code: number) => {
+        codes.push(code);
+        return { json };
+      },
+    } as unknown as Response;
+    notFoundHandler({} as unknown as Request, res);
+    expect(codes[0]).toBe(404);
+    expect(json).toHaveBeenCalledWith({ error: { code: "NOT_FOUND", message: "Route not found." } });
+  });
+});
+
+__ALGOFORGE_FILE_679cee10e4defba5__
+
+mkdir -p ./apps/api/src/middleware
 cat > ./apps/api/src/middleware/error-handler.ts <<'__ALGOFORGE_FILE_337e045f274a8128__'
 import { NextFunction, Request, Response } from "express";
+import { Prisma } from "@algoforge/db";
 import { AppError } from "../utils/app-error";
-import { env } from "../config/env";
+import { logger, serializeError } from "../utils/logger";
+
+type LogLevel = "none" | "warn" | "error";
+
+interface MappedError {
+  statusCode: number;
+  code: string;
+  message: string;
+  level: LogLevel;
+}
+
+function bodyParserType(err: unknown): string | undefined {
+  if (typeof err === "object" && err !== null && "type" in err) {
+    const t = (err as { type: unknown }).type;
+    return typeof t === "string" ? t : undefined;
+  }
+  return undefined;
+}
+
+function mapError(err: unknown): MappedError {
+  if (err instanceof AppError) {
+    return {
+      statusCode: err.statusCode,
+      code: err.code,
+      message: err.message,
+      level: err.statusCode >= 500 ? "error" : "none",
+    };
+  }
+
+  const parserType = bodyParserType(err);
+  if (parserType === "entity.parse.failed") {
+    return { statusCode: 400, code: "BAD_REQUEST", message: "Malformed JSON body.", level: "none" };
+  }
+  if (parserType === "entity.too.large") {
+    return { statusCode: 413, code: "PAYLOAD_TOO_LARGE", message: "Request body is too large.", level: "none" };
+  }
+
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2002") {
+      return { statusCode: 409, code: "CONFLICT", message: "A resource with these values already exists.", level: "warn" };
+    }
+    if (err.code === "P2025") {
+      return { statusCode: 404, code: "NOT_FOUND", message: "Resource not found.", level: "warn" };
+    }
+  }
+
+  return { statusCode: 500, code: "INTERNAL_ERROR", message: "An unexpected error occurred.", level: "error" };
+}
 
 export function errorHandler(
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
-  _next: NextFunction,
+  next: NextFunction,
 ): void {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      error: {
-        code: err.code,
-        message: err.message,
-      },
-    });
+  if (res.headersSent) {
+    next(err);
     return;
   }
 
-  if (!env.isProduction) {
-    console.error("[Unhandled Error]", err);
+  const mapped = mapError(err);
+
+  if (mapped.level !== "none") {
+    const fields = {
+      requestId: req.requestId,
+      method: req.method,
+      path: req.originalUrl.split("?")[0],
+      userId: req.auth?.user.id,
+      status: mapped.statusCode,
+      ...serializeError(err),
+    };
+    if (mapped.level === "error") logger.error("request failed", fields);
+    else logger.warn("request failed", fields);
   }
 
-  res.status(500).json({
-    error: {
-      code: "INTERNAL_ERROR",
-      message: "An unexpected error occurred.",
-    },
+  res.status(mapped.statusCode).json({
+    error: { code: mapped.code, message: mapped.message },
   });
 }
+
 __ALGOFORGE_FILE_337e045f274a8128__
 
 mkdir -p ./apps/api/src/middleware
@@ -1154,12 +4912,106 @@ import { Request, Response } from "express";
 
 export function notFoundHandler(_req: Request, res: Response): void {
   res.status(404).json({
-    error: "Route not found.",
-    code: "NOT_FOUND",
+    error: { code: "NOT_FOUND", message: "Route not found." },
   });
 }
 
 __ALGOFORGE_FILE_ffe3ff8cdf0c6f5d__
+
+mkdir -p ./apps/api/src/middleware
+cat > ./apps/api/src/middleware/rate-limit.test.ts <<'__ALGOFORGE_FILE_15621b24664eb2df__'
+import type { NextFunction, Request, Response } from "express";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const h = vi.hoisted(() => ({ counts: new Map<string, number>(), fail: false }));
+
+vi.mock("../config/redis", () => ({
+  getRedisClient: () => ({
+    eval: async (_script: string, _numKeys: number, key: string): Promise<number> => {
+      if (h.fail) throw new Error("redis down");
+      const next = (h.counts.get(key) ?? 0) + 1;
+      h.counts.set(key, next);
+      return next;
+    },
+    ttl: async (): Promise<number> => 120,
+  }),
+}));
+vi.mock("../config/env", () => ({
+  env: {
+    isProduction: false,
+    redis: { aiRateLimitPerHour: 2, defaultRateLimitPerMinute: 2 },
+  },
+}));
+
+import { aiRateLimiter, generalRateLimiter } from "./rate-limit";
+
+function fakeReq(ip: string, forwardedFor?: string, userId?: string): Request {
+  return {
+    ip,
+    headers: forwardedFor ? { "x-forwarded-for": forwardedFor } : {},
+    auth: userId ? { user: { id: userId } } : undefined,
+  } as unknown as Request;
+}
+
+async function hit(
+  mw: (req: Request, res: Response, next: NextFunction) => Promise<void>,
+  req: Request,
+): Promise<unknown> {
+  const next = vi.fn();
+  const res = { setHeader: vi.fn() } as unknown as Response;
+  await mw(req, res, next as unknown as NextFunction);
+  return next.mock.calls[0]?.[0];
+}
+
+beforeEach(() => {
+  h.counts.clear();
+  h.fail = false;
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("S-03: spoofed X-Forwarded-For cannot bypass limits", () => {
+  it("AI limiter keys on req.ip, not on X-Forwarded-For", async () => {
+    const mw = aiRateLimiter("explain");
+    expect(await hit(mw, fakeReq("10.0.0.1", "1.1.1.1"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.0.0.1", "2.2.2.2"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.0.0.1", "3.3.3.3"))).toMatchObject({ statusCode: 429 });
+    // a different real client with the same forwarded header is a different bucket
+    expect(await hit(mw, fakeReq("10.0.0.2", "3.3.3.3"))).toBeUndefined();
+  });
+
+  it("general limiter keys on req.ip, not on X-Forwarded-For", async () => {
+    const mw = generalRateLimiter();
+    expect(await hit(mw, fakeReq("10.1.0.1", "1.1.1.1"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.1.0.1", "2.2.2.2"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.1.0.1", "3.3.3.3"))).toMatchObject({ statusCode: 429 });
+  });
+});
+
+describe("S-05: per-user AI limits", () => {
+  it("limits by user id regardless of IP", async () => {
+    const mw = aiRateLimiter("analysis");
+    expect(await hit(mw, fakeReq("10.2.0.1", undefined, "u1"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.2.0.2", undefined, "u1"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.2.0.3", undefined, "u1"))).toMatchObject({ statusCode: 429 });
+    // another user from the same IP is unaffected
+    expect(await hit(mw, fakeReq("10.2.0.1", undefined, "u2"))).toBeUndefined();
+  });
+});
+
+describe("S-06: AI limiter fails closed when Redis is down", () => {
+  it("enforces the limit in memory", async () => {
+    h.fail = true;
+    const mw = aiRateLimiter("session");
+    expect(await hit(mw, fakeReq("10.3.0.1", undefined, "redis-down-user"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.3.0.1", undefined, "redis-down-user"))).toBeUndefined();
+    expect(await hit(mw, fakeReq("10.3.0.1", undefined, "redis-down-user"))).toMatchObject({ statusCode: 429 });
+  });
+});
+
+__ALGOFORGE_FILE_15621b24664eb2df__
 
 mkdir -p ./apps/api/src/middleware
 cat > ./apps/api/src/middleware/rate-limit.ts <<'__ALGOFORGE_FILE_c6437f2604975e24__'
@@ -1167,14 +5019,55 @@ import { NextFunction, Request, Response } from "express";
 import { getRedisClient } from "../config/redis";
 import { env } from "../config/env";
 import { AppError } from "../utils/app-error";
+import { logger, serializeError } from "../utils/logger";
 
-function getClientIp(req: Request): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0].trim();
-  }
+export type AiFeature = "explain" | "session" | "analysis";
+
+/**
+ * The client IP, as computed by Express from the configured `trust proxy` setting.
+ * X-Forwarded-For is never read directly: its first entry is client-controlled.
+ */
+function clientIp(req: Request): string {
   return req.ip ?? "unknown";
 }
+
+/** AI limits are per user; unauthenticated callers fall back to their IP. */
+function limiterIdentity(req: Request): string {
+  const userId = req.auth?.user.id;
+  return userId ? `u:${userId}` : `ip:${clientIp(req)}`;
+}
+
+/* ───────────── in-memory fallback (used when Redis is unavailable) ───────────── */
+
+const memory = new Map<string, { count: number; resetAt: number }>();
+const MEMORY_MAX_KEYS = 10_000;
+
+function memoryHit(key: string, windowMs: number): { count: number; retryAfterSeconds: number } {
+  const now = Date.now();
+
+  if (memory.size >= MEMORY_MAX_KEYS) {
+    for (const [k, v] of memory) {
+      if (v.resetAt <= now) memory.delete(k);
+    }
+    if (memory.size >= MEMORY_MAX_KEYS) {
+      const oldest = memory.keys().next();
+      if (!oldest.done) memory.delete(oldest.value);
+    }
+  }
+
+  const entry = memory.get(key);
+  if (!entry || entry.resetAt <= now) {
+    memory.set(key, { count: 1, resetAt: now + windowMs });
+    return { count: 1, retryAfterSeconds: Math.ceil(windowMs / 1000) };
+  }
+  entry.count += 1;
+  return {
+    count: entry.count,
+    retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
+  };
+}
+
+/* ───────────── AI limiter (fixed window, per user, fails closed) ───────────── */
 
 const FIXED_WINDOW_SCRIPT = `
 local current = redis.call('INCR', KEYS[1])
@@ -1184,44 +5077,47 @@ end
 return current
 `;
 
-export function aiRateLimiter(feature: "explain" | "session") {
-  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    const ip = getClientIp(req);
+export function aiRateLimiter(feature: AiFeature) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const identity = limiterIdentity(req);
     const windowSeconds = 3600;
     const windowSlot = Math.floor(Date.now() / (windowSeconds * 1000));
-    const key = `rl:ai:${feature}:${ip}:${windowSlot}`;
+    const key = `rl:ai:${feature}:${identity}:${windowSlot}`;
     const limit = env.redis.aiRateLimitPerHour;
+
+    let count: number;
+    let retryAfterSeconds: number;
 
     try {
       const redis = getRedisClient();
-      const count = await redis.eval(
-        FIXED_WINDOW_SCRIPT,
-        1,
-        key,
-        String(windowSeconds),
-      ) as number;
-
-      if (count > limit) {
-        const ttl = await redis.ttl(key);
-        next(
-          AppError.tooManyRequests(
-            `AI rate limit exceeded. Limit: ${limit}/hour. Retry in ${ttl}s.`,
-          ),
-        );
-        return;
-      }
-
-      next();
+      count = (await redis.eval(FIXED_WINDOW_SCRIPT, 1, key, String(windowSeconds))) as number;
+      retryAfterSeconds = count > limit ? Math.max(1, await redis.ttl(key)) : windowSeconds;
     } catch (err) {
-      if (err instanceof AppError) {
-        next(err);
-        return;
-      }
-      console.error(`[RateLimit][AI:${feature}] Redis error — failing open:`, err);
-      next();
+      // Never fail open for AI spend: enforce the same limit in memory.
+      logger.warn("rate limiter: redis unavailable, using in-memory fallback", {
+        feature,
+        ...serializeError(err),
+      });
+      const hit = memoryHit(key, windowSeconds * 1000);
+      count = hit.count;
+      retryAfterSeconds = hit.retryAfterSeconds;
     }
+
+    if (count > limit) {
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      next(
+        AppError.tooManyRequests(
+          `AI rate limit exceeded. Limit: ${limit}/hour. Retry in ${retryAfterSeconds}s.`,
+        ),
+      );
+      return;
+    }
+
+    next();
   };
 }
+
+/* ───────────── general limiter (sliding window, per IP) ───────────── */
 
 const SLIDING_WINDOW_SCRIPT = `
 local key = KEYS[1]
@@ -1237,17 +5133,20 @@ return redis.call('ZCARD', key)
 `;
 
 export function generalRateLimiter() {
-  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    const ip = getClientIp(req);
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const ip = clientIp(req);
     const windowMs = 60_000;
     const limit = env.redis.defaultRateLimitPerMinute;
     const key = `rl:general:${ip}`;
     const now = Date.now();
     const member = `${now}:${process.hrtime.bigint().toString()}`;
 
+    let count: number;
+    let retryAfterSeconds = Math.ceil(windowMs / 1000);
+
     try {
       const redis = getRedisClient();
-      const count = await redis.eval(
+      count = (await redis.eval(
         SLIDING_WINDOW_SCRIPT,
         1,
         key,
@@ -1255,34 +5154,51 @@ export function generalRateLimiter() {
         String(windowMs),
         String(limit),
         member,
-      ) as number;
-
-      if (count > limit) {
-        next(
-          AppError.tooManyRequests(
-            `Rate limit exceeded. Limit: ${limit} requests/minute.`,
-          ),
-        );
-        return;
-      }
-
-      next();
+      )) as number;
     } catch (err) {
-      if (err instanceof AppError) {
-        next(err);
-        return;
-      }
-      console.error("[RateLimit] Redis error — failing open:", err);
-      next();
+      logger.warn("rate limiter: redis unavailable, using in-memory fallback", serializeError(err));
+      const hit = memoryHit(key, windowMs);
+      count = hit.count;
+      retryAfterSeconds = hit.retryAfterSeconds;
     }
+
+    if (count > limit) {
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      next(AppError.tooManyRequests(`Rate limit exceeded. Limit: ${limit} requests/minute.`));
+      return;
+    }
+
+    next();
   };
-} 
+}
+
 __ALGOFORGE_FILE_c6437f2604975e24__
+
+mkdir -p ./apps/api/src/middleware
+cat > ./apps/api/src/middleware/request-id.ts <<'__ALGOFORGE_FILE_79b0f239c6cd96d0__'
+import { randomUUID } from "crypto";
+import { NextFunction, Request, Response } from "express";
+
+const SAFE_ID = /^[A-Za-z0-9._-]{8,64}$/;
+
+export function requestId(req: Request, res: Response, next: NextFunction): void {
+  const incoming = req.get("x-request-id");
+  const id = incoming && SAFE_ID.test(incoming) ? incoming : randomUUID();
+  req.requestId = id;
+  res.setHeader("X-Request-Id", id);
+  next();
+}
+
+__ALGOFORGE_FILE_79b0f239c6cd96d0__
 
 mkdir -p ./apps/api/src/middleware
 cat > ./apps/api/src/middleware/security-headers.ts <<'__ALGOFORGE_FILE_274f083961e6be1e__'
 import { NextFunction, Request, Response } from "express";
+import { env } from "../config/env";
 
+/**
+ * The API only serves JSON, so the CSP is fully locked down.
+ */
 export function securityHeaders(
   _req: Request,
   res: Response,
@@ -1294,6 +5210,14 @@ export function securityHeaders(
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-site");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  );
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  if (env.isProduction) {
+    res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  }
   next();
 }
 
@@ -1388,11 +5312,6 @@ RULES:
 Answer:`;
 }
 __ALGOFORGE_FILE_567d0834deccdfc7__
-
-mkdir -p ./apps/api/src/prompts
-cat > ./apps/api/src/prompts/explanation.prompts.ts <<'__ALGOFORGE_FILE_be6936ea3f6bf56c__'
-
-__ALGOFORGE_FILE_be6936ea3f6bf56c__
 
 mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/algorithm.repository.ts <<'__ALGOFORGE_FILE_2e4efbd2124e9ef5__'
@@ -1735,13 +5654,8 @@ export const categoryRepository = {
 __ALGOFORGE_FILE_b280365fe1c8ae03__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/explanation.repository.ts <<'__ALGOFORGE_FILE_e2f3fb37effceeec__'
-
-__ALGOFORGE_FILE_e2f3fb37effceeec__
-
-mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/explanation-session.repository.ts <<'__ALGOFORGE_FILE_8f526095ebde3864__'
-import { prisma } from "@algoforge/db";
+import { prisma, Prisma } from "@algoforge/db";
 import type { SessionMessage } from "../services/explanation-session.service";
 
 export const explanationSessionRepository = {
@@ -1799,7 +5713,7 @@ export const explanationSessionRepository = {
     return prisma.explanationSession.update({
       where: { id },
       data:  {
-        messages: messages as object[],
+        messages: messages as unknown as Prisma.InputJsonValue,
         ...(title ? { title } : {}),
       },
     });
@@ -1966,6 +5880,22 @@ export const userRepository = {
     });
   },
 
+  /** Keyset-style page over users, newest first. `take` should be limit + 1 to detect a next page. */
+  findPage(opts: { take: number; cursor?: string }) {
+    return prisma.user.findMany({
+      take: opts.take,
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  },
+
   create(data: {
     email: string | null;
     name: string | null;
@@ -1986,6 +5916,7 @@ export const userRepository = {
     return prisma.user.update({ where: { id }, data: { role }, select: userSelect });
   },
 };
+
 __ALGOFORGE_FILE_bec8351d705c1d20__
 
 mkdir -p ./apps/api/src/routes
@@ -1993,33 +5924,37 @@ cat > ./apps/api/src/routes/admin.ts <<'__ALGOFORGE_FILE_3545272fa8f271f5__'
 //# filename: apps/api/src/routes/admin.ts
 
 import { Router } from "express";
+import { Role } from "@algoforge/db";
 import { adminController } from "../controllers/admin.controller";
-import { requireAdminAccess } from "../middleware/admin-secret";
+import { requireAuth, requireRoles } from "../middleware/auth";
 import { requireCsrf } from "../middleware/csrf";
 
 const router = Router();
 
-// All admin management routes require admin access (JWT admin OR env secret).
-// CSRF is also required to protect against cross-site requests.
-// Role is never accepted from any request body — it is hardcoded per endpoint.
+// Admin access requires a signed-in ADMIN user. There is no secret-header path.
+// Bootstrap the first admin with: pnpm db:make-admin <email>
+// Role is never accepted from any request body: it is hardcoded per endpoint.
 
-router.get("/users", requireAdminAccess, adminController.listUsers);
+router.get("/users", requireAuth, requireRoles(Role.ADMIN), adminController.listUsers);
 
 router.post(
   "/upgrade-user",
-  requireAdminAccess,
+  requireAuth,
+  requireRoles(Role.ADMIN),
   requireCsrf,
   adminController.upgradeUser,
 );
 
 router.post(
   "/downgrade-user",
-  requireAdminAccess,
+  requireAuth,
+  requireRoles(Role.ADMIN),
   requireCsrf,
   adminController.downgradeUser,
 );
 
 export default router;
+
 __ALGOFORGE_FILE_3545272fa8f271f5__
 
 mkdir -p ./apps/api/src/routes
@@ -2029,17 +5964,18 @@ cat > ./apps/api/src/routes/algorithm.ts <<'__ALGOFORGE_FILE_9e6aa3281a12c13b__'
 import { Router } from "express";
 import { Role } from "@algoforge/db";
 import { algorithmController } from "../controllers/algorithm.controller";
-import { requireAuth, requireRoles } from "../middleware/auth";
+import { optionalAuth, requireAuth, requireRoles } from "../middleware/auth";
 import { requireCsrf } from "../middleware/csrf";
 import { validateIdParam, validateSlugParam } from "../validation/algorithm";
 
 const router = Router();
 
-// Public reads — optional ?lang=javascript|python query param
-router.get("/", algorithmController.list);
-router.get("/slug/:slug", validateSlugParam, algorithmController.getBySlug);
-router.get("/id/:id/visualize", validateIdParam, algorithmController.getVisualize);
-router.get("/id/:id", validateIdParam, algorithmController.getById);
+// Public reads: anonymous callers only ever see published algorithms.
+// optionalAuth lets admins see drafts. Optional ?lang=javascript|python query param.
+router.get("/", optionalAuth, algorithmController.list);
+router.get("/slug/:slug", optionalAuth, validateSlugParam, algorithmController.getBySlug);
+router.get("/id/:id/visualize", optionalAuth, validateIdParam, algorithmController.getVisualize);
+router.get("/id/:id", optionalAuth, validateIdParam, algorithmController.getById);
 
 // Admin writes
 router.post(
@@ -2069,6 +6005,7 @@ router.delete(
 );
 
 export default router;
+
 __ALGOFORGE_FILE_9e6aa3281a12c13b__
 
 mkdir -p ./apps/api/src/routes
@@ -2077,12 +6014,19 @@ import { Router } from "express";
 import { analysisController } from "../controllers/analysis.controller";
 import { requireAuth } from "../middleware/auth";
 import { requireCsrf } from "../middleware/csrf";
+import { aiRateLimiter } from "../middleware/rate-limit";
 
 const router = Router();
 
 router.get("/", requireAuth, analysisController.listAnalyses);
 router.get("/:id", requireAuth, analysisController.getAnalysisById);
-router.post("/", requireAuth, requireCsrf, analysisController.createAnalysis);
+router.post(
+  "/",
+  requireAuth,
+  requireCsrf,
+  aiRateLimiter("analysis"),
+  analysisController.createAnalysis,
+);
 router.post(
   "/:id/share",
   requireAuth,
@@ -2091,14 +6035,14 @@ router.post(
 );
 
 export default router;
+
 __ALGOFORGE_FILE_bde494eea179d5c8__
 
 mkdir -p ./apps/api/src/routes
 cat > ./apps/api/src/routes/auth.ts <<'__ALGOFORGE_FILE_2efe1862db9c9fec__'
 import { Router } from "express";
-import { Role } from "@algoforge/db";
 import { authController } from "../controllers/auth.controller";
-import { requireAuth, requireRoles } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 import { requireCsrf } from "../middleware/csrf";
 
 const router = Router();
@@ -2106,17 +6050,17 @@ const router = Router();
 router.get("/google/start", authController.startGoogleAuth);
 router.get("/google/callback", authController.handleGoogleCallback);
 router.get("/me", requireAuth, authController.getMe);
+
+// No CSRF token on refresh by design: the refresh cookie is httpOnly, scoped to
+// /api/auth and SameSite=Lax, the endpoint only rotates the caller's own session,
+// and it returns no cross-origin-readable secret. Do not weaken those cookie flags.
 router.post("/refresh", authController.refreshSession);
+
 router.post("/logout", requireCsrf, authController.logout);
 router.post("/logout-all", requireAuth, requireCsrf, authController.logoutAll);
-router.get(
-  "/admin/users",
-  requireAuth,
-  requireRoles(Role.ADMIN),
-  authController.listUsers,
-);
 
 export default router;
+
 __ALGOFORGE_FILE_2efe1862db9c9fec__
 
 mkdir -p ./apps/api/src/routes
@@ -2157,7 +6101,7 @@ export default router;
 __ALGOFORGE_FILE_61e2fc8842771d48__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/exaplantion.ts <<'__ALGOFORGE_FILE_a74cade7f4cb8a0f__'
+cat > ./apps/api/src/routes/explanation.ts <<'__ALGOFORGE_FILE_a325b8fc98bcb0f5__'
 import { Router } from "express";
 import { explanationController } from "../controllers/explanation.controller";
 import { requireAuth } from "../middleware/auth";
@@ -2170,12 +6114,12 @@ router.post(
   "/",
   requireAuth,
   requireCsrf,
-  aiRateLimiter(),
+  aiRateLimiter("explain"),
   explanationController.explain,
 );
 
 export default router;
-__ALGOFORGE_FILE_a74cade7f4cb8a0f__
+__ALGOFORGE_FILE_a325b8fc98bcb0f5__
 
 mkdir -p ./apps/api/src/routes
 cat > ./apps/api/src/routes/explanation-session.ts <<'__ALGOFORGE_FILE_c45637969e89e09e__'
@@ -2198,6 +6142,60 @@ export default router;
 __ALGOFORGE_FILE_c45637969e89e09e__
 
 mkdir -p ./apps/api/src/routes
+cat > ./apps/api/src/routes/health.ts <<'__ALGOFORGE_FILE_8b0fc605c922d91e__'
+import { Router } from "express";
+import { prisma } from "@algoforge/db";
+import { getRedisClient } from "../config/redis";
+
+const router = Router();
+const CHECK_TIMEOUT_MS = 2000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+async function check(fn: () => Promise<unknown>): Promise<"ok" | "fail"> {
+  try {
+    await withTimeout(fn(), CHECK_TIMEOUT_MS);
+    return "ok";
+  } catch {
+    return "fail";
+  }
+}
+
+// Liveness: the process is up.
+router.get("/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Readiness: dependencies are reachable.
+router.get("/ready", async (_req, res) => {
+  const [database, redis] = await Promise.all([
+    check(() => prisma.$queryRaw`SELECT 1`),
+    check(async () => {
+      const reply = await getRedisClient().ping();
+      if (reply !== "PONG") throw new Error("unexpected ping reply");
+    }),
+  ]);
+  const ready = database === "ok" && redis === "ok";
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "ready" : "not_ready",
+    checks: { database, redis },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+export default router;
+
+__ALGOFORGE_FILE_8b0fc605c922d91e__
+
+mkdir -p ./apps/api/src/routes
 cat > ./apps/api/src/routes/share.ts <<'__ALGOFORGE_FILE_5afea6c2a1da0241__'
 import { Router } from "express";
 import { analysisController } from "../controllers/analysis.controller";
@@ -2213,6 +6211,44 @@ router.get("/:shareId", analysisController.getPublicAnalysis);
 
 export default router;
 __ALGOFORGE_FILE_5afea6c2a1da0241__
+
+mkdir -p ./apps/api/src/security
+cat > ./apps/api/src/security/no-hardcoded-secrets.test.ts <<'__ALGOFORGE_FILE_50cf60c0394fcb17__'
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const SRC = resolve(__dirname, "..");
+
+function sourceFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) out.push(...sourceFiles(full));
+    else if (name.endsWith(".ts") && !name.endsWith(".test.ts")) out.push(full);
+  }
+  return out;
+}
+
+function offenders(pattern: RegExp): string[] {
+  return sourceFiles(SRC).filter((f) => pattern.test(readFileSync(f, "utf8")));
+}
+
+describe("S-04: no hard-coded admin secret", () => {
+  it("has no admin secret setting, header or default value anywhere in src", () => {
+    expect(offenders(/adminUpgradeSecret|ADMIN_UPGRADE_SECRET|x-admin-secret|1d201bf1/i)).toEqual([]);
+  });
+});
+
+describe("S-03: rate limiting never trusts X-Forwarded-For", () => {
+  it("does not read the header in the rate limiter", () => {
+    const limiter = readFileSync(join(SRC, "middleware", "rate-limit.ts"), "utf8");
+    expect(limiter.toLowerCase()).not.toContain("x-forwarded-for");
+    expect(limiter).toContain("req.ip");
+  });
+});
+
+__ALGOFORGE_FILE_50cf60c0394fcb17__
 
 mkdir -p ./apps/api/src
 cat > ./apps/api/src/server.ts <<'__ALGOFORGE_FILE_a71e7ff0e8c7a5e0__'
@@ -2277,7 +6313,7 @@ import { AppError } from "../utils/app-error";
 class AdminService {
   /**
    * Promotes userId to ADMIN.
-   * Role is always hardcoded here — it is never accepted from the request body.
+   * Role is always hardcoded here, it is never accepted from the request body.
    */
   async upgradeToAdmin(userId: string) {
     const user = await userRepository.findById(userId);
@@ -2293,7 +6329,7 @@ class AdminService {
 
   /**
    * Demotes userId to USER.
-   * Role is always hardcoded here — it is never accepted from the request body.
+   * Role is always hardcoded here, it is never accepted from the request body.
    */
   async downgradeToUser(userId: string) {
     const user = await userRepository.findById(userId);
@@ -2307,22 +6343,17 @@ class AdminService {
     return { user: updated, changed: true };
   }
 
-  async listAllUsers() {
-    const { prisma } = await import("@algoforge/db");
-    return prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+  async listUsers(limit: number, cursor?: string) {
+    const rows = await userRepository.findPage({ take: limit + 1, cursor });
+    const hasMore = rows.length > limit;
+    const users = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? users[users.length - 1].id : null;
+    return { users, nextCursor };
   }
 }
 
 export const adminService = new AdminService();
+
 __ALGOFORGE_FILE_bebb84cce69c435f__
 
 mkdir -p ./apps/api/src/services
@@ -2427,54 +6458,75 @@ mkdir -p ./apps/api/src/services/algorithm
 cat > ./apps/api/src/services/algorithm/cache-keys.ts <<'__ALGOFORGE_FILE_b71d283ec2084935__'
 /**
  * All cache key builders for algorithms in one place.
- * Changing a key format here automatically fixes every caller.
+ *
+ * Every key embeds:
+ *   - the namespace version (see services/lib/cache-version.ts), so a write invalidates all keys, and
+ *   - the visibility scope, so a draft cached for an admin can never be served to the public.
  */
+export type CacheScope = "public" | "admin";
+
+export const ALGO_CACHE_NAMESPACE = "algo";
+
 export const algorithmCacheKeys = {
-  // List keys are JSON-stringified query objects (hashed by cacheService internally)
-  list:    (query: object)                  => `algo:list:${JSON.stringify(query)}`,
-
-  // Detail keys are structured so we can invalidate by id/slug without re-hashing
-  byId:    (id: string,   lang = "default") => `algo:id:${id}:${lang}`,
-  bySlug:  (slug: string, lang = "default") => `algo:slug:${slug}:${lang}`,
-
-  // Visualisation / forge config
-  viz:     (id: string)                     => `viz:${id}`,
+  list:   (v: number, scope: CacheScope, query: object)                => `algo:v${v}:${scope}:list:${JSON.stringify(query)}`,
+  byId:   (v: number, scope: CacheScope, id: string,   lang = "default") => `algo:v${v}:${scope}:id:${id}:${lang}`,
+  bySlug: (v: number, scope: CacheScope, slug: string, lang = "default") => `algo:v${v}:${scope}:slug:${slug}:${lang}`,
+  viz:    (v: number, scope: CacheScope, id: string)                   => `viz:v${v}:${scope}:${id}`,
 };
+
 __ALGOFORGE_FILE_b71d283ec2084935__
 
 mkdir -p ./apps/api/src/services/algorithm
 cat > ./apps/api/src/services/algorithm/detail.service.ts <<'__ALGOFORGE_FILE_1b69f90d862c94e5__'
 /**
  * Fetches a single algorithm by id or slug.
- * Each (id/slug + language) combination gets its own cache entry
- * so switching display language doesn't cause a cache miss cascade.
+ * Unpublished algorithms are invisible (404) to everyone but admins.
+ * Each (scope + id/slug + language) combination gets its own cache entry.
  */
 import { AlgorithmDetailSchema, type AlgorithmDetail } from "@algoforge/forge";
 import { algorithmRepository, type AlgorithmDetailRow } from "../../repositories/algorithm.repository";
-import { layeredCache } from "../lib/Layered.cache";
-import { algorithmCacheKeys } from "./cache-keys";
+import { layeredCache } from "../lib/layered-cache";
+import { getCacheVersion } from "../lib/cache-version";
+import { ALGO_CACHE_NAMESPACE, algorithmCacheKeys } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
+import type { AlgorithmVisibility } from "../../types/algorithm.types";
 
-export async function getAlgorithmById(id: string, lang?: string): Promise<AlgorithmDetail> {
-  const key    = algorithmCacheKeys.byId(id, lang);
-  const cached = await layeredCache.get<AlgorithmDetail>(key);
+function visibleTo(row: AlgorithmDetailRow, visibility: AlgorithmVisibility): row is NonNullable<AlgorithmDetailRow> {
+  return row !== null && (visibility.isAdmin || row.isPublished);
+}
+
+export async function getAlgorithmById(
+  id: string,
+  lang: string | undefined,
+  visibility: AlgorithmVisibility,
+): Promise<AlgorithmDetail> {
+  const scope   = visibility.isAdmin ? "admin" : "public";
+  const version = await getCacheVersion(ALGO_CACHE_NAMESPACE);
+  const key     = algorithmCacheKeys.byId(version, scope, id, lang);
+  const cached  = await layeredCache.get<AlgorithmDetail>(key);
   if (cached) return cached;
 
   const row = await algorithmRepository.findById(id);
-  if (!row) throw AppError.notFound("Algorithm not found.");
+  if (!visibleTo(row, visibility)) throw AppError.notFound("Algorithm not found.");
 
   const result = toAlgorithmDetail(row, lang);
   await layeredCache.set(key, result);
   return result;
 }
 
-export async function getAlgorithmBySlug(slug: string, lang?: string): Promise<AlgorithmDetail> {
-  const key    = algorithmCacheKeys.bySlug(slug, lang);
-  const cached = await layeredCache.get<AlgorithmDetail>(key);
+export async function getAlgorithmBySlug(
+  slug: string,
+  lang: string | undefined,
+  visibility: AlgorithmVisibility,
+): Promise<AlgorithmDetail> {
+  const scope   = visibility.isAdmin ? "admin" : "public";
+  const version = await getCacheVersion(ALGO_CACHE_NAMESPACE);
+  const key     = algorithmCacheKeys.bySlug(version, scope, slug, lang);
+  const cached  = await layeredCache.get<AlgorithmDetail>(key);
   if (cached) return cached;
 
   const row = await algorithmRepository.findBySlug(slug);
-  if (!row) throw AppError.notFound("Algorithm not found.");
+  if (!visibleTo(row, visibility)) throw AppError.notFound("Algorithm not found.");
 
   const result = toAlgorithmDetail(row, lang);
   await layeredCache.set(key, result);
@@ -2531,6 +6583,7 @@ function toAlgorithmDetail(
       : null,
   });
 }
+
 __ALGOFORGE_FILE_1b69f90d862c94e5__
 
 mkdir -p ./apps/api/src/services/algorithm
@@ -2564,6 +6617,82 @@ export const algorithmService = {
 __ALGOFORGE_FILE_0d9aa0e857585249__
 
 mkdir -p ./apps/api/src/services/algorithm
+cat > ./apps/api/src/services/algorithm/mutation.service.test.ts <<'__ALGOFORGE_FILE_34f979d2401b1e42__'
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UpdateAlgorithm } from "@algoforge/forge";
+
+const h = vi.hoisted(() => ({
+  findById: vi.fn(),
+  update: vi.fn(),
+  findCategory: vi.fn(),
+  bump: vi.fn(),
+}));
+
+vi.mock("../../repositories/algorithm.repository", () => ({
+  algorithmRepository: { findById: h.findById, update: h.update },
+}));
+vi.mock("../../repositories/category.repository", () => ({
+  categoryRepository: { findByIdentifier: h.findCategory },
+}));
+vi.mock("../lib/layered-cache", () => ({
+  layeredCache: { get: async () => null, set: async () => undefined, del: async () => undefined },
+}));
+vi.mock("../lib/cache-version", () => ({
+  getCacheVersion: async (): Promise<number> => 0,
+  bumpCacheVersion: h.bump,
+}));
+vi.mock("@algoforge/db", () => ({ Prisma: {}, Difficulty: {} }));
+
+import { toUpdateData, updateAlgorithm } from "./mutation.service";
+
+beforeEach(() => {
+  h.findById.mockReset();
+  h.update.mockReset();
+  h.findCategory.mockReset();
+  h.bump.mockReset();
+});
+
+describe("A-09: partial complexity updates", () => {
+  it("writes only the complexity fields that were sent", () => {
+    const input: UpdateAlgorithm = { complexity: { time: { best: "O(1)" } } };
+    const data = toUpdateData(input, null);
+    expect(Object.keys(data)).toEqual(["timeBest"]);
+    expect(data).toEqual({ timeBest: "O(1)" });
+  });
+
+  it("writes space without touching the time columns", () => {
+    const input: UpdateAlgorithm = { complexity: { space: "O(n)" } };
+    expect(toUpdateData(input, null)).toEqual({ spaceComplexity: "O(n)" });
+  });
+});
+
+describe("A-10: category change", () => {
+  it("uses a relation connect instead of the unchecked categoryId scalar", () => {
+    const data = toUpdateData({}, null, "sorting");
+    expect(data).toEqual({ category: { connect: { id: "sorting" } } });
+    expect("categoryId" in data).toBe(false);
+  });
+});
+
+describe("A-11: cache invalidation", () => {
+  it("bumps the algorithm cache version and passes a connect to the repository on update", async () => {
+    h.findById.mockResolvedValue({ id: "a1", slug: "s", forge: null });
+    h.findCategory.mockResolvedValue({ id: "sorting" });
+    h.update.mockResolvedValue({ id: "a1" });
+
+    await updateAlgorithm("a1", { categoryId: "sorting", complexity: { time: { best: "O(1)" } } });
+
+    expect(h.update).toHaveBeenCalledWith("a1", {
+      category: { connect: { id: "sorting" } },
+      timeBest: "O(1)",
+    });
+    expect(h.bump).toHaveBeenCalledWith("algo");
+  });
+});
+
+__ALGOFORGE_FILE_34f979d2401b1e42__
+
+mkdir -p ./apps/api/src/services/algorithm
 cat > ./apps/api/src/services/algorithm/mutation.service.ts <<'__ALGOFORGE_FILE_c41d3c9838a2947a__'
 import { Prisma, Difficulty } from "@algoforge/db";
 import {
@@ -2575,9 +6704,10 @@ import {
 } from "@algoforge/forge";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
 import { categoryRepository } from "../../repositories/category.repository";
-import { algorithmCacheKeys } from "./cache-keys";
+import { ALGO_CACHE_NAMESPACE } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
-import { layeredCache } from "../lib/Layered.cache";
+import { bumpCacheVersion } from "../lib/cache-version";
+import { layeredCache } from "../lib/layered-cache";
 
 type ExistingForge = {
   forgeCode:   Prisma.JsonValue;
@@ -2589,7 +6719,9 @@ type ExistingForge = {
 export async function createAlgorithm(input: CreateAlgorithm) {
   if (input.forge) validateForge(input.forge);
   const category = await resolveCategory(input.categoryId);
-  return algorithmRepository.create(toCreateData(input, category.id));
+  const created = await algorithmRepository.create(toCreateData(input, category.id));
+  await bustCache();
+  return created;
 }
 
 export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
@@ -2615,7 +6747,7 @@ export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
     id,
     toUpdateData(input, existing.forge ?? null, categoryId),
   );
-  await bustCache(id, existing.slug);
+  await bustCache();
   return updated;
 }
 
@@ -2624,16 +6756,16 @@ export async function deleteAlgorithm(id: string): Promise<void> {
   if (!existing) throw AppError.notFound("Algorithm not found.");
 
   await algorithmRepository.delete(id);
-  await bustCache(id, existing.slug);
+  await bustCache();
 }
 
-async function bustCache(id: string, slug: string): Promise<void> {
-  await Promise.all([
-    layeredCache.del(algorithmCacheKeys.byId(id)),
-    layeredCache.del(algorithmCacheKeys.bySlug(slug)),
-    layeredCache.del(algorithmCacheKeys.viz(id)),
-    layeredCache.del("meta:slugs"),
-  ]);
+/**
+ * Invalidates every cached algorithm view on every instance by bumping the namespace version.
+ * `meta:slugs` (used by the AI query processor) is a plain key and is deleted explicitly.
+ */
+async function bustCache(): Promise<void> {
+  await bumpCacheVersion(ALGO_CACHE_NAMESPACE);
+  await layeredCache.del("meta:slugs");
 }
 
 function validateForge(
@@ -2676,7 +6808,20 @@ function toCreateData(input: CreateAlgorithm, categoryId: string) {
   };
 }
 
-function toUpdateData(
+/**
+ * Only fields the caller actually sent are written. A partial `complexity` update
+ * (e.g. only time.best) must never null out the other complexity columns.
+ */
+function complexityPatch(c: NonNullable<UpdateAlgorithm["complexity"]>) {
+  return {
+    ...(c.time?.best    !== undefined ? { timeBest:        c.time.best }    : {}),
+    ...(c.time?.average !== undefined ? { timeAverage:     c.time.average } : {}),
+    ...(c.time?.worst   !== undefined ? { timeWorst:       c.time.worst }   : {}),
+    ...(c.space         !== undefined ? { spaceComplexity: c.space }        : {}),
+  };
+}
+
+export function toUpdateData(
   input: UpdateAlgorithm,
   existingForge: ExistingForge,
   categoryId?: string,
@@ -2688,18 +6833,15 @@ function toUpdateData(
     ...(input.slug        && { slug:        input.slug }),
     ...(input.name        && { name:        input.name }),
     ...(input.description && { description: input.description }),
-    ...(categoryId && { categoryId }),
+    // Relation connect, not the unchecked scalar: Prisma rejects mixing checked
+    // (nested relation writes) and unchecked (scalar foreign key) update input.
+    ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
     ...(input.difficulty  && { difficulty:  input.difficulty as Difficulty }),
     ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
-    ...(input.complexity  && {
-      timeBest:        input.complexity.time?.best    ?? null,
-      timeAverage:     input.complexity.time?.average ?? null,
-      timeWorst:       input.complexity.time?.worst   ?? null,
-      spaceComplexity: input.complexity.space         ?? null,
-    }),
+    ...(input.complexity ? complexityPatch(input.complexity) : {}),
     ...(input.displayCodes && { displayCodes: input.displayCodes }),
     ...(input.tags         && { tags:         input.tags }),
-    ...(input.forge        && buildForgeWrite(input.forge, existingForge)),
+    ...(input.forge ? buildForgeWrite(input.forge, existingForge) : {}),
   };
 }
 
@@ -2738,27 +6880,37 @@ async function resolveCategory(categoryIdOrLabel: string) {
   }
   return category;
 }
+
 __ALGOFORGE_FILE_c41d3c9838a2947a__
 
 mkdir -p ./apps/api/src/services/algorithm
 cat > ./apps/api/src/services/algorithm/query.service.ts <<'__ALGOFORGE_FILE_8b291ac00c62c522__'
 /**
  * Lists and searches algorithms.
- * Results are cached; the cache is busted on any mutation via mutation.service.ts.
+ * Non-admins only ever see published algorithms, whatever filters they send.
+ * Results are cached per visibility scope; any mutation bumps the namespace version.
  */
 import { Prisma, Difficulty } from "@algoforge/db";
 import { AlgorithmListItemSchema, type AlgorithmListItem } from "@algoforge/forge";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
-import { algorithmCacheKeys } from "./cache-keys";
-import { layeredCache } from "../lib/Layered.cache";
-import type { AlgorithmQuery } from "../../types/algorithm.types";
+import { ALGO_CACHE_NAMESPACE, algorithmCacheKeys } from "./cache-keys";
+import { getCacheVersion } from "../lib/cache-version";
+import { layeredCache } from "../lib/layered-cache";
+import type { AlgorithmQuery, AlgorithmVisibility } from "../../types/algorithm.types";
 
-export async function listAlgorithms(query: AlgorithmQuery): Promise<AlgorithmListItem[]> {
-  const key    = algorithmCacheKeys.list(query);
-  const cached = await layeredCache.get<AlgorithmListItem[]>(key);
+export async function listAlgorithms(
+  query: AlgorithmQuery,
+  visibility: AlgorithmVisibility,
+): Promise<AlgorithmListItem[]> {
+  const scope = visibility.isAdmin ? "admin" : "public";
+  const effective: AlgorithmQuery = visibility.isAdmin ? query : { ...query, isPublished: true };
+
+  const version = await getCacheVersion(ALGO_CACHE_NAMESPACE);
+  const key     = algorithmCacheKeys.list(version, scope, effective);
+  const cached  = await layeredCache.get<AlgorithmListItem[]>(key);
   if (cached) return cached;
 
-  const rows   = await algorithmRepository.findMany(buildWhere(query));
+  const rows = await algorithmRepository.findMany(buildWhere(effective));
 
   // The DB returns flat complexity fields; the schema expects a nested object.
   const result = rows.map((row) =>
@@ -2799,28 +6951,152 @@ function buildWhere(query: AlgorithmQuery): Prisma.AlgorithmWhereInput {
     } : {}),
   };
 }
+
 __ALGOFORGE_FILE_8b291ac00c62c522__
+
+mkdir -p ./apps/api/src/services/algorithm
+cat > ./apps/api/src/services/algorithm/visibility.test.ts <<'__ALGOFORGE_FILE_473747d7b4bf6408__'
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const h = vi.hoisted(() => ({
+  findMany: vi.fn(),
+  findById: vi.fn(),
+  findBySlug: vi.fn(),
+  cache: new Map<string, string>(),
+}));
+
+vi.mock("../../repositories/algorithm.repository", () => ({
+  algorithmRepository: {
+    findMany: h.findMany,
+    findById: h.findById,
+    findBySlug: h.findBySlug,
+  },
+}));
+vi.mock("../lib/layered-cache", () => ({
+  layeredCache: {
+    get: async (key: string): Promise<unknown> => {
+      const v = h.cache.get(key);
+      return v === undefined ? null : JSON.parse(v);
+    },
+    set: async (key: string, value: unknown): Promise<void> => {
+      h.cache.set(key, JSON.stringify(value));
+    },
+    del: async (key: string): Promise<void> => {
+      h.cache.delete(key);
+    },
+  },
+}));
+vi.mock("../lib/cache-version", () => ({
+  getCacheVersion: async (): Promise<number> => 0,
+  bumpCacheVersion: async (): Promise<void> => undefined,
+}));
+vi.mock("@algoforge/db", () => ({
+  Prisma: { QueryMode: { insensitive: "insensitive" } },
+  Difficulty: {},
+}));
+
+import { listAlgorithms } from "./query.service";
+import { getAlgorithmById, getAlgorithmBySlug } from "./detail.service";
+import { getAlgorithmVisualization } from "./viz.service";
+
+const draftRow = {
+  id: "a1",
+  slug: "draft-algo",
+  name: "Draft",
+  description: "not public",
+  difficulty: "beginner",
+  categoryId: "sorting",
+  isPublished: false,
+  timeBest: null,
+  timeAverage: null,
+  timeWorst: null,
+  spaceComplexity: null,
+  displayCodes: [],
+  tags: [],
+  forge: null,
+};
+
+const anon = { isAdmin: false };
+const admin = { isAdmin: true };
+
+beforeEach(() => {
+  h.cache.clear();
+  h.findMany.mockReset();
+  h.findById.mockReset();
+  h.findBySlug.mockReset();
+  h.findMany.mockResolvedValue([]);
+});
+
+describe("S-02: drafts are not public", () => {
+  it("forces isPublished=true for anonymous callers even when they ask for drafts", async () => {
+    await listAlgorithms({ isPublished: false }, anon);
+    expect(h.findMany).toHaveBeenCalledWith(expect.objectContaining({ isPublished: true }));
+  });
+
+  it("filters to published when an anonymous caller sends no filter", async () => {
+    await listAlgorithms({}, anon);
+    expect(h.findMany).toHaveBeenCalledWith(expect.objectContaining({ isPublished: true }));
+  });
+
+  it("lets admins see drafts and respects their isPublished filter", async () => {
+    await listAlgorithms({ isPublished: false }, admin);
+    expect(h.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ isPublished: false }));
+
+    await listAlgorithms({}, admin);
+    const where = h.findMany.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(where).not.toHaveProperty("isPublished");
+  });
+
+  it("returns 404 for an unpublished algorithm by id, slug and visualize for anonymous callers", async () => {
+    h.findById.mockResolvedValue(draftRow);
+    h.findBySlug.mockResolvedValue(draftRow);
+    await expect(getAlgorithmById("a1", undefined, anon)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(getAlgorithmBySlug("draft-algo", undefined, anon)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(getAlgorithmVisualization("a1", anon)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("lets admins read a draft", async () => {
+    h.findById.mockResolvedValue(draftRow);
+    await expect(getAlgorithmById("a1", undefined, admin)).resolves.toMatchObject({ id: "a1" });
+  });
+
+  it("never serves an admin-cached draft to an anonymous caller", async () => {
+    h.findById.mockResolvedValue(draftRow);
+    await getAlgorithmById("a1", undefined, admin); // populates the admin-scoped cache
+    await expect(getAlgorithmById("a1", undefined, anon)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+__ALGOFORGE_FILE_473747d7b4bf6408__
 
 mkdir -p ./apps/api/src/services/algorithm
 cat > ./apps/api/src/services/algorithm/viz.service.ts <<'__ALGOFORGE_FILE_9d83371fbc11c6fc__'
 /**
  * Returns the forge / visualisation config for an algorithm.
- * The forge config is the most frequently read object for the visualiser UI
- * so it gets its own dedicated cache key.
+ * Unpublished algorithms are invisible (404) to everyone but admins.
  */
 import { AlgorithmExecutionSchema, type AlgorithmExecution } from "@algoforge/forge";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
-import { algorithmCacheKeys } from "./cache-keys";
+import { ALGO_CACHE_NAMESPACE, algorithmCacheKeys } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
-import { layeredCache } from "../lib/Layered.cache";
+import { getCacheVersion } from "../lib/cache-version";
+import { layeredCache } from "../lib/layered-cache";
+import type { AlgorithmVisibility } from "../../types/algorithm.types";
 
-export async function getAlgorithmVisualization(id: string): Promise<AlgorithmExecution> {
-  const key    = algorithmCacheKeys.viz(id);
-  const cached = await layeredCache.get<AlgorithmExecution>(key);
+export async function getAlgorithmVisualization(
+  id: string,
+  visibility: AlgorithmVisibility,
+): Promise<AlgorithmExecution> {
+  const scope   = visibility.isAdmin ? "admin" : "public";
+  const version = await getCacheVersion(ALGO_CACHE_NAMESPACE);
+  const key     = algorithmCacheKeys.viz(version, scope, id);
+  const cached  = await layeredCache.get<AlgorithmExecution>(key);
   if (cached) return cached;
 
   const row = await algorithmRepository.findById(id);
-  if (!row)       throw AppError.notFound("Algorithm not found.");
+  if (!row || (!visibility.isAdmin && !row.isPublished)) {
+    throw AppError.notFound("Algorithm not found.");
+  }
   if (!row.forge) throw AppError.notFound("No forge configuration found for this algorithm.");
 
   const result = AlgorithmExecutionSchema.parse({
@@ -2837,6 +7113,7 @@ export async function getAlgorithmVisualization(id: string): Promise<AlgorithmEx
   await layeredCache.set(key, result);
   return result;
 }
+
 __ALGOFORGE_FILE_9d83371fbc11c6fc__
 
 mkdir -p ./apps/api/src/services
@@ -2850,13 +7127,14 @@ cat > ./apps/api/src/services/analysis.service.ts <<'__ALGOFORGE_FILE_b4d4e3cce0
  *   - The DB record is always written — cache only shields the AI call.
  */
 import { createHash, randomBytes } from "crypto";
+import type { Prisma } from "@algoforge/db";
 import { env } from "../config/env";
 import { analysisRepository } from "../repositories/analysis.repository";
 import { aiService } from "./ai.service";
 import { AppError } from "../utils/app-error";
 import { SharedAnalysisSchema, type AnalysisResult } from "@algoforge/analysis";
 import type { AnalysisInput, AnalysisHistoryQuery } from "../validation/analysis";
-import { layeredCache } from "./lib/Layered.cache";
+import { layeredCache } from "./lib/layered-cache";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -2892,7 +7170,7 @@ class AnalysisService {
       language:   input.language,
       complexity: aiResult.complexity?.time?.average ?? null,
       suggestion: aiResult.improvements?.[0]?.suggestion ?? null,
-      result:     aiResult as object,
+      result:     aiResult as unknown as Prisma.InputJsonValue,
     });
   }
 
@@ -3282,45 +7560,6 @@ export const authService = new AuthService();
 __ALGOFORGE_FILE_b1c1512ce5c0c69e__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/cache.service.ts <<'__ALGOFORGE_FILE_f6de7977b8b6d7c3__'
-/**
- * Backward-compatible cache wrapper used by analysis and explanation services.
- * Internally delegates to the layered (LRU + Redis) cache.
- * Keys are SHA-256 hashed so arbitrarily long inputs (e.g. source code) stay
- * within Redis key-length limits.
- */
-import { createHash } from "crypto";
-import { layeredCache } from "./lib/Layered.cache";
-import { env } from "../config/env";
-
-export type CacheNamespace = "ai" | "viz" | "algo";
-
-function buildKey(namespace: CacheNamespace, raw: string): string {
-  const hashed = createHash("sha256").update(raw).digest("hex").slice(0, 32);
-  return `${namespace}:${hashed}`;
-}
-
-export const cacheService = {
-  async get<T>(namespace: CacheNamespace, input: string): Promise<T | null> {
-    return layeredCache.get<T>(buildKey(namespace, input));
-  },
-
-  async set(
-    namespace: CacheNamespace,
-    input: string,
-    value: unknown,
-    ttlSeconds = env.redis.ttlSeconds,
-  ): Promise<void> {
-    await layeredCache.set(buildKey(namespace, input), value, ttlSeconds);
-  },
-
-  async del(namespace: CacheNamespace, input: string): Promise<void> {
-    await layeredCache.del(buildKey(namespace, input));
-  },
-};
-__ALGOFORGE_FILE_f6de7977b8b6d7c3__
-
-mkdir -p ./apps/api/src/services
 cat > ./apps/api/src/services/category.service.ts <<'__ALGOFORGE_FILE_387b6fdc5da051ed__'
 //# filename: apps/api/src/services/category.service.ts
 
@@ -3368,9 +7607,7 @@ class CategoryService {
   async createCategory(input: CreateCategory): Promise<CategoryResponse> {
 
     
-    console.log("Creating category with input:", input);
     const normalizedId = normalizeCategoryId(input.id ?? input.label);
-    console.log("Normalized category ID:", normalizedId);
 
     const existing = await categoryRepository.findByIdentifier(normalizedId);
     if (existing) throw AppError.badRequest("Category already exists.");
@@ -3439,7 +7676,7 @@ import { processQuery, type QueryScope } from "../ai/query-processor";
 import { buildExplanationPrompt } from "../prompts/explanation.prompt";
 import { formatExplanationResponse, type ExplanationResponse } from "../ai/response-formatter";
 import { AppError } from "../utils/app-error";
-import { layeredCache } from "./lib/Layered.cache";
+import { layeredCache } from "./lib/layered-cache";
 
 const EXPLAIN_CACHE_PREFIX = "ai:explain:";
 const MAX_QUERY_LENGTH = 2000;
@@ -3482,6 +7719,114 @@ export const explanationService = new ExplanationService();
 __ALGOFORGE_FILE_3ece156b063edd8b__
 
 mkdir -p ./apps/api/src/services
+cat > ./apps/api/src/services/explanation-session.service.test.ts <<'__ALGOFORGE_FILE_d12ab8ee72cba0ad__'
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+interface Row {
+  id: string;
+  userId: string;
+  title: string | null;
+  shareId: string | null;
+  isPublic: boolean;
+  messages: unknown[];
+}
+
+const h = vi.hoisted(() => ({
+  cache: new Map<string, string>(),
+  rows: new Map<string, Row>(),
+}));
+
+vi.mock("./lib/layered-cache", () => ({
+  layeredCache: {
+    get: async (key: string): Promise<unknown> => {
+      const v = h.cache.get(key);
+      return v === undefined ? null : JSON.parse(v);
+    },
+    set: async (key: string, value: unknown): Promise<void> => {
+      h.cache.set(key, JSON.stringify(value));
+    },
+    del: async (key: string): Promise<void> => {
+      h.cache.delete(key);
+    },
+  },
+}));
+
+vi.mock("../repositories/explanation-session.repository", () => ({
+  explanationSessionRepository: {
+    findOneByUser: async (id: string, userId: string) => {
+      const r = h.rows.get(id);
+      return r && r.userId === userId ? r : null;
+    },
+    delete: async (id: string, userId: string) => {
+      const r = h.rows.get(id);
+      if (r && r.userId === userId) {
+        h.rows.delete(id);
+        return { count: 1 };
+      }
+      return { count: 0 };
+    },
+  },
+}));
+
+vi.mock("../ai/query-processor", () => ({ processQuery: vi.fn() }));
+vi.mock("../ai/context-builder", () => ({
+  buildCodebaseContext: vi.fn(),
+  serializeContext: vi.fn(),
+}));
+vi.mock("../prompts/explanation.prompt", () => ({ buildExplanationPrompt: vi.fn() }));
+vi.mock("./ai.service", () => ({ aiService: { generateText: vi.fn() } }));
+vi.mock("../config/env", () => ({ env: { webAppUrl: "http://localhost:3000" } }));
+
+import { explanationSessionService } from "./explanation-session.service";
+
+beforeEach(() => {
+  h.cache.clear();
+  h.rows.clear();
+  h.rows.set("s1", {
+    id: "s1",
+    userId: "alice",
+    title: "t",
+    shareId: "share1",
+    isPublic: true,
+    messages: [],
+  });
+});
+
+describe("S-01: explanation session ownership", () => {
+  it("does not serve another user's cached private session", async () => {
+    await expect(explanationSessionService.getSession("alice", "s1")).resolves.toMatchObject({ id: "s1" });
+    expect(h.cache.size).toBe(1);
+
+    await expect(explanationSessionService.getSession("bob", "s1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("rejects a cache entry whose owner differs from the caller", async () => {
+    h.cache.set(
+      "explain:session:bob:s1",
+      JSON.stringify({ id: "s1", userId: "alice", title: "t", shareId: null, isPublic: false, messages: [] }),
+    );
+    await expect(explanationSessionService.getSession("bob", "s1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("S-09: public cache purge", () => {
+  it("purges the public cache entry when the owner deletes the session", async () => {
+    h.cache.set("explain:public:share1", JSON.stringify({ id: "s1" }));
+    await explanationSessionService.deleteSession("alice", "s1");
+    expect(h.cache.has("explain:public:share1")).toBe(false);
+  });
+
+  it("does not let another user delete (or purge) someone else's session", async () => {
+    h.cache.set("explain:public:share1", JSON.stringify({ id: "s1" }));
+    await expect(explanationSessionService.deleteSession("bob", "s1")).rejects.toMatchObject({ statusCode: 404 });
+    expect(h.cache.has("explain:public:share1")).toBe(true);
+    expect(h.rows.has("s1")).toBe(true);
+  });
+});
+
+__ALGOFORGE_FILE_d12ab8ee72cba0ad__
+
+mkdir -p ./apps/api/src/services
 cat > ./apps/api/src/services/explanation-session.service.ts <<'__ALGOFORGE_FILE_9ab8077e11e0df0f__'
 import { randomBytes } from "crypto";
 import { explanationSessionRepository } from "../repositories/explanation-session.repository";
@@ -3496,7 +7841,7 @@ import type {
   SendMessageInput,
   ListSessionsQuery,
 } from "../validation/explanation-session";
-import { layeredCache } from "./lib/Layered.cache";
+import { layeredCache } from "./lib/layered-cache";
 
 export type SessionMessage = {
   id:        string;
@@ -3506,12 +7851,21 @@ export type SessionMessage = {
   createdAt: string;
 };
 
+type SessionRecord = NonNullable<
+  Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
+>;
+
 const SESSION_CACHE_TTL_SECONDS = 300;
 const MAX_STORED_MESSAGES       = 100; // 50 exchanges
 const AI_HISTORY_MESSAGES       = 10;  // last 5 exchanges sent to AI
 
-function sessionCacheKey(id: string): string {
-  return `explain:session:${id}`;
+/** Private session cache entries are scoped to the owner, so one user can never be served another's session. */
+function sessionCacheKey(userId: string, id: string): string {
+  return `explain:session:${userId}:${id}`;
+}
+
+function publicCacheKey(shareId: string): string {
+  return `explain:public:${shareId}`;
 }
 
 function newMessageId(): string {
@@ -3545,16 +7899,16 @@ class ExplanationSessionService {
   }
 
   async getSession(userId: string, id: string) {
-    const cached = await layeredCache.get<
-      Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
-    >(sessionCacheKey(id));
+    const key = sessionCacheKey(userId, id);
+    const cached = await layeredCache.get<SessionRecord>(key);
 
-    if (cached) return cached;
+    // Defense in depth: even under the owner-scoped key, verify ownership.
+    if (cached && cached.userId === userId) return cached;
 
     const session = await explanationSessionRepository.findOneByUser(id, userId);
     if (!session) throw AppError.notFound("Session not found.");
 
-    await layeredCache.set(sessionCacheKey(id), session, SESSION_CACHE_TTL_SECONDS);
+    await layeredCache.set(key, session, SESSION_CACHE_TTL_SECONDS);
     return session;
   }
 
@@ -3606,15 +7960,22 @@ class ExplanationSessionService {
 
     const title = session.title ?? input.query.slice(0, 80);
     await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
-    await layeredCache.del(sessionCacheKey(sessionId));
+    await layeredCache.del(sessionCacheKey(userId, sessionId));
+    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
 
     return { userMessage, assistantMessage };
   }
 
   async deleteSession(userId: string, id: string): Promise<void> {
+    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
     const result = await explanationSessionRepository.delete(id, userId);
     if (result.count === 0) throw AppError.notFound("Session not found.");
-    await layeredCache.del(sessionCacheKey(id));
+
+    await layeredCache.del(sessionCacheKey(userId, id));
+    // A deleted public session must stop being readable immediately.
+    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
   }
 
   async shareSession(userId: string, id: string) {
@@ -3627,13 +7988,13 @@ class ExplanationSessionService {
 
     const shareId = newShareId();
     await explanationSessionRepository.share(id, shareId);
-    await layeredCache.del(sessionCacheKey(id));
+    await layeredCache.del(sessionCacheKey(userId, id));
 
     return { shareUrl: buildShareUrl(shareId) };
   }
 
   async getPublicSession(shareId: string) {
-    const cacheKey = `explain:public:${shareId}`;
+    const cacheKey = publicCacheKey(shareId);
 
     const cached = await layeredCache.get<
       Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>
@@ -3649,15 +8010,50 @@ class ExplanationSessionService {
 }
 
 export const explanationSessionService = new ExplanationSessionService();
+
 __ALGOFORGE_FILE_9ab8077e11e0df0f__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/index.ts <<'__ALGOFORGE_FILE_c636e8930dbeab0e__'
-export { layeredCache as cache } from "./Layered.cache";
-__ALGOFORGE_FILE_c636e8930dbeab0e__
+cat > ./apps/api/src/services/lib/cache-version.ts <<'__ALGOFORGE_FILE_288d9bb615048e21__'
+/**
+ * Namespace version counters for cache invalidation.
+ *
+ * Cache keys embed the current version of their namespace. Bumping the version makes every
+ * older key unreachable on EVERY instance (the version lives in Redis and is read per lookup),
+ * including entries already sitting in a per-instance L1 cache. Stale entries then age out of
+ * the LRU. This replaces per-key deletion, which could never reach other instances' L1.
+ *
+ * If Redis is unavailable, a per-process counter is used (single-instance behavior).
+ */
+import { getRedisClient } from "../../config/redis";
+
+const local = new Map<string, number>();
+const redisKey = (namespace: string) => `cachever:${namespace}`;
+
+export async function getCacheVersion(namespace: string): Promise<number> {
+  try {
+    const raw = await getRedisClient().get(redisKey(namespace));
+    if (raw === null) return 0;
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= 0 ? n : 0;
+  } catch {
+    return local.get(namespace) ?? 0;
+  }
+}
+
+export async function bumpCacheVersion(namespace: string): Promise<void> {
+  local.set(namespace, (local.get(namespace) ?? 0) + 1);
+  try {
+    await getRedisClient().incr(redisKey(namespace));
+  } catch {
+    // local counter only
+  }
+}
+
+__ALGOFORGE_FILE_288d9bb615048e21__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/Layered.cache.ts <<'__ALGOFORGE_FILE_521fe8a848c62e1a__'
+cat > ./apps/api/src/services/lib/layered-cache.ts <<'__ALGOFORGE_FILE_f2c8bf2207c32cbb__'
 /**
  * Layered cache — L1 (LRU) + L2 (Redis).
  *
@@ -3709,7 +8105,7 @@ export const layeredCache = {
     await redisCache.del(key);
   },
 };
-__ALGOFORGE_FILE_521fe8a848c62e1a__
+__ALGOFORGE_FILE_f2c8bf2207c32cbb__
 
 mkdir -p ./apps/api/src/services/lib
 cat > ./apps/api/src/services/lib/lru.cache.ts <<'__ALGOFORGE_FILE_79db2511888ad3ae__'
@@ -3965,7 +8361,7 @@ export class OpenRouterProvider implements AIProvider {
             model: modelState.model,
             messages: this.toOpenRouterMessages(request.messages),
             reasoning: { enabled: true },
-          } as OpenRouterChatRequest);
+          } as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
 
           const assistantMessage = this.toAssistantMessage(
             completion as unknown as OpenRouterCompletionResponse,
@@ -4187,6 +8583,12 @@ export type AlgorithmQuery = {
   isPublished?: boolean;
   search?:      string;
 };
+
+/** Who is asking. Non-admins can only ever see published algorithms. */
+export type AlgorithmVisibility = {
+  isAdmin: boolean;
+};
+
 __ALGOFORGE_FILE_9507a77fa8db1e43__
 
 mkdir -p ./apps/api/src/types
@@ -4196,6 +8598,8 @@ import { Role } from "@algoforge/db";
 declare global {
   namespace Express {
     interface Request {
+      /** Correlation id, also returned in the X-Request-Id response header. */
+      requestId?: string;
       auth?: {
         user: {
           id:       string;
@@ -4210,14 +8614,12 @@ declare global {
           expiresAt: Date;
         };
       };
-      // Set by requireAdminSecret middleware when the X-Admin-Secret header
-      // is valid. Allows the admin endpoint without a user JWT.
-      adminViaSecret?: true;
     }
   }
 }
 
 export {};
+
 __ALGOFORGE_FILE_0667c1de7b100060__
 
 mkdir -p ./apps/api/src/utils
@@ -4249,6 +8651,14 @@ export class AppError extends Error {
     return new AppError(404, message, "NOT_FOUND");
   }
 
+  static conflict(message: string): AppError {
+    return new AppError(409, message, "CONFLICT");
+  }
+
+  static payloadTooLarge(message: string): AppError {
+    return new AppError(413, message, "PAYLOAD_TOO_LARGE");
+  }
+
   static tooManyRequests(message: string): AppError {
     return new AppError(429, message, "TOO_MANY_REQUESTS");
   }
@@ -4261,6 +8671,7 @@ export class AppError extends Error {
     return new AppError(500, message, "INTERNAL_ERROR");
   }
 }
+
 __ALGOFORGE_FILE_98a699f2eb9e9f34__
 
 mkdir -p ./apps/api/src/utils
@@ -4394,6 +8805,38 @@ export function safeTokenEquals(left: string, right: string): boolean {
   return timingSafeEqual(leftBuffer, rightBuffer);
 }
 __ALGOFORGE_FILE_89a11d931e0a5bdc__
+
+mkdir -p ./apps/api/src/utils
+cat > ./apps/api/src/utils/logger.ts <<'__ALGOFORGE_FILE_293413948efab287__'
+type Level = "info" | "warn" | "error";
+type Fields = Record<string, unknown>;
+
+function write(level: Level, message: string, fields: Fields): void {
+  const line = JSON.stringify({
+    level,
+    time: new Date().toISOString(),
+    message,
+    ...fields,
+  });
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
+}
+
+export const logger = {
+  info: (message: string, fields: Fields = {}): void => write("info", message, fields),
+  warn: (message: string, fields: Fields = {}): void => write("warn", message, fields),
+  error: (message: string, fields: Fields = {}): void => write("error", message, fields),
+};
+
+export function serializeError(err: unknown): Fields {
+  if (err instanceof Error) {
+    return { errorName: err.name, errorMessage: err.message, stack: err.stack };
+  }
+  return { errorValue: String(err) };
+}
+
+__ALGOFORGE_FILE_293413948efab287__
 
 mkdir -p ./apps/api/src/utils
 cat > ./apps/api/src/utils/token.ts <<'__ALGOFORGE_FILE_65347a52f9aca23e__'
@@ -4776,18 +9219,63 @@ export function parseListSessionsQuery(value: unknown): ListSessionsQuery {
 }
 __ALGOFORGE_FILE_c81a7b225265fe1f__
 
+mkdir -p ./apps/api
+cat > ./apps/api/tsup.config.ts <<'__ALGOFORGE_FILE_f35efed998f42e78__'
+import { defineConfig } from "tsup";
+
+// The API is bundled into one file. Workspace packages (@algoforge/*) export
+// TypeScript source, so they are inlined. Everything listed in this package's
+// "dependencies" (express, zod, @prisma/client, ...) stays external.
+export default defineConfig({
+  entry: ["src/server.ts"],
+  format: ["cjs"],
+  platform: "node",
+  target: "node20",
+  outDir: "dist",
+  clean: true,
+  sourcemap: true,
+  dts: false,
+  splitting: false,
+  minify: false,
+  noExternal: [/^@algoforge\//],
+});
+
+__ALGOFORGE_FILE_f35efed998f42e78__
+
+mkdir -p ./apps/api
+cat > ./apps/api/vitest.config.ts <<'__ALGOFORGE_FILE_cc1b621ad3f20819__'
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts"],
+  },
+});
+
+__ALGOFORGE_FILE_cc1b621ad3f20819__
+
 mkdir -p ./apps/web
 cat > ./apps/web/next.config.ts <<'__ALGOFORGE_FILE_eeb5dbfc92444a0d__'
 import path from "node:path";
 import type { NextConfig } from "next";
 
+// Placeholder for Phase 4: when API_URL is set, /api/* is proxied to the API (same-origin cookies).
+const apiUrl = process.env.API_URL;
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(process.cwd(), "../.."),
   },
+  // Workspace packages export TypeScript source.
+  transpilePackages: ["@algoforge/analysis", "@algoforge/forge"],
+  async rewrites() {
+    return apiUrl ? [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }] : [];
+  },
 };
 
 export default nextConfig;
+
 __ALGOFORGE_FILE_eeb5dbfc92444a0d__
 
 mkdir -p ./apps/web
@@ -34176,19 +38664,36 @@ cat > ./package.json <<'__ALGOFORGE_FILE_40b8419e3e2132ef__'
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
-    "build": "pnpm --filter db build && pnpm --filter api build && pnpm --filter web build",
-    "db:migrate": "pnpm --filter db migrate",
-    "db:generate": "pnpm --filter db generate",
-    "db:studio": "pnpm --filter db studio",
+    "dev": "concurrently -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "build": "pnpm db:generate && pnpm build:api && pnpm build:web",
+    "db:migrate": "pnpm --filter @algoforge/db migrate:dev",
+    "db:generate": "pnpm --filter @algoforge/db generate",
+    "db:studio": "pnpm --filter @algoforge/db studio",
     "dev:web": "pnpm --filter @algoforge/web dev",
     "dev:api": "pnpm --filter api dev",
     "build:web": "pnpm --filter @algoforge/web build",
-    "build:api": "pnpm --filter api build"
+    "build:api": "pnpm --filter api build",
+    "typecheck": "pnpm --filter @algoforge/db typecheck && pnpm --filter api typecheck",
+    "typecheck:web": "pnpm --filter @algoforge/web typecheck",
+    "lint": "pnpm --filter api lint",
+    "lint:web": "pnpm --filter @algoforge/web lint",
+    "ci": "pnpm db:generate && pnpm typecheck && pnpm lint && pnpm build:api",
+    "db:migrate:dev": "pnpm --filter @algoforge/db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @algoforge/db migrate:deploy",
+    "db:seed": "pnpm --filter @algoforge/db seed",
+    "db:reset": "pnpm --filter @algoforge/db reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "db:make-admin": "pnpm --filter @algoforge/db make-admin"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24.15.0"
   }
 }
 
@@ -34207,13 +38712,6 @@ cat > ./packages/analysis/package.json <<'__ALGOFORGE_FILE_3dee3c4756e3d90a__'
 }
 
 __ALGOFORGE_FILE_3dee3c4756e3d90a__
-
-mkdir -p ./packages/analysis/src
-cat > ./packages/analysis/src/analysis.schema.ts <<'__ALGOFORGE_FILE_f2e7c0179783c0ec__'
-// This file is intentionally empty.
-// SharedAnalysisSchema and all other analysis types are defined in ./schema.ts
-// and re-exported from ./index.ts. Import from "@algoforge/analysis" directly.
-__ALGOFORGE_FILE_f2e7c0179783c0ec__
 
 mkdir -p ./packages/analysis/src
 cat > ./packages/analysis/src/index.ts <<'__ALGOFORGE_FILE_afedfa232dca866f__'
@@ -34339,22 +38837,81 @@ cat > ./packages/db/package.json <<'__ALGOFORGE_FILE_d9a61ffd69d1ad12__'
   "private": true,
   "main": "./src/index.ts",
   "scripts": {
-    "migrate": "prisma migrate dev --name init",
+    "migrate": "prisma migrate dev",
     "generate": "prisma generate",
     "studio": "prisma studio",
-    "build": "tsc"
+    "build": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "reset": "prisma migrate reset",
+    "typecheck": "tsc --noEmit",
+    "make-admin": "tsx prisma/make-admin.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.39",
+    "@types/node": "^24.0.0",
     "prisma": "^5.22.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.9.3",
+    "tsx": "^4.20.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
 
 __ALGOFORGE_FILE_d9a61ffd69d1ad12__
+
+mkdir -p ./packages/db/prisma
+cat > ./packages/db/prisma/make-admin.ts <<'__ALGOFORGE_FILE_05a38f070671f357__'
+/* Promotes an existing user to ADMIN.
+   Usage: pnpm db:make-admin <email>
+   The user must have signed in with Google at least once so the account exists. */
+import { prisma, Role } from "../src/index";
+
+async function main(): Promise<void> {
+  const email = process.argv
+    .slice(2)
+    .find((arg) => arg !== "--")
+    ?.trim()
+    .toLowerCase();
+
+  if (!email || !email.includes("@")) {
+    console.error("Usage: pnpm db:make-admin <email>");
+    process.exitCode = 1;
+    return;
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true, email: true, role: true },
+  });
+
+  if (!user) {
+    console.error(`No user with email ${email}. The user must sign in with Google once first.`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (user.role === Role.ADMIN) {
+    console.log(`${user.email} is already an ADMIN. Nothing changed.`);
+    return;
+  }
+
+  await prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
+  console.log(`${user.email} is now an ADMIN.`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());
+
+__ALGOFORGE_FILE_05a38f070671f357__
 
 mkdir -p ./packages/db/prisma
 cat > ./packages/db/prisma/schema.prisma <<'__ALGOFORGE_FILE_a2de0988a9680683__'
@@ -34554,6 +39111,208 @@ model AlgorithmTag {
   @@map("algorithm_tags")
 }
 __ALGOFORGE_FILE_a2de0988a9680683__
+
+mkdir -p ./packages/db/prisma
+cat > ./packages/db/prisma/seed.ts <<'__ALGOFORGE_FILE_b996d07cdcdecd7a__'
+/* Development seed: 3 categories and 6 published algorithms. Idempotent (upserts).
+   Refuses to run in production. */
+import { prisma, Difficulty } from "../src/index";
+
+if (process.env.NODE_ENV === "production") {
+  console.error("Refusing to seed: NODE_ENV=production.");
+  process.exit(1);
+}
+
+const categories = [
+  { id: "sorting", label: "Sorting", description: "Put items in order.", iconName: "sort", sortOrder: 1 },
+  { id: "searching", label: "Searching", description: "Find items in a collection.", iconName: "search", sortOrder: 2 },
+  { id: "graph-traversal", label: "Graph traversal", description: "Visit the vertices of a graph.", iconName: "graph", sortOrder: 3 },
+];
+
+const bubbleJs = `function bubbleSort(arr) {
+  const a = [...arr];
+  for (let i = 0; i < a.length - 1; i++) {
+    let swapped = false;
+    for (let j = 0; j < a.length - 1 - i; j++) {
+      if (a[j] > a[j + 1]) {
+        [a[j], a[j + 1]] = [a[j + 1], a[j]];
+        swapped = true;
+      }
+    }
+    if (!swapped) break;
+  }
+  return a;
+}`;
+const bubblePy = `def bubble_sort(arr):
+    a = list(arr)
+    for i in range(len(a) - 1):
+        swapped = False
+        for j in range(len(a) - 1 - i):
+            if a[j] > a[j + 1]:
+                a[j], a[j + 1] = a[j + 1], a[j]
+                swapped = True
+        if not swapped:
+            break
+    return a`;
+
+const mergeJs = `function mergeSort(arr) {
+  if (arr.length <= 1) return arr;
+  const mid = Math.floor(arr.length / 2);
+  const left = mergeSort(arr.slice(0, mid));
+  const right = mergeSort(arr.slice(mid));
+  const out = [];
+  let i = 0, j = 0;
+  while (i < left.length && j < right.length) {
+    out.push(left[i] <= right[j] ? left[i++] : right[j++]);
+  }
+  return out.concat(left.slice(i), right.slice(j));
+}`;
+const mergePy = `def merge_sort(arr):
+    if len(arr) <= 1:
+        return list(arr)
+    mid = len(arr) // 2
+    left, right = merge_sort(arr[:mid]), merge_sort(arr[mid:])
+    out, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            out.append(left[i]); i += 1
+        else:
+            out.append(right[j]); j += 1
+    return out + left[i:] + right[j:]`;
+
+const linearJs = `function linearSearch(arr, target) {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === target) return i;
+  }
+  return -1;
+}`;
+const linearPy = `def linear_search(arr, target):
+    for i, value in enumerate(arr):
+        if value == target:
+            return i
+    return -1`;
+
+const binaryJs = `function binarySearch(arr, target) {
+  let lo = 0, hi = arr.length - 1;
+  while (lo <= hi) {
+    const mid = lo + Math.floor((hi - lo) / 2);
+    if (arr[mid] === target) return mid;
+    if (arr[mid] < target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}`;
+const binaryPy = `def binary_search(arr, target):
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = lo + (hi - lo) // 2
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1`;
+
+const bfsJs = `function bfs(graph, start) {
+  const seen = new Set([start]);
+  const queue = [start];
+  const order = [];
+  while (queue.length) {
+    const node = queue.shift();
+    order.push(node);
+    for (const next of graph[node] ?? []) {
+      if (!seen.has(next)) { seen.add(next); queue.push(next); }
+    }
+  }
+  return order;
+}`;
+const bfsPy = `from collections import deque
+
+def bfs(graph, start):
+    seen, queue, order = {start}, deque([start]), []
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for nxt in graph.get(node, []):
+            if nxt not in seen:
+                seen.add(nxt)
+                queue.append(nxt)
+    return order`;
+
+const dfsJs = `function dfs(graph, start, seen = new Set()) {
+  seen.add(start);
+  const order = [start];
+  for (const next of graph[start] ?? []) {
+    if (!seen.has(next)) order.push(...dfs(graph, next, seen));
+  }
+  return order;
+}`;
+const dfsPy = `def dfs(graph, start, seen=None):
+    seen = seen if seen is not None else set()
+    seen.add(start)
+    order = [start]
+    for nxt in graph.get(start, []):
+        if nxt not in seen:
+            order.extend(dfs(graph, nxt, seen))
+    return order`;
+
+const algorithms = [
+  { slug: "bubble-sort", name: "Bubble Sort", categoryId: "sorting", difficulty: Difficulty.beginner,
+    description: "Repeatedly swaps adjacent elements that are out of order until the array is sorted.",
+    timeBest: "O(n)", timeAverage: "O(n^2)", timeWorst: "O(n^2)", spaceComplexity: "O(1)",
+    tags: ["sorting", "comparison", "in-place"], js: bubbleJs, py: bubblePy },
+  { slug: "merge-sort", name: "Merge Sort", categoryId: "sorting", difficulty: Difficulty.intermediate,
+    description: "Splits the array in halves, sorts each half recursively and merges them.",
+    timeBest: "O(n log n)", timeAverage: "O(n log n)", timeWorst: "O(n log n)", spaceComplexity: "O(n)",
+    tags: ["sorting", "divide-and-conquer", "stable"], js: mergeJs, py: mergePy },
+  { slug: "linear-search", name: "Linear Search", categoryId: "searching", difficulty: Difficulty.beginner,
+    description: "Checks every element in order until the target is found.",
+    timeBest: "O(1)", timeAverage: "O(n)", timeWorst: "O(n)", spaceComplexity: "O(1)",
+    tags: ["searching", "sequential"], js: linearJs, py: linearPy },
+  { slug: "binary-search", name: "Binary Search", categoryId: "searching", difficulty: Difficulty.beginner,
+    description: "Halves a sorted array on every step to locate the target.",
+    timeBest: "O(1)", timeAverage: "O(log n)", timeWorst: "O(log n)", spaceComplexity: "O(1)",
+    tags: ["searching", "divide-and-conquer", "sorted-input"], js: binaryJs, py: binaryPy },
+  { slug: "breadth-first-search", name: "Breadth-First Search", categoryId: "graph-traversal", difficulty: Difficulty.intermediate,
+    description: "Visits a graph level by level using a queue.",
+    timeBest: "O(V + E)", timeAverage: "O(V + E)", timeWorst: "O(V + E)", spaceComplexity: "O(V)",
+    tags: ["graph", "traversal", "queue"], js: bfsJs, py: bfsPy },
+  { slug: "depth-first-search", name: "Depth-First Search", categoryId: "graph-traversal", difficulty: Difficulty.intermediate,
+    description: "Explores as far as possible along each branch before backtracking.",
+    timeBest: "O(V + E)", timeAverage: "O(V + E)", timeWorst: "O(V + E)", spaceComplexity: "O(V)",
+    tags: ["graph", "traversal", "recursion"], js: dfsJs, py: dfsPy },
+];
+
+async function main() {
+  for (const c of categories) {
+    await prisma.category.upsert({ where: { id: c.id }, create: c, update: { label: c.label, description: c.description, iconName: c.iconName, sortOrder: c.sortOrder } });
+  }
+  for (const a of algorithms) {
+    const fields = {
+      name: a.name, description: a.description, categoryId: a.categoryId, difficulty: a.difficulty,
+      isPublished: true, timeBest: a.timeBest, timeAverage: a.timeAverage, timeWorst: a.timeWorst,
+      spaceComplexity: a.spaceComplexity,
+    };
+    await prisma.algorithm.upsert({
+      where: { slug: a.slug },
+      update: fields,
+      create: {
+        slug: a.slug,
+        ...fields,
+        displayCodes: { create: [{ language: "javascript", code: a.js }, { language: "python", code: a.py }] },
+        tags: { create: a.tags.map((label) => ({ tag: { connectOrCreate: { where: { label }, create: { label } } } })) },
+      },
+    });
+  }
+  console.log(`Seeded ${categories.length} categories and ${algorithms.length} algorithms.`);
+}
+
+main()
+  .catch((e) => { console.error(e); process.exitCode = 1; })
+  .finally(() => prisma.$disconnect());
+
+__ALGOFORGE_FILE_b996d07cdcdecd7a__
 
 mkdir -p ./packages/db/src
 cat > ./packages/db/src/index.ts <<'__ALGOFORGE_FILE_ad66074ce04df320__'

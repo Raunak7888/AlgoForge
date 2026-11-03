@@ -1,6 +1,5 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
 import { AiBrain01Icon, MessageMultiple01Icon, PlayIcon, TrendingUp } from "@hugeicons/core-free-icons";
 import { IconSvgObject } from "@/lib/types";
 import { StatusChip } from "@/components/ui/StatusChip";

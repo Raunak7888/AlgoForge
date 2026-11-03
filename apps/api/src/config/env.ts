@@ -82,9 +82,6 @@ export const env = {
   authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
   authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
   geminiApiKey,
-  // NOTE: hard-coded default kept on purpose; removed in Phase 2 (S-04).
-  adminUpgradeSecret:
-    process.env.ADMIN_UPGRADE_SECRET ?? "1d201bf1-eb81-42ec-bd13-3e627b0fc4e9",
   ai: {
     provider: aiProvider as AIProvider,
     model: aiModel,

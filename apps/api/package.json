@@ -7,7 +7,9 @@
     "build": "tsup",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@algoforge/analysis": "workspace:*",
+    "@algoforge/contracts": "workspace:*",
     "@algoforge/db": "workspace:*",
     "@algoforge/forge": "workspace:*",
     "@eslint/js": "^9.39.0",
@@ -35,6 +38,7 @@
     "tsup": "^8.5.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.0"
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^5.0.5"
   }
 }

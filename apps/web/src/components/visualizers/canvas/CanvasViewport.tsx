@@ -45,9 +45,11 @@ export function Viewport({ content, children, className }: Props) {
     const auto = useMemo(() => fit(content, view), [content, view]);
     const t = manual ?? auto;
     const tRef = useRef(t);
-    tRef.current = t;
     const viewRef = useRef(view);
-    viewRef.current = view;
+    useEffect(() => {
+        tRef.current = t;
+        viewRef.current = view;
+    });
 
     useEffect(() => {
         const el = outer.current;

@@ -9,6 +9,7 @@ import {
 } from "next/font/google";
 import { cn } from "@/lib/utils";
 import MotionProvider from "@/components/MotionProvider";
+import { QueryProvider } from "@/lib/query/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -65,7 +66,9 @@ export default function RootLayout({
                 />
             </head>
             <body className="bg-background text-white antialiased">
-                <MotionProvider>{children}</MotionProvider>
+                <MotionProvider>
+                    <QueryProvider>{children}</QueryProvider>
+                </MotionProvider>
             </body>
         </html>
     );

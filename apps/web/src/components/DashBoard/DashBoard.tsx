@@ -26,9 +26,11 @@ export default function AlgoforgeDashboard() {
 
     // Read after mount (the server cannot know the saved value), write only once that read is done.
     useEffect(() => {
+        /* eslint-disable react-hooks/set-state-in-effect -- the saved value only exists in the browser, so it can only be read after mount */
         const saved = loadSplit();
         if (saved !== null) setSplitPct(saved);
         setHydrated(true);
+        /* eslint-enable react-hooks/set-state-in-effect */
     }, []);
     useEffect(() => {
         if (hydrated) saveSplit(splitPct);

@@ -120,7 +120,10 @@ export function GraphStageView({ data, selV, selE, anim, status, showIds, captio
       for (const id of vertexIds(data)) {
         const p = data.positions[id];
         const d = Math.hypot(p.x - at.x, p.y - at.y);
-        if (d < best) (best = d), (attachTo = id);
+        if (d < best) {
+          best = d;
+          attachTo = id;
+        }
       }
     }
     run({ type: "addVertex", value: String.fromCharCode(65 + (vertexCount(data) % 26)), attachTo, at });

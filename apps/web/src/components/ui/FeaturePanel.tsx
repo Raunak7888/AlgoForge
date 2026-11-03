@@ -1,7 +1,6 @@
 // FeaturePanel.tsx
 "use client";
 
-import { useRef } from "react";
 import { motion, Variants } from "framer-motion";
 import FeatureCard from "@/components/ui/FeatureCard";
 import { StatusChip } from "@/components/ui/StatusChip";

@@ -4,6 +4,16 @@ import { growthFor } from "@/lib/complexity";
 import { wait } from "@/lib/async";
 import { MOCK_DATA_ENABLED } from "@/lib/featureFlags";
 import { SampleChip } from "@/components/ui/SampleChip";
+import type {
+    AnalysisLanguage,
+    AnalysisReport,
+    AnalysisResult,
+    Bottleneck,
+    Breakdown,
+    Comparison,
+    ComplexityResult,
+    Improvement,
+} from "@algoforge/contracts";
 
 import {
     ArrowRight,
@@ -48,52 +58,11 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type Language = "python" | "javascript";
+// Analysis types come from the shared contracts package; none are declared here.
+export type { AnalysisResult, Bottleneck, Breakdown, Comparison, ComplexityResult, Improvement };
+export type Language = AnalysisLanguage;
+export type Analysis = AnalysisReport;
 type State = "idle" | "analyzing" | "completed";
-export interface ComplexityResult {
-    time: { best: string; average: string; worst: string };
-    space: string;
-}
-
-export interface Breakdown {
-    approach: string;
-    steps: string[];
-}
-
-export interface Bottleneck {
-    issue: string;
-    impact: string;
-    location?: string;
-}
-
-export interface Improvement {
-    suggestion: string;
-    expectedImpact: string;
-}
-
-export interface Comparison {
-    originalVsOptimized: string;
-    improvementSummary: string;
-}
-
-export interface AnalysisResult {
-    summary: string;
-    complexity: ComplexityResult;
-    breakdown: Breakdown;
-    bottlenecks: Bottleneck[];
-    antiPatterns: string[];
-    improvements: Improvement[];
-    optimizedCode: string;
-    comparison?: Comparison;
-    edgeCases: string[];
-    readabilityScore?: number;
-    tags?: string[];
-}
-
-export interface Analysis {
-    language: Language;
-    result: AnalysisResult;
-}
 
 export type SeriesKey = "best" | "avg" | "worst" | "space";
 export interface ChartPoint {

@@ -1,20 +1,29 @@
 /**
  * Lists and searches algorithms.
- * Results are cached; the cache is busted on any mutation via mutation.service.ts.
+ * Non-admins only ever see published algorithms, whatever filters they send.
+ * Results are cached per visibility scope; any mutation bumps the namespace version.
  */
 import { Prisma, Difficulty } from "@algoforge/db";
 import { AlgorithmListItemSchema, type AlgorithmListItem } from "@algoforge/forge";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
-import { algorithmCacheKeys } from "./cache-keys";
+import { ALGO_CACHE_NAMESPACE, algorithmCacheKeys } from "./cache-keys";
+import { getCacheVersion } from "../lib/cache-version";
 import { layeredCache } from "../lib/layered-cache";
-import type { AlgorithmQuery } from "../../types/algorithm.types";
+import type { AlgorithmQuery, AlgorithmVisibility } from "../../types/algorithm.types";
 
-export async function listAlgorithms(query: AlgorithmQuery): Promise<AlgorithmListItem[]> {
-  const key    = algorithmCacheKeys.list(query);
-  const cached = await layeredCache.get<AlgorithmListItem[]>(key);
+export async function listAlgorithms(
+  query: AlgorithmQuery,
+  visibility: AlgorithmVisibility,
+): Promise<AlgorithmListItem[]> {
+  const scope = visibility.isAdmin ? "admin" : "public";
+  const effective: AlgorithmQuery = visibility.isAdmin ? query : { ...query, isPublished: true };
+
+  const version = await getCacheVersion(ALGO_CACHE_NAMESPACE);
+  const key     = algorithmCacheKeys.list(version, scope, effective);
+  const cached  = await layeredCache.get<AlgorithmListItem[]>(key);
   if (cached) return cached;
 
-  const rows   = await algorithmRepository.findMany(buildWhere(query));
+  const rows = await algorithmRepository.findMany(buildWhere(effective));
 
   // The DB returns flat complexity fields; the schema expects a nested object.
   const result = rows.map((row) =>

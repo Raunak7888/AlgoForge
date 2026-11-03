@@ -3,11 +3,12 @@
 import { Role } from "@algoforge/db";
 import { userRepository } from "../repositories/user.repository";
 import { AppError } from "../utils/app-error";
+import { paginate } from "../utils/pagination";
 
 class AdminService {
   /**
    * Promotes userId to ADMIN.
-   * Role is always hardcoded here — it is never accepted from the request body.
+   * Role is always hardcoded here, it is never accepted from the request body.
    */
   async upgradeToAdmin(userId: string) {
     const user = await userRepository.findById(userId);
@@ -23,7 +24,7 @@ class AdminService {
 
   /**
    * Demotes userId to USER.
-   * Role is always hardcoded here — it is never accepted from the request body.
+   * Role is always hardcoded here, it is never accepted from the request body.
    */
   async downgradeToUser(userId: string) {
     const user = await userRepository.findById(userId);
@@ -37,18 +38,9 @@ class AdminService {
     return { user: updated, changed: true };
   }
 
-  async listAllUsers() {
-    const { prisma } = await import("@algoforge/db");
-    return prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+  async listUsers(limit: number, cursor?: string) {
+    const rows = await userRepository.findPage({ take: limit + 1, cursor });
+    return paginate(rows, limit, (row) => row.id);
   }
 }
 

@@ -8,8 +8,9 @@ import {
 } from "@algoforge/forge";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
 import { categoryRepository } from "../../repositories/category.repository";
-import { algorithmCacheKeys } from "./cache-keys";
+import { ALGO_CACHE_NAMESPACE } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
+import { bumpCacheVersion } from "../lib/cache-version";
 import { layeredCache } from "../lib/layered-cache";
 
 type ExistingForge = {
@@ -22,7 +23,9 @@ type ExistingForge = {
 export async function createAlgorithm(input: CreateAlgorithm) {
   if (input.forge) validateForge(input.forge);
   const category = await resolveCategory(input.categoryId);
-  return algorithmRepository.create(toCreateData(input, category.id));
+  const created = await algorithmRepository.create(toCreateData(input, category.id));
+  await bustCache();
+  return created;
 }
 
 export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
@@ -48,7 +51,7 @@ export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
     id,
     toUpdateData(input, existing.forge ?? null, categoryId),
   );
-  await bustCache(id, existing.slug);
+  await bustCache();
   return updated;
 }
 
@@ -57,16 +60,16 @@ export async function deleteAlgorithm(id: string): Promise<void> {
   if (!existing) throw AppError.notFound("Algorithm not found.");
 
   await algorithmRepository.delete(id);
-  await bustCache(id, existing.slug);
+  await bustCache();
 }
 
-async function bustCache(id: string, slug: string): Promise<void> {
-  await Promise.all([
-    layeredCache.del(algorithmCacheKeys.byId(id)),
-    layeredCache.del(algorithmCacheKeys.bySlug(slug)),
-    layeredCache.del(algorithmCacheKeys.viz(id)),
-    layeredCache.del("meta:slugs"),
-  ]);
+/**
+ * Invalidates every cached algorithm view on every instance by bumping the namespace version.
+ * `meta:slugs` (used by the AI query processor) is a plain key and is deleted explicitly.
+ */
+async function bustCache(): Promise<void> {
+  await bumpCacheVersion(ALGO_CACHE_NAMESPACE);
+  await layeredCache.del("meta:slugs");
 }
 
 function validateForge(
@@ -109,7 +112,20 @@ function toCreateData(input: CreateAlgorithm, categoryId: string) {
   };
 }
 
-function toUpdateData(
+/**
+ * Only fields the caller actually sent are written. A partial `complexity` update
+ * (e.g. only time.best) must never null out the other complexity columns.
+ */
+function complexityPatch(c: NonNullable<UpdateAlgorithm["complexity"]>) {
+  return {
+    ...(c.time?.best    !== undefined ? { timeBest:        c.time.best }    : {}),
+    ...(c.time?.average !== undefined ? { timeAverage:     c.time.average } : {}),
+    ...(c.time?.worst   !== undefined ? { timeWorst:       c.time.worst }   : {}),
+    ...(c.space         !== undefined ? { spaceComplexity: c.space }        : {}),
+  };
+}
+
+export function toUpdateData(
   input: UpdateAlgorithm,
   existingForge: ExistingForge,
   categoryId?: string,
@@ -121,18 +137,15 @@ function toUpdateData(
     ...(input.slug        && { slug:        input.slug }),
     ...(input.name        && { name:        input.name }),
     ...(input.description && { description: input.description }),
-    ...(categoryId && { categoryId }),
+    // Relation connect, not the unchecked scalar: Prisma rejects mixing checked
+    // (nested relation writes) and unchecked (scalar foreign key) update input.
+    ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
     ...(input.difficulty  && { difficulty:  input.difficulty as Difficulty }),
     ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
-    ...(input.complexity  && {
-      timeBest:        input.complexity.time?.best    ?? null,
-      timeAverage:     input.complexity.time?.average ?? null,
-      timeWorst:       input.complexity.time?.worst   ?? null,
-      spaceComplexity: input.complexity.space         ?? null,
-    }),
+    ...(input.complexity ? complexityPatch(input.complexity) : {}),
     ...(input.displayCodes && { displayCodes: input.displayCodes }),
     ...(input.tags         && { tags:         input.tags }),
-    ...(input.forge        && buildForgeWrite(input.forge, existingForge)),
+    ...(input.forge ? buildForgeWrite(input.forge, existingForge) : {}),
   };
 }
 

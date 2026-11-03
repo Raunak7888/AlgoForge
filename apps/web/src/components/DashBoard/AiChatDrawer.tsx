@@ -1,13 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import {
-    ArrowUp,
-    Maximize2,
-    Minimize2,
-    Sparkles,
-    X,
-} from "lucide-react";
+import { ArrowUp, Maximize2, Minimize2, Sparkles, X } from "lucide-react";
 import {
     useCallback,
     useEffect,
@@ -96,7 +90,11 @@ function AIChatDrawer({
 }) {
     const available = MOCK_DATA_ENABLED;
     const [messages, setMessages] = useState<Message[]>([
-        { id: 0, role: "ai", text: available ? PREVIEW_GREETING : UNAVAILABLE_TEXT },
+        {
+            id: 0,
+            role: "ai",
+            text: available ? PREVIEW_GREETING : UNAVAILABLE_TEXT,
+        },
     ]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
@@ -108,17 +106,26 @@ function AIChatDrawer({
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const nextId = useRef(1);
-    const widthRef = useRef(width);
-    widthRef.current = width;
 
     // restore saved width
     useEffect(() => {
+        let frame = 0;
+
         try {
             const saved = Number(localStorage.getItem(STORAGE_KEY));
-            if (saved) setWidth(clamp(saved));
+
+            if (saved) {
+                frame = requestAnimationFrame(() => {
+                    setWidth(clamp(saved));
+                });
+            }
         } catch {
-            /* storage unavailable */
+            // Storage unavailable.
         }
+
+        return () => {
+            if (frame) cancelAnimationFrame(frame);
+        };
     }, []);
 
     // keep width valid when the window shrinks
@@ -134,7 +141,10 @@ function AIChatDrawer({
         const opener = document.activeElement as HTMLElement | null;
         const id = requestAnimationFrame(() => {
             const el = asideRef.current;
-            (el?.querySelector<HTMLElement>("textarea:not(:disabled)") ?? el?.querySelector<HTMLElement>("button"))?.focus();
+            (
+                el?.querySelector<HTMLElement>("textarea:not(:disabled)") ??
+                el?.querySelector<HTMLElement>("button")
+            )?.focus();
         });
         return () => {
             cancelAnimationFrame(id);
@@ -172,27 +182,36 @@ function AIChatDrawer({
     };
     const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
         if (!dragging) return;
+
         e.currentTarget.releasePointerCapture(e.pointerId);
+
+        const next = clamp(window.innerWidth - e.clientX);
+        setWidth(next);
         setDragging(false);
-        persist(widthRef.current);
+        persist(next);
+    };
+
+    const cancelDrag = () => {
+        setDragging(false);
     };
     const onHandleKey = (e: KeyboardEvent<HTMLDivElement>) => {
         const step = e.shiftKey ? 80 : 20;
         if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
             e.preventDefault();
-            const next = clamp(
-                widthRef.current + (e.key === "ArrowLeft" ? step : -step),
-            );
+            const next = clamp(width + (e.key === "ArrowLeft" ? step : -step));
             setWidth(next);
             persist(next);
         }
     };
     const resetWidth = () => {
-        setWidth(clamp(DEFAULT_WIDTH));
-        persist(DEFAULT_WIDTH);
+        const next = clamp(DEFAULT_WIDTH);
+        setWidth(next);
+        persist(next);
     };
     const toggleWide = () => {
-        const next = clamp(width >= WIDE_WIDTH - 8 ? DEFAULT_WIDTH : WIDE_WIDTH);
+        const next = clamp(
+            width >= WIDE_WIDTH - 8 ? DEFAULT_WIDTH : WIDE_WIDTH,
+        );
         setWidth(next);
         persist(next);
     };
@@ -273,7 +292,7 @@ function AIChatDrawer({
                         onPointerDown={onPointerDown}
                         onPointerMove={onPointerMove}
                         onPointerUp={endDrag}
-                        onPointerCancel={endDrag}
+                        onPointerCancel={cancelDrag}
                         onDoubleClick={resetWidth}
                         onKeyDown={onHandleKey}
                         className="group absolute -left-1.5 top-0 z-40 flex h-full w-3 cursor-col-resize touch-none items-center justify-center outline-none"
@@ -309,7 +328,14 @@ function AIChatDrawer({
                                     AlgoForge AI
                                 </span>
                                 <span className="flex items-center gap-1.5 text-[11px] text-primary-foreground/60">
-                                    <span className={"h-1.5 w-1.5 rounded-full " + (available ? "bg-amber-400" : "bg-primary-foreground/30")} />
+                                    <span
+                                        className={
+                                            "h-1.5 w-1.5 rounded-full " +
+                                            (available
+                                                ? "bg-amber-400"
+                                                : "bg-primary-foreground/30")
+                                        }
+                                    />
                                     {available ? "Preview" : "Unavailable"}
                                 </span>
                             </div>
@@ -360,7 +386,9 @@ function AIChatDrawer({
                                                 : "rounded-bl-md border border-primary-foreground/8! bg-primary-foreground/4 text-primary-foreground/80"
                                         }`}
                                     >
-                                        <span className="sr-only">{isUser ? "You: " : "Assistant: "}</span>
+                                        <span className="sr-only">
+                                            {isUser ? "You: " : "Assistant: "}
+                                        </span>
                                         {m.text}
                                     </div>
                                 </motion.div>
@@ -416,7 +444,11 @@ function AIChatDrawer({
                                     resizeTextarea();
                                 }}
                                 onKeyDown={onInputKey}
-                                placeholder={available ? "Ask about your algorithm…" : "Not available yet"}
+                                placeholder={
+                                    available
+                                        ? "Ask about your algorithm…"
+                                        : "Not available yet"
+                                }
                                 disabled={!available}
                                 className="scrollbar-thin max-h-30 flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-snug text-primary-foreground/80 outline-none placeholder:text-primary-foreground/60"
                             />
@@ -435,7 +467,9 @@ function AIChatDrawer({
                             </motion.button>
                         </div>
                         <p className="mt-1.5 text-center text-[11px] text-primary-foreground/60">
-                            {available ? "Enter to send · Shift + Enter for a new line" : "Chat is turned off in this build"}
+                            {available
+                                ? "Enter to send · Shift + Enter for a new line"
+                                : "Chat is turned off in this build"}
                         </p>
                     </div>
                 </motion.aside>

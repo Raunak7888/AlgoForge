@@ -1,7 +1,7 @@
 // filepath: src/components/CodeEditor/EditorToolbar.tsx
 "use client";
 
-import React, { useId } from "react";
+import React from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import type { EditorToolbarProps, Language } from "./types";
 import { LANGUAGE_LABELS } from "./constants";
@@ -140,7 +140,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     readOnly,
     isReady,
 }) => {
-    const selectId = useId();
 
     return (
         <div

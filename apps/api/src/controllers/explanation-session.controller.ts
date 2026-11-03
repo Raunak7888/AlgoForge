@@ -1,35 +1,34 @@
 import { Request, Response } from "express";
+import type { ExplainSessionListResponse } from "@algoforge/contracts";
+import { serializeSessionDetail, serializeSessionSummary, serializeSharedSession } from "../serializers/explain";
 import { explanationSessionService } from "../services/explanation-session.service";
 import { asyncHandler } from "../utils/async-handler";
-import {
-  parseCreateSession,
-  parseSendMessage,
-  parseListSessionsQuery,
-} from "../validation/explanation-session";
+import { parseCreateSession, parseSendMessage, parseListSessionsQuery } from "../validation/explanation-session";
 import { ensureString } from "../validation/common";
 
 class ExplanationSessionController {
   create = asyncHandler(async (req: Request, res: Response) => {
-    const input   = parseCreateSession(req.body);
+    const input = parseCreateSession(req.body);
     const session = await explanationSessionService.createSession(req.auth!.user.id, input);
-    res.status(201).json(session);
+    res.status(201).json(serializeSessionDetail(session));
   });
 
   list = asyncHandler(async (req: Request, res: Response) => {
-    const query  = parseListSessionsQuery(req.query);
-    const result = await explanationSessionService.listSessions(req.auth!.user.id, query);
-    res.json(result);
+    const query = parseListSessionsQuery(req.query);
+    const { items, meta } = await explanationSessionService.listSessions(req.auth!.user.id, query);
+    const body: ExplainSessionListResponse = { data: items.map(serializeSessionSummary), meta };
+    res.json(body);
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const id      = ensureString(req.params.id, "Session id is required.");
+    const id = ensureString(req.params.id, "Session id is required.");
     const session = await explanationSessionService.getSession(req.auth!.user.id, id);
-    res.json(session);
+    res.json(serializeSessionDetail(session));
   });
 
   sendMessage = asyncHandler(async (req: Request, res: Response) => {
-    const id     = ensureString(req.params.id, "Session id is required.");
-    const input  = parseSendMessage(req.body);
+    const id = ensureString(req.params.id, "Session id is required.");
+    const input = parseSendMessage(req.body);
     const result = await explanationSessionService.sendMessage(req.auth!.user.id, id, input);
     res.status(201).json(result);
   });
@@ -41,7 +40,7 @@ class ExplanationSessionController {
   });
 
   share = asyncHandler(async (req: Request, res: Response) => {
-    const id     = ensureString(req.params.id, "Session id is required.");
+    const id = ensureString(req.params.id, "Session id is required.");
     const result = await explanationSessionService.shareSession(req.auth!.user.id, id);
     res.json(result);
   });
@@ -49,7 +48,7 @@ class ExplanationSessionController {
   getPublic = asyncHandler(async (req: Request, res: Response) => {
     const shareId = ensureString(req.params.shareId, "Share id is required.");
     const session = await explanationSessionService.getPublicSession(shareId);
-    res.json(session);
+    res.json(serializeSharedSession(session));
   });
 }
 

@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import type { AnalysisHistoryResponse } from "@algoforge/contracts";
+import { serializeAnalysisRecord, serializeHistoryItem } from "../serializers/analysis";
 import { analysisService } from "../services/analysis.service";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
@@ -6,32 +8,37 @@ import { parseAnalysisHistoryQuery, parseAnalysisInput } from "../validation/ana
 
 class AnalysisController {
   createAnalysis = asyncHandler(async (req: Request, res: Response) => {
-    const input    = parseAnalysisInput(req.body);
+    const input = parseAnalysisInput(req.body);
     const analysis = await analysisService.createAnalysis(req.auth!.user.id, input);
-    res.status(201).json(analysis);
+    res.status(201).json(serializeAnalysisRecord(analysis));
   });
 
   listAnalyses = asyncHandler(async (req: Request, res: Response) => {
-    const query    = parseAnalysisHistoryQuery(req.query);
-    const analyses = await analysisService.listUserAnalyses(req.auth!.user.id, query);
-    res.json(analyses);
+    const query = parseAnalysisHistoryQuery(req.query);
+    const { items, meta } = await analysisService.listUserAnalyses(req.auth!.user.id, query);
+    const data = items.flatMap((row) => {
+      const item = serializeHistoryItem(row);
+      return item ? [item] : [];
+    });
+    const body: AnalysisHistoryResponse = { data, meta };
+    res.json(body);
   });
 
   getAnalysisById = asyncHandler(async (req: Request, res: Response) => {
-    const id       = ensureString(req.params.id, "Analysis id is required.");
+    const id = ensureString(req.params.id, "Analysis id is required.");
     const analysis = await analysisService.getUserAnalysisById(req.auth!.user.id, id);
-    res.json(analysis);
+    res.json(serializeAnalysisRecord(analysis));
   });
 
   shareAnalysis = asyncHandler(async (req: Request, res: Response) => {
-    const id     = ensureString(req.params.id, "Analysis id is required.");
+    const id = ensureString(req.params.id, "Analysis id is required.");
     const result = await analysisService.shareAnalysis(req.auth!.user.id, id);
     res.json(result);
   });
 
   getPublicAnalysis = asyncHandler(async (req: Request, res: Response) => {
     const shareId = ensureString(req.params.shareId, "Share id is required.");
-    const result  = await analysisService.getPublicAnalysis(shareId);
+    const result = await analysisService.getPublicAnalysis(shareId);
     res.json(result);
   });
 }

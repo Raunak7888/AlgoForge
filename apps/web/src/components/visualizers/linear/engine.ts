@@ -57,7 +57,6 @@ function accept(state: LinearState, explain: Explain, anim: Anim = NONE, result?
 }
 
 const STACK_ONLY = new Set(["push", "pop"]);
-const QUEUE_ONLY = new Set(["enqueue", "dequeue"]);
 function wrongKind(s: LinearState, ran: string, type: string): Outcome {
     const need = STACK_ONLY.has(type) ? "Stack" : "Queue";
     return reject(s, ran, `${type}() is a ${need} operation. Switch to ${need} to use it.`);

@@ -30,6 +30,7 @@ export function useTheme(): readonly [Theme, () => void] {
     const [theme, setTheme] = useState<Theme>("dark");
     useEffect(() => {
         const t = resolveTheme(readStored());
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- the stored theme can only be read after mount
         setTheme(t);
         applyTheme(t);
     }, []);

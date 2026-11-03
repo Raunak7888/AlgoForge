@@ -12,6 +12,7 @@ import type {
   ListSessionsQuery,
 } from "../validation/explanation-session";
 import { layeredCache } from "./lib/layered-cache";
+import { paginate } from "../utils/pagination";
 
 export type SessionMessage = {
   id:        string;
@@ -21,12 +22,21 @@ export type SessionMessage = {
   createdAt: string;
 };
 
+type SessionRecord = NonNullable<
+  Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
+>;
+
 const SESSION_CACHE_TTL_SECONDS = 300;
 const MAX_STORED_MESSAGES       = 100; // 50 exchanges
 const AI_HISTORY_MESSAGES       = 10;  // last 5 exchanges sent to AI
 
-function sessionCacheKey(id: string): string {
-  return `explain:session:${id}`;
+/** Private session cache entries are scoped to the owner, so one user can never be served another's session. */
+function sessionCacheKey(userId: string, id: string): string {
+  return `explain:session:${userId}:${id}`;
+}
+
+function publicCacheKey(shareId: string): string {
+  return `explain:public:${shareId}`;
 }
 
 function newMessageId(): string {
@@ -47,29 +57,25 @@ class ExplanationSessionService {
   }
 
   async listSessions(userId: string, query: ListSessionsQuery) {
-    const sessions = await explanationSessionRepository.findManyByUser(userId, {
-      take:   query.limit,
+    // One extra row proves whether another page exists.
+    const rows = await explanationSessionRepository.findManyByUser(userId, {
+      take:   query.limit + 1,
       cursor: query.cursor,
     });
-
-    const nextCursor = sessions.length === query.limit
-      ? (sessions[sessions.length - 1]?.id ?? null)
-      : null;
-
-    return { sessions, nextCursor };
+    return paginate(rows, query.limit, (row) => row.id);
   }
 
   async getSession(userId: string, id: string) {
-    const cached = await layeredCache.get<
-      Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
-    >(sessionCacheKey(id));
+    const key = sessionCacheKey(userId, id);
+    const cached = await layeredCache.get<SessionRecord>(key);
 
-    if (cached) return cached;
+    // Defense in depth: even under the owner-scoped key, verify ownership.
+    if (cached && cached.userId === userId) return cached;
 
     const session = await explanationSessionRepository.findOneByUser(id, userId);
     if (!session) throw AppError.notFound("Session not found.");
 
-    await layeredCache.set(sessionCacheKey(id), session, SESSION_CACHE_TTL_SECONDS);
+    await layeredCache.set(key, session, SESSION_CACHE_TTL_SECONDS);
     return session;
   }
 
@@ -121,15 +127,22 @@ class ExplanationSessionService {
 
     const title = session.title ?? input.query.slice(0, 80);
     await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
-    await layeredCache.del(sessionCacheKey(sessionId));
+    await layeredCache.del(sessionCacheKey(userId, sessionId));
+    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
 
     return { userMessage, assistantMessage };
   }
 
   async deleteSession(userId: string, id: string): Promise<void> {
+    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+
     const result = await explanationSessionRepository.delete(id, userId);
     if (result.count === 0) throw AppError.notFound("Session not found.");
-    await layeredCache.del(sessionCacheKey(id));
+
+    await layeredCache.del(sessionCacheKey(userId, id));
+    // A deleted public session must stop being readable immediately.
+    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
   }
 
   async shareSession(userId: string, id: string) {
@@ -142,13 +155,13 @@ class ExplanationSessionService {
 
     const shareId = newShareId();
     await explanationSessionRepository.share(id, shareId);
-    await layeredCache.del(sessionCacheKey(id));
+    await layeredCache.del(sessionCacheKey(userId, id));
 
     return { shareUrl: buildShareUrl(shareId) };
   }
 
   async getPublicSession(shareId: string) {
-    const cacheKey = `explain:public:${shareId}`;
+    const cacheKey = publicCacheKey(shareId);
 
     const cached = await layeredCache.get<
       Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>

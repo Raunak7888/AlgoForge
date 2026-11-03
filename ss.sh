@@ -1,60 +1,202 @@
-  #!/bin/bash
-  
-  # --- Strict Mode ---
-  set -euo pipefail
-  IFS=$'\n\t'
-  
-  # Configuration
-  OUTPUT_FILE="sourcecode.txt"
-  
-  # Target Directory (defaults to current directory if not provided)
-  TARGET_DIR="${1:-.}"
-  
-  # Validate Directory
-  if [[ ! -d "$TARGET_DIR" ]]; then
-      echo "Error: '$TARGET_DIR' is not a valid directory." >&2
-      exit 1
-  fi
-  
-  # Clear or initialize the output file
-  : > "$OUTPUT_FILE"
-  
-  echo "Collecting all frontend and backend source code into $OUTPUT_FILE..."
-  
-  # Find and process files
-  # Pruning common backend (Java/Spring/Maven/Gradle) and frontend (Node/Next/Build) directories
-  find "$TARGET_DIR" \
-      -path "$TARGET_DIR/.gradle" -prune -o \
-      -path "$TARGET_DIR/.mvn" -prune -o \
-      -path "$TARGET_DIR/.idea" -prune -o \
-      -path "$TARGET_DIR/build" -prune -o \
-      -path "$TARGET_DIR/target" -prune -o \
-      -path "$TARGET_DIR/.git" -prune -o \
-      -path "$TARGET_DIR/src/components/auth" -prune -o \
-      -path "$TARGET_DIR/src/components/LandingPage" -prune -o \
-      -path "$TARGET_DIR/src/components/DashBoard" -prune -o \
-      -path "$TARGET_DIR/src/components/ui" -prune -o \
-      -path "*/node_modules/*" -prune -o \
-      -path "*/.next/*" -prune -o \
-      -path "*/dist/*" -prune -o \
-      \( \
-          -name "*.tsx" -o \
-          -name "*.ts" -o \
-          -name "*.jsx" -o \
-          -name "*.js" -o \
-          -name "*.css" \
-      \) -type f -print | while read -r file; do
-          
-          # Clean path formatting
-          CLEAN_PATH="${file#./}"
-          
-          {
-              echo "================================================================================"
-              echo " FILE: $CLEAN_PATH"
-              echo "================================================================================"
-              cat "$file"
-              echo -e "\n\n"
-          } >> "$OUTPUT_FILE"
-  done
-  
-  echo "Finished extraction. Combined contents saved to: $OUTPUT_FILE"
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# ==========================================
+# AlgoForge Lint Source Code Dumper
+# Git Bash / Windows compatible
+#
+# Output:
+#   lint-files-dump.sh
+#   ss-debug.log
+# ==========================================
+
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
+
+OUT="lint-files-dump.sh"
+DEBUG_LOG="ss-debug.log"
+
+# ==========================================
+# DEBUG SYSTEM
+# ==========================================
+
+exec > >(tee -a "$DEBUG_LOG") 2>&1
+
+PS4='+ [${BASH_SOURCE##*/}:${LINENO}] '
+
+debug() {
+    echo "[DEBUG $(date '+%H:%M:%S')] $*"
+}
+
+debug "=========================================="
+debug "AlgoForge Lint Source Dumper started"
+debug "=========================================="
+
+debug "Current directory: $(pwd)"
+debug "Bash version: $BASH_VERSION"
+debug "Output file: $OUT"
+debug "Debug log: $DEBUG_LOG"
+
+# ==========================================
+# REPOSITORY CHECK
+# ==========================================
+
+debug "Checking repository directories..."
+
+if [[ ! -d "apps/web/src" || ! -d "packages" ]]; then
+    echo "[ERROR] Run this script from the AlgoForge repository root."
+    exit 1
+fi
+
+debug "Repository structure verified."
+
+# ==========================================
+# TARGET FILES
+# Exact paths prevent duplicate filename issues.
+# ==========================================
+
+TARGETS=(
+    "apps/web/src/components/CodeEditor/EditorToolbar.tsx"
+    "apps/web/src/components/DashBoard/DashBoard.tsx"
+    "apps/web/src/components/DashBoard/DashboardGate.tsx"
+    "apps/web/src/components/DashBoard/DesktopOnlyScreen.tsx"
+    "apps/web/src/components/DashBoard/Setting.tsx"
+    "apps/web/src/components/DashBoard/ShareModal.tsx"
+    "apps/web/src/components/DashBoard/TitleBar.tsx"
+    "apps/web/src/components/DashBoard/analysis-history.tsx"
+    "apps/web/src/components/LandingPage/WhatYouGet.tsx"
+    "apps/web/src/components/LandingPage/shared.tsx"
+    "apps/web/src/components/auth/GoogleLoginModal.tsx"
+    "apps/web/src/components/ui/FeaturePanel.tsx"
+    "apps/web/src/components/ui/card-hover-effect.tsx"
+    "apps/web/src/components/ui/glowing-effect.tsx"
+    "apps/web/src/components/ui/hover-border-gradient.tsx"
+    "apps/web/src/components/ui/resizable-navbar.tsx"
+    "apps/web/src/components/visualizers/canvas/CanvasViewport.tsx"
+    "apps/web/src/components/visualizers/canvas/Group.tsx"
+    "apps/web/src/components/visualizers/canvas/VisualizerCanvas.tsx"
+    "apps/web/src/components/visualizers/graph/GraphStage.tsx"
+    "apps/web/src/components/visualizers/graph/model.ts"
+    "apps/web/src/components/visualizers/linear/engine.ts"
+    "apps/web/src/components/visualizers/linkedlist/engine.ts"
+    "apps/web/src/components/visualizers/shared/animationSettings.ts"
+    "apps/web/src/components/visualizers/shared/stage/StageFrame.tsx"
+    "apps/web/src/components/visualizers/tree/TreeStage.tsx"
+    "apps/web/src/components/visualizers/tree/model.ts"
+    "apps/web/src/components/visualizers/ui/ScriptDrawer.tsx"
+    "apps/web/src/components/visualizers/ui/ScriptEditor.tsx"
+)
+
+# ==========================================
+# FILE DISCOVERY
+# ==========================================
+
+debug "Starting file discovery..."
+
+FILTERED=()
+MISSING=()
+
+for FILE in "${TARGETS[@]}"; do
+
+    debug "Checking: $FILE"
+
+    if [[ -f "$FILE" ]]; then
+        FILTERED+=("$FILE")
+        debug "FOUND: $FILE"
+    else
+        MISSING+=("$FILE")
+        debug "MISSING: $FILE"
+    fi
+
+done
+
+debug "File discovery completed."
+debug "Found: ${#FILTERED[@]}"
+debug "Missing: ${#MISSING[@]}"
+
+# ==========================================
+# GENERATE RESTORATION SCRIPT
+# ==========================================
+
+debug "Starting restoration script generation..."
+
+: > "$OUT"
+
+cat >> "$OUT" <<'HEADER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+echo "Restoring AlgoForge lint files..."
+
+HEADER
+
+for FILE in "${FILTERED[@]}"; do
+
+    debug "Processing: $FILE"
+
+    DELIMITER="__ALGOFORGE_FILE_$(printf '%s' "$FILE" | sha256sum | cut -c1-16)__"
+
+    while grep -Fqx "$DELIMITER" "$FILE"; do
+        DELIMITER="${DELIMITER}_X"
+    done
+
+    {
+        printf 'mkdir -p %q\n' "$(dirname "$FILE")"
+        printf 'cat > %q <<'\''%s'\''\n' "$FILE" "$DELIMITER"
+        cat "$FILE"
+        printf '\n%s\n\n' "$DELIMITER"
+    } >> "$OUT"
+
+    debug "Added to output: $FILE"
+
+done
+
+cat >> "$OUT" <<'FOOTER'
+echo "All AlgoForge lint files restored successfully."
+FOOTER
+
+chmod +x "$OUT"
+
+debug "Restoration script generated successfully."
+
+# ==========================================
+# DISPLAY RESULTS
+# ==========================================
+
+echo ""
+echo "================================================"
+echo "          ALGOFORGE LINT SOURCE DUMP"
+echo "================================================"
+
+echo ""
+echo "[INCLUDED FILES]"
+
+for FILE in "${FILTERED[@]}"; do
+    printf "  %s\n" "$FILE"
+done
+
+echo ""
+echo "[MISSING FILES]"
+
+if [[ ${#MISSING[@]} -eq 0 ]]; then
+    echo "  None"
+else
+    for FILE in "${MISSING[@]}"; do
+        printf "  %s\n" "$FILE"
+    done
+fi
+
+echo ""
+echo "================================================"
+echo "Target files       : ${#TARGETS[@]}"
+echo "Files included     : ${#FILTERED[@]}"
+echo "Files missing      : ${#MISSING[@]}"
+echo "Generated file     : $OUT"
+echo "Debug log          : $DEBUG_LOG"
+echo "================================================"
+
+echo ""
+echo "To restore the collected files:"
+echo "  bash $OUT"
+
+debug "Script completed successfully."

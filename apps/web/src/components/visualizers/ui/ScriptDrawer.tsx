@@ -35,7 +35,9 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
     const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
     const [ran, setRan] = useState<{ ok: boolean; steps: number } | null>(null);
     const textRef = useRef(text);
-    textRef.current = text;
+    useEffect(() => {
+        textRef.current = text;
+    }, [text]);
     const handle = useRef<EditorHandle | null>(null);
     const hydrated = useRef(false);
     const onReady = useCallback((h: EditorHandle) => {
@@ -57,6 +59,7 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
     useEffect(() => {
         const saved = loadScript();
         if (saved && saved.trim() !== "") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- the saved script only exists in the browser
             setText(saved);
             if (store.getState().compiled === null) runText(saved);
         }

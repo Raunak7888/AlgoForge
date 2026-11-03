@@ -14,7 +14,7 @@ import {
 import { lowestFreeId } from "../shared/ids";
 import { buildSteps, type StepHint } from "./steps";
 import type { Anim, Explain, ListOp, ListState, ListType, Outcome, Primitive, Step } from "./types";
-import { MARKER_HELP, NAME_RE, NODE_ID_HELP } from "./validate";
+import { MARKER_HELP, NAME_RE } from "./validate";
 
 const NONE: Anim = { kind: "none" };
 const COLOR_HELP = "Color must look like #RRGGBB, e.g. #FF430F.";
@@ -63,7 +63,7 @@ const badIndex = (i: unknown, n: number, allowEnd = false) =>
 const inRange = (i: unknown, n: number, allowEnd = false): i is number =>
     Number.isInteger(i) && (i as number) >= 0 && (i as number) < n + (allowEnd ? 1 : 0);
 
-const where = (order: string[], index: number, s: ListState) => {
+const where = (order: string[], index: number) => {
     const n = order.length;
     if (n === 0) return "into the empty list";
     if (index === 0) return `at the head, before ${order[0]}`;
@@ -96,7 +96,7 @@ function insertAtPrimitive(s: ListState, ran: string, index: number, value: Prim
         next,
         ex(
             ran,
-            `New node ${id} (${fmt(v)}${v === null ? ", null is a real value" : ""}) was created and placed at index ${index}, ${where(order, index, s)}.`,
+            `New node ${id} (${fmt(v)}${v === null ? ", null is a real value" : ""}) was created and placed at index ${index}, ${where(order, index)}.`,
             `Length ${n} → ${n + 1}. Pointer changes: ${stepsText(steps)}`,
             n === 0
                 ? "Nothing else existed."

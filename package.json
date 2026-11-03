@@ -12,7 +12,7 @@
     "dev:api": "pnpm --filter api dev",
     "build:web": "pnpm --filter @algoforge/web build",
     "build:api": "pnpm --filter api build",
-    "typecheck": "pnpm --filter @algoforge/db typecheck && pnpm --filter api typecheck",
+    "typecheck": "pnpm --filter @algoforge/db typecheck && pnpm --filter @algoforge/contracts typecheck && pnpm --filter api typecheck",
     "typecheck:web": "pnpm --filter @algoforge/web typecheck",
     "lint": "pnpm --filter api lint",
     "lint:web": "pnpm --filter @algoforge/web lint",
@@ -23,7 +23,10 @@
     "db:reset": "pnpm --filter @algoforge/db reset",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "db:make-admin": "pnpm --filter @algoforge/db make-admin",
+    "test": "pnpm --filter @algoforge/contracts test && pnpm --filter api test && pnpm --filter @algoforge/web test",
+    "test:contracts": "pnpm --filter @algoforge/contracts test"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -6,3 +6,8 @@ export type AlgorithmQuery = {
   isPublished?: boolean;
   search?:      string;
 };
+
+/** Who is asking. Non-admins can only ever see published algorithms. */
+export type AlgorithmVisibility = {
+  isAdmin: boolean;
+};
