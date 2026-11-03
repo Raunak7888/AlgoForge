@@ -1,0 +1,3288 @@
+================================================================================
+ FILE: apps/api/src/ai/context-builder.ts
+================================================================================
+import { prisma } from "@algoforge/db";
+import { layeredCache } from "../services/lib/Layered.cache";
+
+export type CodebaseContext = {
+  algorithms: AlgorithmContext[];
+  schema: SchemaContext;
+  apiRoutes: RouteContext[];
+};
+
+type AlgorithmContext = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  difficulty: string;
+  category: string;
+  displayCode: { language: string; code: string } | null;
+  complexity: {
+    timeBest: string | null;
+    timeAverage: string | null;
+    timeWorst: string | null;
+    space: string | null;
+  } | null;
+};
+
+type SchemaContext = {
+  models: ModelContext[];
+};
+
+type ModelContext = {
+  name: string;
+  fields: string[];
+};
+
+type RouteContext = {
+  method: string;
+  path: string;
+  description: string;
+};
+
+const STATIC_SCHEMA: SchemaContext = {
+  models: [
+    {
+      name: "User",
+      fields: ["id", "email", "username", "name", "image", "role", "createdAt", "updatedAt"],
+    },
+    {
+      name: "Session",
+      fields: ["id", "userId", "tokenHash", "expiresAt", "revokedAt", "ipAddress", "userAgent"],
+    },
+    {
+      name: "Analysis",
+      fields: ["id", "userId", "code", "language", "complexity", "suggestion", "result", "shareId", "isPublic", "createdAt"],
+    },
+    {
+      name: "Algorithm",
+      fields: ["id", "slug", "name", "description", "categoryId", "difficulty", "isPublished", "timeBest", "timeAverage", "timeWorst", "spaceComplexity"],
+    },
+    {
+      name: "Category",
+      fields: ["id", "label", "description", "iconName", "sortOrder"],
+    },
+    {
+      name: "ForgeConfig",
+      fields: ["id", "algorithmId", "forgeCode", "inputSchema", "guardRanges", "version"],
+    },
+    {
+      name: "DisplayCode",
+      fields: ["id", "algorithmId", "language", "code"],
+    },
+  ],
+};
+
+const STATIC_ROUTES: RouteContext[] = [
+  { method: "GET",  path: "/api/auth/me",                    description: "Returns authenticated user profile from JWT session" },
+  { method: "POST", path: "/api/auth/refresh",               description: "Rotates refresh token and issues new access token via cookie" },
+  { method: "POST", path: "/api/auth/logout",                description: "Revokes current session and clears auth cookies" },
+  { method: "GET",  path: "/api/algorithms",                 description: "Lists published algorithms with optional categoryId, difficulty, search filters" },
+  { method: "GET",  path: "/api/algorithms/id/:id",          description: "Fetches full algorithm detail by UUID" },
+  { method: "GET",  path: "/api/algorithms/slug/:slug",      description: "Fetches algorithm detail by slug" },
+  { method: "GET",  path: "/api/algorithms/id/:id/visualize",description: "Returns forge execution config for algorithm visualization" },
+  { method: "POST", path: "/api/analysis",                   description: "Runs AI code analysis and stores result for authenticated user" },
+  { method: "GET",  path: "/api/analysis",                   description: "Lists paginated analysis history for authenticated user" },
+  { method: "GET",  path: "/api/analysis/:id",               description: "Fetches a single analysis by ID for authenticated user" },
+  { method: "POST", path: "/api/analysis/:id/share",         description: "Makes an analysis public and returns a share URL" },
+  { method: "GET",  path: "/api/share/:shareId",             description: "Returns publicly shared analysis by shareId" },
+  { method: "GET",  path: "/api/categories",                 description: "Lists all categories sorted by sortOrder" },
+  { method: "POST", path: "/api/explain",                    description: "Accepts natural language query and returns AI explanation mapped to codebase" },
+  { method: "POST", path: "/api/explain-sessions",           description: "Creates a persistent AI explanation chat session" },
+  { method: "POST", path: "/api/explain-sessions/:id/messages", description: "Sends a message in a persistent explanation session" },
+];
+
+const CONTEXT_CACHE_TTL = 60; // seconds
+
+export async function buildCodebaseContext(slugs?: string[]): Promise<CodebaseContext> {
+  const cacheKey = `ctx:${(slugs ?? []).slice().sort().join(",")}`;
+
+  const cached = await layeredCache.get<CodebaseContext>(cacheKey);
+  if (cached) return cached;
+
+  const where = slugs?.length
+    ? { slug: { in: slugs }, isPublished: true }
+    : { isPublished: true };
+
+  const algorithms = await prisma.algorithm.findMany({
+    where,
+    take: 10,
+    include: {
+      category:     { select: { label: true } },
+      displayCodes: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const algorithmContexts: AlgorithmContext[] = algorithms.map((algo) => {
+    const jsCode    = algo.displayCodes.find((dc) => dc.language === "javascript");
+    const firstCode = algo.displayCodes[0] ?? null;
+
+    return {
+      id:          algo.id,
+      slug:        algo.slug,
+      name:        algo.name,
+      description: algo.description,
+      difficulty:  algo.difficulty,
+      category:    algo.category.label,
+      displayCode: jsCode ?? (firstCode ? { language: firstCode.language, code: firstCode.code } : null),
+      complexity:
+        algo.timeBest || algo.timeAverage || algo.timeWorst || algo.spaceComplexity
+          ? {
+              timeBest:    algo.timeBest,
+              timeAverage: algo.timeAverage,
+              timeWorst:   algo.timeWorst,
+              space:       algo.spaceComplexity,
+            }
+          : null,
+    };
+  });
+
+  const result: CodebaseContext = {
+    algorithms: algorithmContexts,
+    schema:     STATIC_SCHEMA,
+    apiRoutes:  STATIC_ROUTES,
+  };
+
+  await layeredCache.set(cacheKey, result, CONTEXT_CACHE_TTL);
+  return result;
+}
+
+export function serializeContext(ctx: CodebaseContext): string {
+  const sections: string[] = [];
+
+  sections.push("=== DATABASE SCHEMA ===");
+  for (const model of ctx.schema.models) {
+    sections.push(`Model ${model.name}: [${model.fields.join(", ")}]`);
+  }
+
+  sections.push("\n=== API ROUTES ===");
+  for (const route of ctx.apiRoutes) {
+    sections.push(`${route.method} ${route.path} — ${route.description}`);
+  }
+
+  if (ctx.algorithms.length > 0) {
+    sections.push("\n=== ALGORITHMS ===");
+    for (const algo of ctx.algorithms) {
+      sections.push(`[${algo.slug}] ${algo.name} (${algo.difficulty}, category: ${algo.category})`);
+      sections.push(`  Description: ${algo.description}`);
+      if (algo.complexity) {
+        sections.push(
+          `  Complexity: time=${algo.complexity.timeAverage ?? "?"}, space=${algo.complexity.space ?? "?"}`,
+        );
+      }
+      if (algo.displayCode) {
+        const snippet = algo.displayCode.code.slice(0, 600);
+        sections.push(`  Code (${algo.displayCode.language}):\n${snippet}${algo.displayCode.code.length > 600 ? "\n  [truncated]" : ""}`);
+      }
+    }
+  }
+
+  return sections.join("\n");
+}
+
+
+================================================================================
+ FILE: apps/api/src/ai/query-processor.ts
+================================================================================
+import { prisma } from "@algoforge/db";
+import { layeredCache } from "../services/lib/Layered.cache";
+
+export type QueryScope = {
+  intent: "explain_flow" | "explain_failure" | "explain_algorithm" | "explain_api" | "general";
+  keywords: string[];
+  targetSlugs: string[];
+  targetRoutes: string[];
+  rawQuery: string;
+};
+
+const ROUTE_KEYWORDS: Record<string, string[]> = {
+  "/api/auth":       ["auth", "login", "logout", "session", "token", "refresh", "google", "oauth"],
+  "/api/analysis":   ["analysis", "analyze", "ai", "code analysis"],
+  "/api/algorithms": ["algorithm", "visualize", "forge"],
+  "/api/categories": ["category", "categories"],
+  "/api/share":      ["share", "public", "shareId"],
+  "/api/explain":    ["explain", "explanation"],
+};
+
+const SLUGS_CACHE_KEY = "meta:slugs";
+const SLUGS_CACHE_TTL = 300; // 5 minutes
+
+export async function getKnownSlugs(): Promise<string[]> {
+  const cached = await layeredCache.get<string[]>(SLUGS_CACHE_KEY);
+  if (cached) return cached;
+
+  const rows = await prisma.algorithm.findMany({
+    where:  { isPublished: true },
+    select: { slug: true },
+  });
+  const result = rows.map((r) => r.slug);
+  await layeredCache.set(SLUGS_CACHE_KEY, result, SLUGS_CACHE_TTL);
+  return result;
+}
+
+export async function processQuery(query: string): Promise<QueryScope> {
+  const lower = query.toLowerCase();
+
+  const intent       = detectIntent(lower);
+  const keywords     = extractKeywords(lower);
+  const targetSlugs  = await matchSlugs(lower);
+  const targetRoutes = matchRoutes(lower);
+
+  return {
+    intent,
+    keywords,
+    targetSlugs,
+    targetRoutes,
+    rawQuery: query,
+  };
+}
+
+function detectIntent(query: string): QueryScope["intent"] {
+  if (/why.*(fail|error|broken|wrong|crash|not work)/i.test(query)) {
+    return "explain_failure";
+  }
+  if (/how.*(happen|work|flow|process|execut)/i.test(query)) {
+    return "explain_flow";
+  }
+  if (/api|endpoint|route|request|response/i.test(query)) {
+    return "explain_api";
+  }
+  if (/algorithm|sort|search|graph|tree|heap|stack|queue/i.test(query)) {
+    return "explain_algorithm";
+  }
+  return "general";
+}
+
+function extractKeywords(query: string): string[] {
+  const stopWords = new Set([
+    "this", "that", "the", "is", "are", "was", "were", "a", "an", "and",
+    "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+    "how", "why", "what", "when", "where", "which", "who",
+  ]);
+  return query
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z0-9-]/g, ""))
+    .filter((w) => w.length > 2 && !stopWords.has(w));
+}
+
+async function matchSlugs(query: string): Promise<string[]> {
+  const knownSlugs = await getKnownSlugs();
+  return knownSlugs.filter((slug) => {
+    const normalized = slug.replace(/-/g, " ");
+    return query.includes(slug) || query.includes(normalized);
+  });
+}
+
+function matchRoutes(query: string): string[] {
+  const matched: string[] = [];
+  for (const [route, keywords] of Object.entries(ROUTE_KEYWORDS)) {
+    if (keywords.some((kw) => query.includes(kw))) {
+      matched.push(route);
+    }
+  }
+  return matched;
+}
+
+
+================================================================================
+ FILE: apps/api/src/ai/response-formatter.ts
+================================================================================
+import type { QueryScope } from "./query-processor";
+
+export type ExplanationResponse = {
+  query: string;
+  intent: string;
+  explanation: string;
+  relevantFiles: string[];
+  relevantRoutes: string[];
+  cachedAt?: string;
+};
+
+export function formatExplanationResponse(
+  rawExplanation: string,
+  scope: QueryScope,
+  relevantRoutes: string[],
+  fromCache = false,
+): ExplanationResponse {
+  return {
+    query: scope.rawQuery,
+    intent: scope.intent,
+    explanation: rawExplanation.trim(),
+    relevantFiles: scope.targetSlugs.map((s) => `algorithms/${s}`),
+    relevantRoutes,
+    ...(fromCache ? { cachedAt: new Date().toISOString() } : {}),
+  };
+}
+
+
+================================================================================
+ FILE: apps/api/src/app.ts
+================================================================================
+import cors from "cors";
+import express from "express";
+import { env } from "./config/env";
+import { errorHandler } from "./middleware/error-handler";
+import { notFoundHandler } from "./middleware/not-found";
+import { securityHeaders } from "./middleware/security-headers";
+import { generalRateLimiter } from "./middleware/rate-limit";
+
+import adminRouter              from "./routes/admin";
+import algorithmRouter          from "./routes/algorithm";
+import analysisRouter           from "./routes/analysis";
+import authRouter               from "./routes/auth";
+import categoryRouter           from "./routes/category";
+import shareRouter              from "./routes/share";
+import explanationRouter        from "./routes/exaplantion";
+import explanationSessionRouter from "./routes/explanation-session";
+
+const app = express();
+
+app.set("trust proxy", 1);
+
+app.use(securityHeaders);
+app.use(
+  cors({
+    origin:         env.webAppUrl,
+    credentials:    true,
+    methods:        ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Admin-Secret"],
+  }),
+);
+app.use(express.json({ limit: "256kb" }));
+
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.use("/api/auth", authRouter);
+app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
+app.use("/api/categories", categoryRouter);
+app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
+app.use("/api/analyses",  generalRateLimiter(), analysisRouter);
+
+// Sessions mounted at a path that cannot be prefix-matched by the explain router.
+app.use("/api/explain-sessions", explanationSessionRouter);
+app.use("/api/explain",          explanationRouter);
+
+app.use("/api/share", shareRouter);
+app.use("/api/admin", adminRouter);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export { app };
+
+
+================================================================================
+ FILE: apps/api/src/config/env.ts
+================================================================================
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const AI_PROVIDERS = ["gemini", "openrouter"] as const;
+type AIProvider = (typeof AI_PROVIDERS)[number];
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function parseInteger(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+  const parsed = Number(rawValue);
+  // if (!Number.isInteger(parsed) || parsed <= 0)
+  //   throw new Error(`Environment variable ${name} must be a positive integer.`);
+  return parsed;
+}
+
+function parseStringEnum<T extends string>(
+  name: string,
+  allowedValues: readonly T[],
+  fallback: T,
+): T {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+  if (!allowedValues.includes(rawValue as T))
+    throw new Error(
+      `Environment variable ${name} must be one of: ${allowedValues.join(", ")}.`,
+    );
+  return rawValue as T;
+}
+
+function parseList(name: string): string[] {
+  const rawValue = process.env[name];
+  if (!rawValue) return [];
+  return rawValue
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+const port = parseInteger("PORT", 4000);
+const nodeEnv = process.env.NODE_ENV ?? "development";
+const isProduction = nodeEnv === "production";
+const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
+const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
+
+export const env = {
+  nodeEnv,
+  isProduction,
+  port,
+  apiBaseUrl,
+  webAppUrl: process.env.WEB_APP_URL ?? "http://localhost:3000",
+  cookieDomain: process.env.COOKIE_DOMAIN,
+  googleClientId: requireEnv("GOOGLE_CLIENT_ID"),
+  googleClientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
+  jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
+  jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
+  accessTokenTtlMinutes: parseInteger("ACCESS_TOKEN_TTL_MINUTES", 15),
+  refreshTokenTtlDays: parseInteger("REFRESH_TOKEN_TTL_DAYS", 30),
+  authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
+  authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
+  geminiApiKey: requireEnv("GEMINI_API_KEY"),
+  adminUpgradeSecret:
+    process.env.ADMIN_UPGRADE_SECRET ?? "1d201bf1-eb81-42ec-bd13-3e627b0fc4e9",
+  ai: {
+    provider: aiProvider as AIProvider,
+    model: process.env.AI_MODEL ?? "gemini-2.0-flash",
+    timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
+    maxRetries: parseInteger("AI_MAX_RETRIES", 1),
+  },
+  openRouter: {
+    baseUrl:
+      process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+    apiKeys: parseList("OPENROUTER_API_KEYS"),
+    freeModels: parseList("OPENROUTER_FREE_MODELS"),
+    appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
+    siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
+  },
+  redis: {
+    url: process.env.REDIS_URL ?? "redis://localhost:6379",
+    ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
+    aiRateLimitPerHour: parseInteger("AI_RATE_LIMIT_PER_HOUR", 5),
+    defaultRateLimitPerMinute: parseInteger("DEFAULT_RATE_LIMIT_PER_MINUTE", 10),
+  },
+};
+
+export const authCookies = {
+  accessToken: "af_access",
+  refreshToken: "af_refresh",
+  csrfToken: "af_csrf",
+  oauthState: "af_oauth_state",
+} as const;
+
+export const googleOAuthConfig = {
+  redirectUri: `${apiBaseUrl}/api/auth/google/callback`,
+  scopes: ["openid", "email", "profile"],
+};
+
+
+================================================================================
+ FILE: apps/api/src/config/redis.ts
+================================================================================
+import Redis from "ioredis";
+import { env } from "./env";
+
+let _client: Redis | null = null;
+let _healthy = false;
+
+export function getRedisClient(): Redis {
+  if (!_client) {
+    _client = new Redis(env.redis.url, {
+      maxRetriesPerRequest: 2,
+      enableReadyCheck: true,
+      lazyConnect: true,
+      retryStrategy(times) {
+        if (times > 5) return null; // stop retrying after 5 attempts
+        return Math.min(times * 200, 2000);
+      },
+    });
+
+    _client.on("ready", () => {
+      _healthy = true;
+      if (!env.isProduction) console.info("[Redis] Ready.");
+    });
+
+    _client.on("error", (err: Error) => {
+      _healthy = false;
+      if (!env.isProduction) console.error("[Redis] Error:", err.message);
+    });
+
+    _client.on("close", () => {
+      _healthy = false;
+    });
+  }
+
+  return _client;
+}
+
+export function isRedisHealthy(): boolean {
+  return _healthy;
+}
+
+export async function connectRedis(): Promise<void> {
+  const client = getRedisClient();
+  try {
+    await client.connect();
+  } catch (err) {
+    // ioredis throws if already connected — suppress that
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes("already")) {
+      throw err;
+    }
+  }
+}
+
+export async function closeRedis(): Promise<void> {
+  if (_client) {
+    await _client.quit();
+    _client = null;
+    _healthy = false;
+  }
+}
+
+
+================================================================================
+ FILE: apps/api/src/controllers/admin.controller.ts
+================================================================================
+//# filename: apps/api/src/controllers/admin.controller.ts
+
+import { Request, Response } from "express";
+import { adminService } from "../services/admin.service";
+import { asyncHandler } from "../utils/async-handler";
+import { AppError } from "../utils/app-error";
+
+class AdminController {
+  /**
+   * POST /api/admin/upgrade-user
+   * Body: { userId: string }
+   * Role is always hardcoded server-side. Never read from body.
+   */
+  upgradeUser = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.body as { userId?: unknown };
+    if (typeof userId !== "string" || !userId.trim()) {
+      throw AppError.badRequest("userId is required.");
+    }
+    const result = await adminService.upgradeToAdmin(userId.trim());
+    res.json({
+      changed: result.changed,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+      },
+    });
+  });
+
+  /**
+   * POST /api/admin/downgrade-user
+   * Body: { userId: string }
+   */
+  downgradeUser = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.body as { userId?: unknown };
+    if (typeof userId !== "string" || !userId.trim()) {
+      throw AppError.badRequest("userId is required.");
+    }
+    const result = await adminService.downgradeToUser(userId.trim());
+    res.json({
+      changed: result.changed,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+      },
+    });
+  });
+
+  listUsers = asyncHandler(async (_req: Request, res: Response) => {
+    const users = await adminService.listAllUsers();
+    res.json({ users });
+  });
+}
+
+export const adminController = new AdminController();
+
+
+================================================================================
+ FILE: apps/api/src/controllers/algorithm.controller.ts
+================================================================================
+import { Request, Response } from "express";
+import { algorithmService } from "../services/algorithm/index";
+import { asyncHandler } from "../utils/async-handler";
+import { ensureString } from "../validation/common";
+import {
+  parseCreateAlgorithm,
+  parseUpdateAlgorithm,
+  parseAlgorithmQuery,
+} from "../validation/algorithm";
+
+class AlgorithmController {
+  list = asyncHandler(async (req: Request, res: Response) => {
+    const query      = parseAlgorithmQuery(req.query);
+    const algorithms = await algorithmService.listAlgorithms(query);
+    res.json(algorithms);
+  });
+
+  getById = asyncHandler(async (req: Request, res: Response) => {
+    const id        = ensureString(req.params.id, "Algorithm ID is required.");
+    const lang      = typeof req.query.lang === "string" ? req.query.lang : undefined;
+    const algorithm = await algorithmService.getAlgorithmById(id, lang);
+    res.json(algorithm);
+  });
+
+  getBySlug = asyncHandler(async (req: Request, res: Response) => {
+    const slug      = ensureString(req.params.slug, "Algorithm slug is required.");
+    const lang      = typeof req.query.lang === "string" ? req.query.lang : undefined;
+    const algorithm = await algorithmService.getAlgorithmBySlug(slug, lang);
+    res.json(algorithm);
+  });
+
+  getVisualize = asyncHandler(async (req: Request, res: Response) => {
+    const id        = ensureString(req.params.id, "Algorithm ID is required.");
+    const execution = await algorithmService.getAlgorithmExecution(id);
+    res.json(execution);
+  });
+
+  create = asyncHandler(async (req: Request, res: Response) => {
+    const input   = parseCreateAlgorithm(req.body);
+    const created = await algorithmService.createAlgorithm(input);
+    res.status(201).json(created);
+  });
+
+  update = asyncHandler(async (req: Request, res: Response) => {
+    const id      = ensureString(req.params.id, "Algorithm ID is required.");
+    const input   = parseUpdateAlgorithm(req.body);
+    const updated = await algorithmService.updateAlgorithm(id, input);
+    res.status(200).json(updated);
+  });
+
+  delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Algorithm ID is required.");
+    await algorithmService.deleteAlgorithm(id);
+    res.status(204).send();
+  });
+}
+
+export const algorithmController = new AlgorithmController();
+
+
+================================================================================
+ FILE: apps/api/src/controllers/analysis.controller.ts
+================================================================================
+import { Request, Response } from "express";
+import { analysisService } from "../services/analysis.service";
+import { asyncHandler } from "../utils/async-handler";
+import { ensureString } from "../validation/common";
+import { parseAnalysisHistoryQuery, parseAnalysisInput } from "../validation/analysis";
+
+class AnalysisController {
+  createAnalysis = asyncHandler(async (req: Request, res: Response) => {
+    const input    = parseAnalysisInput(req.body);
+    const analysis = await analysisService.createAnalysis(req.auth!.user.id, input);
+    res.status(201).json(analysis);
+  });
+
+  listAnalyses = asyncHandler(async (req: Request, res: Response) => {
+    const query    = parseAnalysisHistoryQuery(req.query);
+    const analyses = await analysisService.listUserAnalyses(req.auth!.user.id, query);
+    res.json(analyses);
+  });
+
+  getAnalysisById = asyncHandler(async (req: Request, res: Response) => {
+    const id       = ensureString(req.params.id, "Analysis id is required.");
+    const analysis = await analysisService.getUserAnalysisById(req.auth!.user.id, id);
+    res.json(analysis);
+  });
+
+  shareAnalysis = asyncHandler(async (req: Request, res: Response) => {
+    const id     = ensureString(req.params.id, "Analysis id is required.");
+    const result = await analysisService.shareAnalysis(req.auth!.user.id, id);
+    res.json(result);
+  });
+
+  getPublicAnalysis = asyncHandler(async (req: Request, res: Response) => {
+    const shareId = ensureString(req.params.shareId, "Share id is required.");
+    const result  = await analysisService.getPublicAnalysis(shareId);
+    res.json(result);
+  });
+}
+
+export const analysisController = new AnalysisController();
+
+
+================================================================================
+ FILE: apps/api/src/controllers/auth.controller.ts
+================================================================================
+import { Request, Response } from "express";
+import { authCookies, env } from "../config/env";
+import { authService } from "../services/auth.service";
+import { userService } from "../services/user.service";
+import { adminService } from "../services/admin.service";
+import { AppError } from "../utils/app-error";
+import { asyncHandler } from "../utils/async-handler";
+import {
+  clearAuthCookies,
+  clearOAuthStateCookie,
+  getCookie,
+  setAuthCookies,
+  setOAuthStateCookie,
+} from "../utils/cookies";
+import { ensureString } from "../validation/common";
+
+class AuthController {
+  startGoogleAuth = asyncHandler(async (_req: Request, res: Response) => {
+    const { url, state } = authService.buildGoogleAuthorizationUrl();
+    setOAuthStateCookie(res, state);
+    res.redirect(url);
+  });
+
+  handleGoogleCallback = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const state         = ensureString(req.query.state, "OAuth state is missing.");
+      const code          = ensureString(req.query.code, "Authorization code is missing.");
+      const expectedState = getCookie(req, authCookies.oauthState);
+
+      clearOAuthStateCookie(res);
+
+      if (!expectedState || expectedState !== state) {
+        throw AppError.unauthorized("Invalid OAuth state.");
+      }
+
+      const authResult = await authService.authenticateGoogleCallback(code, {
+        ipAddress: req.ip ?? null,
+        userAgent: req.get("user-agent") ?? null,
+      });
+
+      setAuthCookies(res, authResult);
+      res.redirect(`${env.webAppUrl}/`);
+    } catch (error) {
+      clearOAuthStateCookie(res);
+      clearAuthCookies(res);
+      console.error("[OAuth Callback Error]", error);
+      res.redirect(`${env.webAppUrl}/?authError=oauth_failed`);
+    }
+  });
+
+  getMe = asyncHandler(async (req: Request, res: Response) => {
+    const user = await userService.getUserById(req.auth!.user.id);
+
+    if (!user) {
+      throw AppError.notFound("User not found.");
+    }
+
+    res.json({ user });
+  });
+
+  refreshSession = asyncHandler(async (req: Request, res: Response) => {
+    const refreshToken = getCookie(req, authCookies.refreshToken);
+
+    if (!refreshToken) {
+      clearAuthCookies(res);
+      throw AppError.unauthorized("Refresh token is missing.");
+    }
+
+    const authResult = await authService.rotateRefreshToken(refreshToken, {
+      ipAddress: req.ip ?? null,
+      userAgent: req.get("user-agent") ?? null,
+    });
+
+    setAuthCookies(res, authResult);
+    res.json({ user: authResult.user });
+  });
+
+  logout = asyncHandler(async (req: Request, res: Response) => {
+    const refreshToken = getCookie(req, authCookies.refreshToken);
+
+    if (refreshToken) {
+      await authService.revokeSessionByRefreshToken(refreshToken);
+    }
+
+    clearAuthCookies(res);
+    res.status(204).send();
+  });
+
+  logoutAll = asyncHandler(async (req: Request, res: Response) => {
+    await authService.revokeAllUserSessions(req.auth!.user.id);
+    clearAuthCookies(res);
+    res.status(204).send();
+  });
+
+  listUsers = asyncHandler(async (_req: Request, res: Response) => {
+    const users = await adminService.listAllUsers();
+    res.json({ users });
+  });
+}
+
+export const authController = new AuthController();
+
+
+================================================================================
+ FILE: apps/api/src/controllers/category.controller.ts
+================================================================================
+import { Request, Response } from "express";
+import { categoryService } from "../services/category.service";
+import { asyncHandler } from "../utils/async-handler";
+import { ensureString } from "../validation/common";
+import {
+  parseCreateCategory,
+  parseUpdateCategory,
+} from "../validation/category";
+
+class CategoryController {
+  list = asyncHandler(async (_req: Request, res: Response) => {
+    const categories = await categoryService.listCategories();
+    res.json(categories);
+  });
+
+  getById = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Category ID is required.");
+    const category = await categoryService.getCategoryById(id);
+    res.json(category);
+  });
+
+  create = asyncHandler(async (req: Request, res: Response) => {
+    const input = parseCreateCategory(req.body);
+    const category = await categoryService.createCategory(input);
+    res.status(201).json(category);
+  });
+
+  update = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Category ID is required.");
+    const input = parseUpdateCategory(req.body);
+    const category = await categoryService.updateCategory(id, input);
+    res.json(category);
+  });
+
+  delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Category ID is required.");
+    await categoryService.deleteCategory(id);
+    res.status(204).send();
+  });
+}
+
+export const categoryController = new CategoryController();
+
+
+================================================================================
+ FILE: apps/api/src/controllers/explanation-session.controller.ts
+================================================================================
+import { Request, Response } from "express";
+import { explanationSessionService } from "../services/explanation-session.service";
+import { asyncHandler } from "../utils/async-handler";
+import {
+  parseCreateSession,
+  parseSendMessage,
+  parseListSessionsQuery,
+} from "../validation/explanation-session";
+import { ensureString } from "../validation/common";
+
+class ExplanationSessionController {
+  create = asyncHandler(async (req: Request, res: Response) => {
+    const input   = parseCreateSession(req.body);
+    const session = await explanationSessionService.createSession(req.auth!.user.id, input);
+    res.status(201).json(session);
+  });
+
+  list = asyncHandler(async (req: Request, res: Response) => {
+    const query  = parseListSessionsQuery(req.query);
+    const result = await explanationSessionService.listSessions(req.auth!.user.id, query);
+    res.json(result);
+  });
+
+  getById = asyncHandler(async (req: Request, res: Response) => {
+    const id      = ensureString(req.params.id, "Session id is required.");
+    const session = await explanationSessionService.getSession(req.auth!.user.id, id);
+    res.json(session);
+  });
+
+  sendMessage = asyncHandler(async (req: Request, res: Response) => {
+    const id     = ensureString(req.params.id, "Session id is required.");
+    const input  = parseSendMessage(req.body);
+    const result = await explanationSessionService.sendMessage(req.auth!.user.id, id, input);
+    res.status(201).json(result);
+  });
+
+  delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Session id is required.");
+    await explanationSessionService.deleteSession(req.auth!.user.id, id);
+    res.status(204).send();
+  });
+
+  share = asyncHandler(async (req: Request, res: Response) => {
+    const id     = ensureString(req.params.id, "Session id is required.");
+    const result = await explanationSessionService.shareSession(req.auth!.user.id, id);
+    res.json(result);
+  });
+
+  getPublic = asyncHandler(async (req: Request, res: Response) => {
+    const shareId = ensureString(req.params.shareId, "Share id is required.");
+    const session = await explanationSessionService.getPublicSession(shareId);
+    res.json(session);
+  });
+}
+
+export const explanationSessionController = new ExplanationSessionController();
+
+
+================================================================================
+ FILE: apps/api/src/controllers/explanation.controller.ts
+================================================================================
+import { Request, Response } from "express";
+import { explanationService } from "../services/explanation.service";
+import { asyncHandler } from "../utils/async-handler";
+import { AppError } from "../utils/app-error";
+
+class ExplanationController {
+  explain = asyncHandler(async (req: Request, res: Response) => {
+    const { query } = req.body as { query?: unknown };
+    if (typeof query !== "string" || !query.trim()) {
+      throw AppError.badRequest("Field 'query' is required and must be a non-empty string.");
+    }
+    const result = await explanationService.explain(query.trim());
+    res.json(result);
+  });
+}
+
+export const explanationController = new ExplanationController();
+
+
+================================================================================
+ FILE: apps/api/src/middleware/admin-secret.ts
+================================================================================
+//# filename: apps/api/src/middleware/admin-secret.ts
+
+import { NextFunction, Request, Response } from "express";
+import { Role } from "@algoforge/db";
+import { env } from "../config/env";
+import { authService } from "../services/auth.service";
+import { AppError } from "../utils/app-error";
+import { getToken } from "./auth";
+
+/**
+ * Grants access if EITHER:
+ *   1. X-Admin-Secret header matches ADMIN_UPGRADE_SECRET env var (non-empty).
+ *   2. The request carries a valid JWT for an ADMIN user.
+ *
+ * Role is NEVER read from the request body. The secret must come from the
+ * environment; a blank env var disables secret-based access entirely.
+ */
+export async function requireAdminAccess(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    // Path 1 — env secret
+    const headerSecret = req.get("X-Admin-Secret");
+    if (
+      headerSecret &&
+      env.adminUpgradeSecret.length > 0 &&
+      headerSecret === env.adminUpgradeSecret
+    ) {
+      req.adminViaSecret = true;
+      return next();
+    }
+
+    // Path 2 — authenticated admin JWT
+    const accessToken = getToken(req);
+    if (!accessToken) {
+      return next(AppError.unauthorized("Authentication required."));
+    }
+
+    const auth = await authService.authenticateAccessToken(accessToken);
+
+    if (auth.user.role !== Role.ADMIN) {
+      return next(AppError.forbidden("Insufficient permissions."));
+    }
+
+    req.auth = auth;
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+================================================================================
+ FILE: apps/api/src/middleware/auth.ts
+================================================================================
+//# filename: apps/api/src/middleware/auth.ts
+
+import { NextFunction, Request, Response } from "express";
+import { Role } from "@algoforge/db";
+import { authCookies } from "../config/env";
+import { authService } from "../services/auth.service";
+import { AppError } from "../utils/app-error";
+import { getCookie } from "../utils/cookies";
+
+export function getToken(req: Request): string | null {
+  const cookieToken = getCookie(req, authCookies.accessToken);
+  if (cookieToken) return cookieToken;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.split(" ")[1];
+  }
+
+  return null;
+}
+
+export async function requireAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const accessToken = getToken(req);
+    if (!accessToken) {
+      return next(AppError.unauthorized("Authentication required."));
+    }
+    req.auth = await authService.authenticateAccessToken(accessToken);
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function requireRoles(...roles: Role[]) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.auth) {
+      return next(AppError.unauthorized("Authentication required."));
+    }
+    if (!roles.includes(req.auth.user.role)) {
+      return next(AppError.forbidden("Insufficient permissions."));
+    }
+    next();
+  };
+}
+
+
+================================================================================
+ FILE: apps/api/src/middleware/csrf.ts
+================================================================================
+import { NextFunction, Request, Response } from "express";
+import { authCookies } from "../config/env";
+import { AppError } from "../utils/app-error";
+import { getCookie } from "../utils/cookies";
+
+export function requireCsrf(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void {
+  const csrfCookie = getCookie(req, authCookies.csrfToken);
+  const csrfHeader = req.get("x-csrf-token");
+
+  if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+    return next(AppError.forbidden("CSRF validation failed."));
+  }
+
+  next();
+}
+
+
+================================================================================
+ FILE: apps/api/src/middleware/error-handler.ts
+================================================================================
+import { NextFunction, Request, Response } from "express";
+import { AppError } from "../utils/app-error";
+import { env } from "../config/env";
+
+export function errorHandler(
+  err: unknown,
+  _req: Request,
+  res: Response,
+  _next: NextFunction,
+): void {
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      error: {
+        code: err.code,
+        message: err.message,
+      },
+    });
+    return;
+  }
+
+  if (!env.isProduction) {
+    console.error("[Unhandled Error]", err);
+  }
+
+  res.status(500).json({
+    error: {
+      code: "INTERNAL_ERROR",
+      message: "An unexpected error occurred.",
+    },
+  });
+}
+
+
+================================================================================
+ FILE: apps/api/src/middleware/not-found.ts
+================================================================================
+import { Request, Response } from "express";
+
+export function notFoundHandler(_req: Request, res: Response): void {
+  res.status(404).json({
+    error: "Route not found.",
+    code: "NOT_FOUND",
+  });
+}
+
+
+
+================================================================================
+ FILE: apps/api/src/middleware/rate-limit.ts
+================================================================================
+import { NextFunction, Request, Response } from "express";
+import { getRedisClient } from "../config/redis";
+import { env } from "../config/env";
+import { AppError } from "../utils/app-error";
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.ip ?? "unknown";
+}
+
+const FIXED_WINDOW_SCRIPT = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+  redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1]))
+end
+return current
+`;
+
+export function aiRateLimiter(feature: "explain" | "session") {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const ip = getClientIp(req);
+    const windowSeconds = 3600;
+    const windowSlot = Math.floor(Date.now() / (windowSeconds * 1000));
+    const key = `rl:ai:${feature}:${ip}:${windowSlot}`;
+    const limit = env.redis.aiRateLimitPerHour;
+
+    try {
+      const redis = getRedisClient();
+      const count = await redis.eval(
+        FIXED_WINDOW_SCRIPT,
+        1,
+        key,
+        String(windowSeconds),
+      ) as number;
+
+      if (count > limit) {
+        const ttl = await redis.ttl(key);
+        next(
+          AppError.tooManyRequests(
+            `AI rate limit exceeded. Limit: ${limit}/hour. Retry in ${ttl}s.`,
+          ),
+        );
+        return;
+      }
+
+      next();
+    } catch (err) {
+      if (err instanceof AppError) {
+        next(err);
+        return;
+      }
+      console.error(`[RateLimit][AI:${feature}] Redis error — failing open:`, err);
+      next();
+    }
+  };
+}
+
+const SLIDING_WINDOW_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local windowMs = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+local member = ARGV[4]
+local cutoff = now - windowMs
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+redis.call('ZADD', key, now, member)
+redis.call('PEXPIRE', key, windowMs)
+return redis.call('ZCARD', key)
+`;
+
+export function generalRateLimiter() {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const ip = getClientIp(req);
+    const windowMs = 60_000;
+    const limit = env.redis.defaultRateLimitPerMinute;
+    const key = `rl:general:${ip}`;
+    const now = Date.now();
+    const member = `${now}:${process.hrtime.bigint().toString()}`;
+
+    try {
+      const redis = getRedisClient();
+      const count = await redis.eval(
+        SLIDING_WINDOW_SCRIPT,
+        1,
+        key,
+        String(now),
+        String(windowMs),
+        String(limit),
+        member,
+      ) as number;
+
+      if (count > limit) {
+        next(
+          AppError.tooManyRequests(
+            `Rate limit exceeded. Limit: ${limit} requests/minute.`,
+          ),
+        );
+        return;
+      }
+
+      next();
+    } catch (err) {
+      if (err instanceof AppError) {
+        next(err);
+        return;
+      }
+      console.error("[RateLimit] Redis error — failing open:", err);
+      next();
+    }
+  };
+} 
+
+
+================================================================================
+ FILE: apps/api/src/middleware/security-headers.ts
+================================================================================
+import { NextFunction, Request, Response } from "express";
+
+export function securityHeaders(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+}
+
+
+
+================================================================================
+ FILE: apps/api/src/prompts/analysis.prompt.ts
+================================================================================
+import type { AnalysisLanguage } from "@algoforge/analysis";
+
+const LANGUAGE_LABELS: Record<AnalysisLanguage, string> = {
+  javascript: "JavaScript",
+  python: "Python",
+};
+
+export function buildAnalysisPrompt(input: {
+  code: string;
+  language: AnalysisLanguage;
+}): string {
+  const languageLabel = LANGUAGE_LABELS[input.language];
+
+  return `
+You are a strict JSON generator.
+
+Return ONLY valid JSON. No markdown, no explanation, no extra text.
+
+Schema:
+{
+  "summary": string,
+  "complexity": {
+    "time": { "best": string, "average": string, "worst": string },
+    "space": string
+  },
+  "breakdown": {
+    "approach": string,
+    "steps": string[]
+  },
+  "bottlenecks": [
+    { "issue": string, "impact": string, "location": string }
+  ],
+  "antiPatterns": string[],
+  "improvements": [
+    { "suggestion": string, "expectedImpact": string }
+  ],
+  "optimizedCode": string,
+  "comparison": {
+    "originalVsOptimized": string,
+    "improvementSummary": string
+  },
+  "edgeCases": string[],
+  "readabilityScore": number,
+  "tags": string[]
+}
+
+Rules:
+- All fields required
+- Use [] if empty
+- Keep optimizedCode in ${languageLabel}
+- No extra keys
+
+Code:
+${input.code}
+`;
+}
+
+
+================================================================================
+ FILE: apps/api/src/prompts/explanation.prompt.ts
+================================================================================
+import type { QueryScope } from "../ai/query-processor";
+
+export function buildExplanationPrompt(
+  contextText: string,
+  scope: QueryScope,
+): string {
+  return `You are a senior backend engineer. Answer the user's query about this codebase precisely and concisely.
+
+USER QUERY: "${scope.rawQuery}"
+DETECTED INTENT: ${scope.intent}
+KEYWORDS: ${scope.keywords.join(", ")}
+
+CODEBASE CONTEXT:
+${contextText}
+
+RULES:
+- Be direct. No padding.
+- explain_failure: state the most likely root cause from the code.
+- explain_flow: trace the request lifecycle step by step.
+- explain_algorithm: cover logic, complexity, and edge cases.
+- explain_api: describe request → middleware → service → DB → response.
+- Use plain text only. No markdown headers or code fences.
+- Maximum 250 words.
+
+Answer:`;
+}
+
+
+================================================================================
+ FILE: apps/api/src/prompts/explanation.prompts.ts
+================================================================================
+
+
+
+================================================================================
+ FILE: apps/api/src/repositories/algorithm.repository.ts
+================================================================================
+//# filename: apps/api/src/repositories/algorithm.repository.ts
+
+import { prisma, Prisma } from "@algoforge/db";
+import type { Difficulty } from "@algoforge/db";
+
+const listSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  categoryId: true,
+  difficulty: true,
+  timeBest: true,
+  timeAverage: true,
+  timeWorst: true,
+  spaceComplexity: true,
+} as const;
+
+const detailSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  description: true,
+  difficulty: true,
+  categoryId: true,
+  isPublished: true,
+  timeBest: true,
+  timeAverage: true,
+  timeWorst: true,
+  spaceComplexity: true,
+  displayCodes: { select: { language: true, code: true } },
+  forge: {
+    select: {
+      forgeCode: true,
+      inputSchema: true,
+      guardRanges: true,
+      version: true,
+    },
+  },
+  tags: { select: { tag: { select: { id: true, label: true } } } },
+} as const;
+
+export type AlgorithmListRow = Awaited<
+  ReturnType<typeof algorithmRepository.findMany>
+>[number];
+
+export type AlgorithmDetailRow = Awaited<
+  ReturnType<typeof algorithmRepository.findById>
+>;
+
+export const algorithmRepository = {
+  findMany(where: Prisma.AlgorithmWhereInput) {
+    return prisma.algorithm.findMany({
+      where,
+      select: listSelect,
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  findById(id: string) {
+    return prisma.algorithm.findUnique({ where: { id }, select: detailSelect });
+  },
+
+  findBySlug(slug: string) {
+    return prisma.algorithm.findUnique({ where: { slug }, select: detailSelect });
+  },
+
+  findBySlugExists(slug: string) {
+    return prisma.algorithm.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+  },
+
+  findByIdWithForge(id: string) {
+    return prisma.algorithm.findUnique({
+      where: { id },
+      include: { forge: true },
+    });
+  },
+
+  create(data: {
+    slug: string;
+    name: string;
+    description: string;
+    categoryId: string;
+    difficulty: Difficulty;
+    isPublished: boolean;
+    timeBest: string | null;
+    timeAverage: string | null;
+    timeWorst: string | null;
+    spaceComplexity: string | null;
+    displayCodes: { language: string; code: string }[];
+    forge: {
+      forgeCode: Prisma.InputJsonValue;
+      inputSchema: Prisma.InputJsonValue;
+      guardRanges: Prisma.InputJsonValue;
+    };
+    tags: string[];
+  }) {
+    return prisma.algorithm.create({
+      data: {
+        slug: data.slug,
+        name: data.name,
+        description: data.description,
+        categoryId: data.categoryId,
+        difficulty: data.difficulty,
+        isPublished: data.isPublished,
+        timeBest: data.timeBest,
+        timeAverage: data.timeAverage,
+        timeWorst: data.timeWorst,
+        spaceComplexity: data.spaceComplexity,
+        displayCodes: { create: data.displayCodes },
+        forge: { create: data.forge },
+        tags: {
+          create: data.tags.map((label) => ({
+            tag: {
+              connectOrCreate: {
+                where: { label },
+                create: { label },
+              },
+            },
+          })),
+        },
+      },
+      select: detailSelect,
+    });
+  },
+
+  update(
+    id: string,
+    data: Prisma.AlgorithmUpdateInput & {
+      displayCodes?: { language: string; code: string }[];
+      tags?: string[];
+    },
+  ) {
+    const { displayCodes, tags, ...rest } = data;
+
+    return prisma.$transaction(async (tx) => {
+      if (displayCodes) {
+        await tx.displayCode.deleteMany({ where: { algorithmId: id } });
+        await tx.displayCode.createMany({
+          data: displayCodes.map((dc) => ({ ...dc, algorithmId: id })),
+        });
+      }
+
+      if (tags) {
+        await tx.algorithmTag.deleteMany({ where: { algorithmId: id } });
+        for (const label of tags) {
+          const tag = await tx.tag.upsert({
+            where: { label },
+            create: { label },
+            update: {},
+          });
+          await tx.algorithmTag.create({
+            data: { algorithmId: id, tagId: tag.id },
+          });
+        }
+      }
+
+      return tx.algorithm.update({
+        where: { id },
+        data: rest,
+        select: detailSelect,
+      });
+    });
+  },
+
+  delete(id: string) {
+    return prisma.algorithm.delete({ where: { id } });
+  },
+
+  upsertForge(
+    algorithmId: string,
+    forge: {
+      forgeCode: Prisma.InputJsonValue;
+      inputSchema: Prisma.InputJsonValue;
+      guardRanges: Prisma.InputJsonValue;
+    },
+  ) {
+    return prisma.forgeConfig.upsert({
+      where: { algorithmId },
+      create: { algorithmId, ...forge },
+      update: forge,
+    });
+  },
+};
+
+
+================================================================================
+ FILE: apps/api/src/repositories/analysis.repository.ts
+================================================================================
+//# filename: apps/api/src/repositories/analysis.repository.ts
+
+import { prisma, Prisma } from "@algoforge/db";
+
+export const analysisRepository = {
+  create(data: {
+    userId: string;
+    code: string;
+    language: string;
+    complexity: string | null;
+    suggestion: string | null;
+    result: Prisma.InputJsonValue;
+  }) {
+    return prisma.analysis.create({
+      data,
+      select: { id: true, language: true, result: true, createdAt: true },
+    });
+  },
+
+  findManyByUser(
+    userId: string,
+    opts: {
+      cursorCreatedAt?: Date;
+      cursorId?: string;
+      take: number;
+    },
+  ) {
+    return prisma.analysis.findMany({
+      where: {
+        userId,
+        ...(opts.cursorCreatedAt && opts.cursorId
+          ? {
+              OR: [
+                { createdAt: { lt: opts.cursorCreatedAt } },
+                {
+                  createdAt: { equals: opts.cursorCreatedAt },
+                  id: { lt: opts.cursorId },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: opts.take,
+      select: {
+        id: true,
+        language: true,
+        complexity: true,
+        suggestion: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  findOneByUser(userId: string, analysisId: string) {
+    return prisma.analysis.findFirst({
+      where: { id: analysisId, userId },
+      select: { id: true, language: true, result: true, createdAt: true },
+    });
+  },
+
+  findForShare(analysisId: string, userId: string) {
+    return prisma.analysis.findFirst({ where: { id: analysisId, userId } });
+  },
+
+  setPublic(analysisId: string, shareId: string) {
+    return prisma.analysis.update({
+      where: { id: analysisId },
+      data: { shareId, isPublic: true },
+    });
+  },
+
+  findPublicByShareId(shareId: string) {
+    return prisma.analysis.findUnique({
+      where: { shareId, isPublic: true },
+      select: {
+        id: true,
+        code: true,
+        language: true,
+        result: true,
+        createdAt: true,
+        isPublic: true,
+        user: { select: { id: true, name: true, username: true, image: true } },
+      },
+    });
+  },
+};
+
+
+================================================================================
+ FILE: apps/api/src/repositories/category.repository.ts
+================================================================================
+//# filename: apps/api/src/repositories/category.repository.ts
+
+import { prisma } from "@algoforge/db";
+
+export const categoryRepository = {
+  findAll() {
+    return prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
+  },
+
+  findByIdentifier(identifier: string) {
+    return prisma.category.findFirst({
+      where: {
+        OR: [
+          { id: identifier },
+          { label: { equals: identifier.replace(/-/g, " "), mode: "insensitive" } },
+        ],
+      },
+    });
+  },
+
+  findById(id: string) {
+    return prisma.category.findUnique({ where: { id } });
+  },
+
+  create(data: {
+    id: string;
+    label: string;
+    description?: string;
+    iconName?: string;
+    sortOrder: number;
+  }) {
+    return prisma.category.create({ data });
+  },
+
+  update(
+    id: string,
+    data: {
+      label?: string;
+      description?: string;
+      iconName?: string;
+      sortOrder?: number;
+    },
+  ) {
+    return prisma.category.update({ where: { id }, data });
+  },
+
+  delete(id: string) {
+    return prisma.category.delete({ where: { id } });
+  },
+
+  countAlgorithmsInCategory(id: string) {
+    return prisma.algorithm.count({ where: { categoryId: id } });
+  },
+};
+
+
+
+================================================================================
+ FILE: apps/api/src/repositories/explanation-session.repository.ts
+================================================================================
+import { prisma } from "@algoforge/db";
+import type { SessionMessage } from "../services/explanation-session.service";
+
+export const explanationSessionRepository = {
+  // ─── Create ────────────────────────────────────────────────────────────────
+
+  create(userId: string, title?: string) {
+    return prisma.explanationSession.create({
+      data: { userId, title: title ?? null, messages: [] },
+    });
+  },
+
+  // ─── Read ──────────────────────────────────────────────────────────────────
+
+  /** Paginated list — keyset by id (cursor = last seen id). */
+  findManyByUser(userId: string, opts: { take: number; cursor?: string }) {
+    return prisma.explanationSession.findMany({
+      where: {
+        userId,
+        ...(opts.cursor ? { id: { lt: opts.cursor } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take:    opts.take,
+      select:  {
+        id:        true,
+        title:     true,
+        isPublic:  true,
+        shareId:   true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  },
+
+  /** Full session including messages — only accessible by owner. */
+  findOneByUser(id: string, userId: string) {
+    return prisma.explanationSession.findFirst({
+      where: { id, userId },
+    });
+  },
+
+  /** Public session by shareId — includes basic creator info. */
+  findPublicByShareId(shareId: string) {
+    return prisma.explanationSession.findUnique({
+      where:   { shareId, isPublic: true },
+      include: {
+        user: { select: { id: true, name: true, username: true, image: true } },
+      },
+    });
+  },
+
+  // ─── Update ────────────────────────────────────────────────────────────────
+
+  /** Replace the messages array and optionally update the title. */
+  appendMessages(id: string, messages: SessionMessage[], title?: string) {
+    return prisma.explanationSession.update({
+      where: { id },
+      data:  {
+        messages: messages as object[],
+        ...(title ? { title } : {}),
+      },
+    });
+  },
+
+  /** Make the session public and set its shareId. */
+  share(id: string, shareId: string) {
+    return prisma.explanationSession.update({
+      where: { id },
+      data:  { shareId, isPublic: true },
+    });
+  },
+
+  // ─── Delete ────────────────────────────────────────────────────────────────
+
+  /** Hard-delete — returns count so callers can detect not-found. */
+  delete(id: string, userId: string) {
+    return prisma.explanationSession.deleteMany({ where: { id, userId } });
+  },
+};
+
+
+================================================================================
+ FILE: apps/api/src/repositories/explanation.repository.ts
+================================================================================
+
+
+
+================================================================================
+ FILE: apps/api/src/repositories/session.repository.ts
+================================================================================
+import { prisma } from "@algoforge/db";
+
+const userSelect = {
+  id:       true,
+  email:    true,
+  username: true,
+  name:     true,
+  image:    true,
+  role:     true,
+} as const;
+
+export const sessionRepository = {
+  create(data: {
+    id:            string;
+    userId:        string;
+    tokenHash:     string;
+    expiresAt:     Date;
+    lastUsedAt:    Date;
+    ipAddress:     string | null;
+    userAgent:     string | null;
+    rotatedFromId?: string;
+  }) {
+    return prisma.session.create({ data });
+  },
+
+  findActiveById(sessionId: string, userId: string) {
+    return prisma.session.findFirst({
+      where: {
+        id:        sessionId,
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id:        true,
+        expiresAt: true,
+        user:      { select: userSelect },
+      },
+    });
+  },
+
+  findByIdWithUser(sessionId: string) {
+    return prisma.session.findUnique({
+      where:   { id: sessionId },
+      include: { user: { select: userSelect } },
+    });
+  },
+
+  /** Find a session that was created by rotating the given session id. */
+  findRotatedFrom(originalId: string) {
+    return prisma.session.findFirst({
+      where: { rotatedFromId: originalId },
+    });
+  },
+
+  async rotate(
+    currentId:      string,
+    currentUserId:  string,
+    currentTokenHash: string,
+    next: {
+      id:          string;
+      tokenHash:   string;
+      expiresAt:   Date;
+      lastUsedAt:  Date;
+      ipAddress:   string | null;
+      userAgent:   string | null;
+    },
+  ) {
+    const now = new Date();
+
+    return prisma.$transaction(async (tx) => {
+      const revoked = await tx.session.updateMany({
+        where: {
+          id:        currentId,
+          userId:    currentUserId,
+          tokenHash: currentTokenHash,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { revokedAt: now, lastUsedAt: now },
+      });
+
+      if (revoked.count !== 1) return null;
+
+      return tx.session.create({
+        data: {
+          ...next,
+          userId:        currentUserId,
+          rotatedFromId: currentId,
+        },
+      });
+    });
+  },
+
+  revokeById(sessionId: string, userId?: string) {
+    return prisma.session.updateMany({
+      where: { id: sessionId, ...(userId ? { userId } : {}), revokedAt: null },
+      data:  { revokedAt: new Date() },
+    });
+  },
+
+  revokeAllForUser(userId: string) {
+    return prisma.session.updateMany({
+      where: { userId, revokedAt: null },
+      data:  { revokedAt: new Date() },
+    });
+  },
+};
+
+
+================================================================================
+ FILE: apps/api/src/repositories/user.repository.ts
+================================================================================
+//# filename: apps/api/src/repositories/user.repository.ts
+
+import { prisma } from "@algoforge/db";
+import { Role } from "@algoforge/db";
+
+const userSelect = {
+  id: true,
+  email: true,
+  username: true,
+  name: true,
+  image: true,
+  role: true,
+} as const;
+
+export const userRepository = {
+  findById(id: string) {
+    return prisma.user.findUnique({ where: { id }, select: userSelect });
+  },
+
+  findByEmail(email: string) {
+    return prisma.user.findUnique({ where: { email }, select: userSelect });
+  },
+
+  findPublicById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, username: true, image: true },
+    });
+  },
+
+  create(data: {
+    email: string | null;
+    name: string | null;
+    image: string | null;
+    role: Role;
+  }) {
+    return prisma.user.create({ data, select: userSelect });
+  },
+
+  updateProfile(
+    id: string,
+    data: { email?: string | null; name?: string | null; image?: string | null },
+  ) {
+    return prisma.user.update({ where: { id }, data, select: userSelect });
+  },
+
+  setRole(id: string, role: Role) {
+    return prisma.user.update({ where: { id }, data: { role }, select: userSelect });
+  },
+};
+
+
+================================================================================
+ FILE: apps/api/src/routes/admin.ts
+================================================================================
+//# filename: apps/api/src/routes/admin.ts
+
+import { Router } from "express";
+import { adminController } from "../controllers/admin.controller";
+import { requireAdminAccess } from "../middleware/admin-secret";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+// All admin management routes require admin access (JWT admin OR env secret).
+// CSRF is also required to protect against cross-site requests.
+// Role is never accepted from any request body — it is hardcoded per endpoint.
+
+router.get("/users", requireAdminAccess, adminController.listUsers);
+
+router.post(
+  "/upgrade-user",
+  requireAdminAccess,
+  requireCsrf,
+  adminController.upgradeUser,
+);
+
+router.post(
+  "/downgrade-user",
+  requireAdminAccess,
+  requireCsrf,
+  adminController.downgradeUser,
+);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/algorithm.ts
+================================================================================
+//# filename: apps/api/src/routes/algorithm.ts
+
+import { Router } from "express";
+import { Role } from "@algoforge/db";
+import { algorithmController } from "../controllers/algorithm.controller";
+import { requireAuth, requireRoles } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+import { validateIdParam, validateSlugParam } from "../validation/algorithm";
+
+const router = Router();
+
+// Public reads — optional ?lang=javascript|python query param
+router.get("/", algorithmController.list);
+router.get("/slug/:slug", validateSlugParam, algorithmController.getBySlug);
+router.get("/id/:id/visualize", validateIdParam, algorithmController.getVisualize);
+router.get("/id/:id", validateIdParam, algorithmController.getById);
+
+// Admin writes
+router.post(
+  "/",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  algorithmController.create,
+);
+
+router.patch(
+  "/id/:id",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  validateIdParam,
+  algorithmController.update,
+);
+
+router.delete(
+  "/id/:id",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  validateIdParam,
+  algorithmController.delete,
+);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/analysis.ts
+================================================================================
+import { Router } from "express";
+import { analysisController } from "../controllers/analysis.controller";
+import { requireAuth } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+router.get("/", requireAuth, analysisController.listAnalyses);
+router.get("/:id", requireAuth, analysisController.getAnalysisById);
+router.post("/", requireAuth, requireCsrf, analysisController.createAnalysis);
+router.post(
+  "/:id/share",
+  requireAuth,
+  requireCsrf,
+  analysisController.shareAnalysis,
+);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/auth.ts
+================================================================================
+import { Router } from "express";
+import { Role } from "@algoforge/db";
+import { authController } from "../controllers/auth.controller";
+import { requireAuth, requireRoles } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+router.get("/google/start", authController.startGoogleAuth);
+router.get("/google/callback", authController.handleGoogleCallback);
+router.get("/me", requireAuth, authController.getMe);
+router.post("/refresh", authController.refreshSession);
+router.post("/logout", requireCsrf, authController.logout);
+router.post("/logout-all", requireAuth, requireCsrf, authController.logoutAll);
+router.get(
+  "/admin/users",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  authController.listUsers,
+);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/category.ts
+================================================================================
+import { Router } from "express";
+import { Role } from "@algoforge/db";
+import { categoryController } from "../controllers/category.controller";
+import { requireAuth, requireRoles } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+
+const router = Router();
+
+router.get("/", categoryController.list);
+router.get("/:id", categoryController.getById);
+router.post(
+  "/",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  categoryController.create,
+);
+router.patch(
+  "/:id",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  categoryController.update,
+);
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRoles(Role.ADMIN),
+  requireCsrf,
+  categoryController.delete,
+);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/exaplantion.ts
+================================================================================
+import { Router } from "express";
+import { explanationController } from "../controllers/explanation.controller";
+import { requireAuth } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+import { aiRateLimiter } from "../middleware/rate-limit";
+
+const router = Router();
+
+router.post(
+  "/",
+  requireAuth,
+  requireCsrf,
+  aiRateLimiter(),
+  explanationController.explain,
+);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/explanation-session.ts
+================================================================================
+import { Router } from "express";
+import { explanationSessionController } from "../controllers/explanation-session.controller";
+import { requireAuth } from "../middleware/auth";
+import { requireCsrf } from "../middleware/csrf";
+import { aiRateLimiter } from "../middleware/rate-limit";
+
+const router = Router();
+
+router.get(  "/",             requireAuth,                              explanationSessionController.list);
+router.post( "/",             requireAuth, requireCsrf,                 explanationSessionController.create);
+router.get(  "/:id",          requireAuth,                              explanationSessionController.getById);
+router.delete("/:id",         requireAuth, requireCsrf,                 explanationSessionController.delete);
+router.post( "/:id/messages", requireAuth, requireCsrf, aiRateLimiter("session"), explanationSessionController.sendMessage);
+router.post( "/:id/share",    requireAuth, requireCsrf,                 explanationSessionController.share);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/routes/share.ts
+================================================================================
+import { Router } from "express";
+import { analysisController } from "../controllers/analysis.controller";
+import { explanationSessionController } from "../controllers/explanation-session.controller";
+
+const router = Router();
+
+router.get("/analysis/:shareId", analysisController.getPublicAnalysis);
+router.get("/explain/:shareId",  explanationSessionController.getPublic);
+
+// Legacy wildcard MUST be last — it would otherwise intercept /explain/:shareId
+router.get("/:shareId", analysisController.getPublicAnalysis);
+
+export default router;
+
+
+================================================================================
+ FILE: apps/api/src/server.ts
+================================================================================
+import { app } from "./app";
+import { env } from "./config/env";
+import { connectRedis, closeRedis } from "./config/redis";
+
+async function bootstrap(): Promise<void> {
+  // Attempt Redis connection; non-fatal — rate limiting and caching degrade gracefully
+  try {
+    await connectRedis();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[Redis] Startup connection failed: ${message}. Continuing without Redis.`);
+  }
+
+  const server = app.listen(env.port, () => {
+    if (!env.isProduction) {
+      console.log(`[API] Running at ${env.apiBaseUrl}`);
+      console.log(`[API] Health: ${env.apiBaseUrl}/health`);
+    }
+  });
+
+  async function shutdown(signal: string): Promise<void> {
+    if (!env.isProduction) {
+      console.log(`[API] ${signal} — shutting down.`);
+    }
+    server.close(async () => {
+      await closeRedis();
+      process.exit(0);
+    });
+
+    // Force exit if graceful shutdown stalls
+    setTimeout(() => process.exit(1), 10_000).unref();
+  }
+
+  process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+  process.on("SIGINT",  () => { void shutdown("SIGINT"); });
+  process.on("uncaughtException", (err) => {
+    console.error("[API] Uncaught exception:", err);
+    void shutdown("uncaughtException");
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[API] Unhandled rejection:", reason);
+  });
+}
+
+bootstrap().catch((err) => {
+  console.error("[API] Failed to start:", err);
+  process.exit(1);
+});
+
+
+================================================================================
+ FILE: apps/api/src/services/admin.service.ts
+================================================================================
+//# filename: apps/api/src/services/admin.service.ts
+
+import { Role } from "@algoforge/db";
+import { userRepository } from "../repositories/user.repository";
+import { AppError } from "../utils/app-error";
+
+class AdminService {
+  /**
+   * Promotes userId to ADMIN.
+   * Role is always hardcoded here — it is never accepted from the request body.
+   */
+  async upgradeToAdmin(userId: string) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw AppError.notFound("User not found.");
+
+    if (user.role === Role.ADMIN) {
+      return { user, changed: false };
+    }
+
+    const updated = await userRepository.setRole(userId, Role.ADMIN);
+    return { user: updated, changed: true };
+  }
+
+  /**
+   * Demotes userId to USER.
+   * Role is always hardcoded here — it is never accepted from the request body.
+   */
+  async downgradeToUser(userId: string) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw AppError.notFound("User not found.");
+
+    if (user.role === Role.USER) {
+      return { user, changed: false };
+    }
+
+    const updated = await userRepository.setRole(userId, Role.USER);
+    return { user: updated, changed: true };
+  }
+
+  async listAllUsers() {
+    const { prisma } = await import("@algoforge/db");
+    return prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  }
+}
+
+export const adminService = new AdminService();
+
+
+================================================================================
+ FILE: apps/api/src/services/ai.service.ts
+================================================================================
+import {
+  AnalysisResultSchema,
+  type AnalysisLanguage,
+  type AnalysisResult,
+} from "@algoforge/analysis";
+import { env } from "../config/env";
+import { buildAnalysisPrompt } from "../prompts/analysis.prompt";
+import { AppError } from "../utils/app-error";
+import { getAIProvider } from "./providers/provider-factory";
+import type { AIMessage } from "./providers/ai-provider";
+
+type AnalyzeCodeInput = {
+  code: string;
+  language: AnalysisLanguage;
+};
+
+class AIService {
+  async analyzeCode(input: AnalyzeCodeInput): Promise<AnalysisResult> {
+    const prompt = buildAnalysisPrompt(input);
+    const raw = await this.generate(
+      [{ role: "user", content: prompt }],
+      "json",
+    );
+    const sanitized = sanitizeJson(raw);
+
+    try {
+      const parsed = JSON.parse(sanitized) as unknown;
+      return AnalysisResultSchema.parse(parsed);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw AppError.badGateway("AI provider returned invalid JSON.");
+      }
+      throw AppError.badGateway("AI provider returned an invalid analysis payload.");
+    }
+  }
+
+  async generateText(messages: AIMessage[]): Promise<string> {
+    return this.generate(messages, "text");
+  }
+
+  private async generate(
+    messages: AIMessage[],
+    responseFormat: "json" | "text",
+  ): Promise<string> {
+    const provider = getAIProvider();
+
+    try {
+      const response = await withTimeout(
+        provider.generate({ messages, responseFormat }),
+        env.ai.timeoutMs,
+      );
+      return response.message.content;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw AppError.badGateway("AI request failed.");
+    }
+  }
+}
+
+function sanitizeJson(value: string): string {
+  const trimmed = value.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced?.[1]) return fenced[1].trim();
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) return trimmed.slice(start, end + 1).trim();
+
+  return trimmed;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(AppError.badGateway("AI provider request timed out.")),
+      ms,
+    );
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+export const aiService = new AIService();
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm/cache-keys.ts
+================================================================================
+/**
+ * All cache key builders for algorithms in one place.
+ * Changing a key format here automatically fixes every caller.
+ */
+export const algorithmCacheKeys = {
+  // List keys are JSON-stringified query objects (hashed by cacheService internally)
+  list:    (query: object)                  => `algo:list:${JSON.stringify(query)}`,
+
+  // Detail keys are structured so we can invalidate by id/slug without re-hashing
+  byId:    (id: string,   lang = "default") => `algo:id:${id}:${lang}`,
+  bySlug:  (slug: string, lang = "default") => `algo:slug:${slug}:${lang}`,
+
+  // Visualisation / forge config
+  viz:     (id: string)                     => `viz:${id}`,
+};
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm/detail.service.ts
+================================================================================
+/**
+ * Fetches a single algorithm by id or slug.
+ * Each (id/slug + language) combination gets its own cache entry
+ * so switching display language doesn't cause a cache miss cascade.
+ */
+import { AlgorithmDetailSchema, type AlgorithmDetail } from "@algoforge/forge";
+import { algorithmRepository, type AlgorithmDetailRow } from "../../repositories/algorithm.repository";
+import { layeredCache } from "../lib/Layered.cache";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+
+export async function getAlgorithmById(id: string, lang?: string): Promise<AlgorithmDetail> {
+  const key    = algorithmCacheKeys.byId(id, lang);
+  const cached = await layeredCache.get<AlgorithmDetail>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findById(id);
+  if (!row) throw AppError.notFound("Algorithm not found.");
+
+  const result = toAlgorithmDetail(row, lang);
+  await layeredCache.set(key, result);
+  return result;
+}
+
+export async function getAlgorithmBySlug(slug: string, lang?: string): Promise<AlgorithmDetail> {
+  const key    = algorithmCacheKeys.bySlug(slug, lang);
+  const cached = await layeredCache.get<AlgorithmDetail>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findBySlug(slug);
+  if (!row) throw AppError.notFound("Algorithm not found.");
+
+  const result = toAlgorithmDetail(row, lang);
+  await layeredCache.set(key, result);
+  return result;
+}
+
+// ─── Private ──────────────────────────────────────────────────────────────────
+
+/**
+ * Choose the best display code for the requested language.
+ * Priority: requested lang → javascript → first available.
+ */
+function pickDisplayCode(
+  codes: { language: string; code: string }[],
+  lang?: string,
+): { language: string; code: string } | null {
+  if (!codes.length) return null;
+  const preferred = lang ?? "javascript";
+  return (
+    codes.find((c) => c.language === preferred) ??
+    codes.find((c) => c.language === "javascript") ??
+    codes[0]
+  );
+}
+
+function toAlgorithmDetail(
+  row: NonNullable<AlgorithmDetailRow>,
+  lang?: string,
+): AlgorithmDetail {
+  return AlgorithmDetailSchema.parse({
+    id:          row.id,
+    slug:        row.slug,
+    name:        row.name,
+    description: row.description,
+    difficulty:  row.difficulty,
+    complexity:
+      row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity
+        ? {
+            timeBest:    row.timeBest,
+            timeAverage: row.timeAverage,
+            timeWorst:   row.timeWorst,
+            space:       row.spaceComplexity,
+          }
+        : null,
+    displayCode: pickDisplayCode(row.displayCodes, lang),
+    tags:        row.tags.map((t: { tag: { id: string; label: string } }) => t.tag),
+    forge:       row.forge
+      ? {
+          forgeCode:   row.forge.forgeCode,
+          inputSchema: row.forge.inputSchema,
+          guardRanges: row.forge.guardRanges,
+          version:     row.forge.version,
+        }
+      : null,
+  });
+}
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm/index.ts
+================================================================================
+/**
+ * Public surface of the algorithm service.
+ * Controllers and other services import from here only.
+ * Internal sub-modules are implementation details and must not be imported directly.
+ */
+export { listAlgorithms } from "./query.service";
+export { getAlgorithmById, getAlgorithmBySlug } from "./detail.service";
+export { getAlgorithmVisualization as getAlgorithmExecution } from "./viz.service";
+export { createAlgorithm, updateAlgorithm, deleteAlgorithm } from "./mutation.service";
+export type { AlgorithmQuery } from "../../types/algorithm.types";
+
+import { listAlgorithms } from "./query.service";
+import { getAlgorithmById, getAlgorithmBySlug } from "./detail.service";
+import { getAlgorithmVisualization } from "./viz.service";
+import { createAlgorithm, updateAlgorithm, deleteAlgorithm } from "./mutation.service";
+
+/** Named object alias — import as `algorithmService.listAlgorithms(...)` */
+export const algorithmService = {
+  listAlgorithms,
+  getAlgorithmById,
+  getAlgorithmBySlug,
+  getAlgorithmExecution: getAlgorithmVisualization,
+  createAlgorithm,
+  updateAlgorithm,
+  deleteAlgorithm,
+};
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm/mutation.service.ts
+================================================================================
+import { Prisma, Difficulty } from "@algoforge/db";
+import {
+  ForgeCodeSchema,
+  GuardRangesSchema,
+  InputSchema,
+  type CreateAlgorithm,
+  type UpdateAlgorithm,
+} from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { categoryRepository } from "../../repositories/category.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+import { layeredCache } from "../lib/Layered.cache";
+
+type ExistingForge = {
+  forgeCode:   Prisma.JsonValue;
+  inputSchema: Prisma.JsonValue;
+  guardRanges: Prisma.JsonValue;
+  version:     number;
+} | null;
+
+export async function createAlgorithm(input: CreateAlgorithm) {
+  if (input.forge) validateForge(input.forge);
+  const category = await resolveCategory(input.categoryId);
+  return algorithmRepository.create(toCreateData(input, category.id));
+}
+
+export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
+  const existing = await algorithmRepository.findById(id);
+  if (!existing) throw AppError.notFound("Algorithm not found.");
+
+  if (input.forge) {
+    validateForge(input.forge);
+    if (!existing.forge) {
+      if (!input.forge.forgeCode || !input.forge.inputSchema || !input.forge.guardRanges) {
+        throw AppError.badRequest(
+          "forgeCode, inputSchema, and guardRanges are all required when adding forge configuration for the first time.",
+        );
+      }
+    }
+  }
+
+  const categoryId = input.categoryId
+    ? (await resolveCategory(input.categoryId)).id
+    : undefined;
+
+  const updated = await algorithmRepository.update(
+    id,
+    toUpdateData(input, existing.forge ?? null, categoryId),
+  );
+  await bustCache(id, existing.slug);
+  return updated;
+}
+
+export async function deleteAlgorithm(id: string): Promise<void> {
+  const existing = await algorithmRepository.findById(id);
+  if (!existing) throw AppError.notFound("Algorithm not found.");
+
+  await algorithmRepository.delete(id);
+  await bustCache(id, existing.slug);
+}
+
+async function bustCache(id: string, slug: string): Promise<void> {
+  await Promise.all([
+    layeredCache.del(algorithmCacheKeys.byId(id)),
+    layeredCache.del(algorithmCacheKeys.bySlug(slug)),
+    layeredCache.del(algorithmCacheKeys.viz(id)),
+    layeredCache.del("meta:slugs"),
+  ]);
+}
+
+function validateForge(
+  forge: { forgeCode?: unknown; guardRanges?: unknown; inputSchema?: unknown },
+): void {
+  try {
+    if (forge.forgeCode   !== undefined) ForgeCodeSchema.parse(forge.forgeCode);
+    if (forge.guardRanges !== undefined) GuardRangesSchema.parse(forge.guardRanges);
+    if (forge.inputSchema !== undefined) InputSchema.parse(forge.inputSchema);
+  } catch (err) {
+    throw AppError.badRequest(
+      "Invalid forge configuration: " + (err instanceof Error ? err.message : "unknown"),
+    );
+  }
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue;
+}
+
+function toCreateData(input: CreateAlgorithm, categoryId: string) {
+  return {
+    slug:            input.slug,
+    name:            input.name,
+    description:     input.description,
+    categoryId,
+    difficulty:      input.difficulty as Difficulty,
+    isPublished:     input.isPublished ?? false,
+    timeBest:        input.complexity?.time?.best    ?? null,
+    timeAverage:     input.complexity?.time?.average ?? null,
+    timeWorst:       input.complexity?.time?.worst   ?? null,
+    spaceComplexity: input.complexity?.space         ?? null,
+    displayCodes:    input.displayCodes,
+    forge: {
+      forgeCode:   toJsonValue(input.forge.forgeCode),
+      inputSchema: toJsonValue(input.forge.inputSchema),
+      guardRanges: toJsonValue(input.forge.guardRanges),
+    },
+    tags: input.tags,
+  };
+}
+
+function toUpdateData(
+  input: UpdateAlgorithm,
+  existingForge: ExistingForge,
+  categoryId?: string,
+): Prisma.AlgorithmUpdateInput & {
+  displayCodes?: { language: string; code: string }[];
+  tags?:         string[];
+} {
+  return {
+    ...(input.slug        && { slug:        input.slug }),
+    ...(input.name        && { name:        input.name }),
+    ...(input.description && { description: input.description }),
+    ...(categoryId && { categoryId }),
+    ...(input.difficulty  && { difficulty:  input.difficulty as Difficulty }),
+    ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
+    ...(input.complexity  && {
+      timeBest:        input.complexity.time?.best    ?? null,
+      timeAverage:     input.complexity.time?.average ?? null,
+      timeWorst:       input.complexity.time?.worst   ?? null,
+      spaceComplexity: input.complexity.space         ?? null,
+    }),
+    ...(input.displayCodes && { displayCodes: input.displayCodes }),
+    ...(input.tags         && { tags:         input.tags }),
+    ...(input.forge        && buildForgeWrite(input.forge, existingForge)),
+  };
+}
+
+function buildForgeWrite(
+  forgeInput: NonNullable<UpdateAlgorithm["forge"]>,
+  existingForge: ExistingForge,
+): Pick<Prisma.AlgorithmUpdateInput, "forge"> {
+  if (!existingForge) {
+    return {
+      forge: {
+        create: {
+          forgeCode:   toJsonValue(forgeInput.forgeCode),
+          inputSchema: toJsonValue(forgeInput.inputSchema),
+          guardRanges: toJsonValue(forgeInput.guardRanges),
+          version:     1,
+        },
+      },
+    };
+  }
+
+  return {
+    forge: {
+      update: {
+        ...(forgeInput.forgeCode   !== undefined && { forgeCode:   toJsonValue(forgeInput.forgeCode) }),
+        ...(forgeInput.inputSchema !== undefined && { inputSchema: toJsonValue(forgeInput.inputSchema) }),
+        ...(forgeInput.guardRanges !== undefined && { guardRanges: toJsonValue(forgeInput.guardRanges) }),
+      },
+    },
+  };
+}
+
+async function resolveCategory(categoryIdOrLabel: string) {
+  const category = await categoryRepository.findByIdentifier(categoryIdOrLabel);
+  if (!category) {
+    throw AppError.badRequest(`Category "${categoryIdOrLabel}" does not exist.`);
+  }
+  return category;
+}
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm/query.service.ts
+================================================================================
+/**
+ * Lists and searches algorithms.
+ * Results are cached; the cache is busted on any mutation via mutation.service.ts.
+ */
+import { Prisma, Difficulty } from "@algoforge/db";
+import { AlgorithmListItemSchema, type AlgorithmListItem } from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { layeredCache } from "../lib/Layered.cache";
+import type { AlgorithmQuery } from "../../types/algorithm.types";
+
+export async function listAlgorithms(query: AlgorithmQuery): Promise<AlgorithmListItem[]> {
+  const key    = algorithmCacheKeys.list(query);
+  const cached = await layeredCache.get<AlgorithmListItem[]>(key);
+  if (cached) return cached;
+
+  const rows   = await algorithmRepository.findMany(buildWhere(query));
+
+  // The DB returns flat complexity fields; the schema expects a nested object.
+  const result = rows.map((row) =>
+    AlgorithmListItemSchema.parse({
+      id:         row.id,
+      slug:       row.slug,
+      name:       row.name,
+      categoryId: row.categoryId,
+      difficulty: row.difficulty,
+      complexity:
+        row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity
+          ? {
+              timeBest:    row.timeBest,
+              timeAverage: row.timeAverage,
+              timeWorst:   row.timeWorst,
+              space:       row.spaceComplexity,
+            }
+          : null,
+    }),
+  );
+
+  await layeredCache.set(key, result);
+  return result;
+}
+
+// ─── Private ──────────────────────────────────────────────────────────────────
+
+function buildWhere(query: AlgorithmQuery): Prisma.AlgorithmWhereInput {
+  return {
+    ...(query.categoryId                ? { categoryId:  query.categoryId }                : {}),
+    ...(query.difficulty                ? { difficulty:  query.difficulty as Difficulty }  : {}),
+    ...(query.isPublished !== undefined ? { isPublished: query.isPublished }               : {}),
+    ...(query.search ? {
+      OR: [
+        { name:        { contains: query.search, mode: Prisma.QueryMode.insensitive } },
+        { description: { contains: query.search, mode: Prisma.QueryMode.insensitive } },
+      ],
+    } : {}),
+  };
+}
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm/viz.service.ts
+================================================================================
+/**
+ * Returns the forge / visualisation config for an algorithm.
+ * The forge config is the most frequently read object for the visualiser UI
+ * so it gets its own dedicated cache key.
+ */
+import { AlgorithmExecutionSchema, type AlgorithmExecution } from "@algoforge/forge";
+import { algorithmRepository } from "../../repositories/algorithm.repository";
+import { algorithmCacheKeys } from "./cache-keys";
+import { AppError } from "../../utils/app-error";
+import { layeredCache } from "../lib/Layered.cache";
+
+export async function getAlgorithmVisualization(id: string): Promise<AlgorithmExecution> {
+  const key    = algorithmCacheKeys.viz(id);
+  const cached = await layeredCache.get<AlgorithmExecution>(key);
+  if (cached) return cached;
+
+  const row = await algorithmRepository.findById(id);
+  if (!row)       throw AppError.notFound("Algorithm not found.");
+  if (!row.forge) throw AppError.notFound("No forge configuration found for this algorithm.");
+
+  const result = AlgorithmExecutionSchema.parse({
+    algorithmId: row.id,
+    name:        row.name,
+    forge: {
+      forgeCode:   row.forge.forgeCode,
+      inputSchema: row.forge.inputSchema,
+      guardRanges: row.forge.guardRanges,
+      version:     row.forge.version,
+    },
+  });
+
+  await layeredCache.set(key, result);
+  return result;
+}
+
+
+================================================================================
+ FILE: apps/api/src/services/algorithm.service.ts
+================================================================================
+// Backward-compatible re-export.
+// Implementation has been split into services/algorithm/ sub-modules.
+// Any file that previously imported from this path continues to work.
+export { algorithmService } from "./algorithm/index";
+export type { AlgorithmQuery } from "../types/algorithm.types";
+
+
+================================================================================
+ FILE: apps/api/src/services/analysis.service.ts
+================================================================================
+/**
+ * Analysis service.
+ *
+ * Cache strategy (two-layer LRU + Redis):
+ *   - AI result is cached by SHA-256 of (language + code) so identical
+ *     submissions never hit the AI provider twice.
+ *   - The DB record is always written — cache only shields the AI call.
+ */
+import { createHash, randomBytes } from "crypto";
+import { env } from "../config/env";
+import { analysisRepository } from "../repositories/analysis.repository";
+import { aiService } from "./ai.service";
+import { AppError } from "../utils/app-error";
+import { SharedAnalysisSchema, type AnalysisResult } from "@algoforge/analysis";
+import type { AnalysisInput, AnalysisHistoryQuery } from "../validation/analysis";
+import { layeredCache } from "./lib/Layered.cache";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function aiCacheKey(language: string, code: string): string {
+  const hash = createHash("sha256").update(`${language}:${code}`).digest("hex").slice(0, 32);
+  return `ai:analysis:${hash}`;
+}
+
+function generateShareId(): string {
+  return randomBytes(9).toString("base64url");
+}
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
+class AnalysisService {
+  async createAnalysis(userId: string, input: AnalysisInput) {
+    const key = aiCacheKey(input.language, input.code);
+
+    // Try cache first — avoids calling the AI provider for duplicate code
+    let aiResult = await layeredCache.get<AnalysisResult>(key);
+
+    if (!aiResult) {
+      aiResult = await aiService.analyzeCode({
+        code:     input.code,
+        language: input.language,
+      });
+      await layeredCache.set(key, aiResult);
+    }
+
+    return analysisRepository.create({
+      userId,
+      code:       input.code,
+      language:   input.language,
+      complexity: aiResult.complexity?.time?.average ?? null,
+      suggestion: aiResult.improvements?.[0]?.suggestion ?? null,
+      result:     aiResult as object,
+    });
+  }
+
+  async listUserAnalyses(userId: string, query: AnalysisHistoryQuery) {
+    const rows = await analysisRepository.findManyByUser(userId, {
+      cursorCreatedAt: query.cursorCreatedAt,
+      cursorId:        query.cursorId,
+      take:            query.limit,
+    });
+    return { analyses: rows };
+  }
+
+  async getUserAnalysisById(userId: string, analysisId: string) {
+    const analysis = await analysisRepository.findOneByUser(userId, analysisId);
+    if (!analysis) throw AppError.notFound("Analysis not found.");
+    return analysis;
+  }
+
+  async shareAnalysis(userId: string, analysisId: string) {
+    const analysis = await analysisRepository.findForShare(analysisId, userId);
+    if (!analysis) throw AppError.notFound("Analysis not found.");
+
+    // Idempotent — return existing share URL if already public
+    if (analysis.shareId && analysis.isPublic) {
+      return { shareUrl: `${env.webAppUrl}/share/analysis/${analysis.shareId}` };
+    }
+
+    const shareId = generateShareId();
+    await analysisRepository.setPublic(analysisId, shareId);
+    return { shareUrl: `${env.webAppUrl}/share/analysis/${shareId}` };
+  }
+
+  async getPublicAnalysis(shareId: string) {
+    const analysis = await analysisRepository.findPublicByShareId(shareId);
+    if (!analysis) throw AppError.notFound("Analysis not found or not public.");
+
+    return SharedAnalysisSchema.parse({
+      id:        analysis.id,
+      code:      analysis.code,
+      language:  analysis.language,
+      result:    analysis.result,
+      createdAt: analysis.createdAt.toISOString(),
+      creator:   analysis.user
+        ? {
+            id:        analysis.user.id,
+            name:      analysis.user.name,
+            username:  analysis.user.username ?? analysis.user.name,
+            avatarUrl: analysis.user.image,
+          }
+        : undefined,
+    });
+  }
+}
+
+export const analysisService = new AnalysisService();
+
+
+================================================================================
+ FILE: apps/api/src/services/auth.service.ts
+================================================================================
+import { OAuth2Client } from "google-auth-library";
+import { Role } from "@algoforge/db";
+import { prisma } from "@algoforge/db";
+import { env, googleOAuthConfig } from "../config/env";
+import { sessionRepository } from "../repositories/session.repository";
+import { userRepository } from "../repositories/user.repository";
+import { AppError } from "../utils/app-error";
+import { hashToken, randomToken, safeTokenEquals } from "../utils/crypto";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from "../utils/token";
+
+type RequestMetadata = {
+  ipAddress: string | null;
+  userAgent: string | null;
+};
+
+type AuthenticatedUser = {
+  id:       string;
+  email:    string | null;
+  username: string | null;
+  name:     string | null;
+  image:    string | null;
+  role:     Role;
+};
+
+type SessionCookies = {
+  accessToken:  string;
+  refreshToken: string;
+  csrfToken:    string;
+};
+
+type AuthResult = SessionCookies & { user: AuthenticatedUser };
+
+const googleClient = new OAuth2Client(
+  env.googleClientId,
+  env.googleClientSecret,
+  googleOAuthConfig.redirectUri,
+);
+
+class AuthService {
+  buildGoogleAuthorizationUrl(): { url: string; state: string } {
+    const state = randomToken(32);
+    const url = googleClient.generateAuthUrl({
+      access_type:            "offline",
+      scope:                  googleOAuthConfig.scopes,
+      include_granted_scopes: true,
+      state,
+      prompt:                 "select_account",
+    });
+    return { url, state };
+  }
+
+  async authenticateGoogleCallback(
+    code: string,
+    metadata: RequestMetadata,
+  ): Promise<AuthResult> {
+    const { tokens } = await googleClient.getToken(code);
+    const idToken = tokens.id_token;
+    if (!idToken) throw AppError.unauthorized("Google did not return an ID token.");
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: env.googleClientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.sub) throw AppError.unauthorized("Google account data is invalid.");
+
+    const user = await this.findOrCreateOAuthUser({
+      provider:          "google",
+      providerAccountId: payload.sub,
+      email:             payload.email_verified ? (payload.email ?? null) : null,
+      name:              payload.name ?? null,
+      image:             payload.picture ?? null,
+    });
+
+    return this.createSessionForUser(user, metadata);
+  }
+
+  async authenticateAccessToken(accessToken: string) {
+    const payload = verifyAccessToken(accessToken);
+
+    const session = await sessionRepository.findActiveById(
+      payload.sessionId,
+      payload.sub,
+    );
+
+    if (!session) throw AppError.unauthorized("Session is invalid.");
+
+    return {
+      user:    session.user,
+      session: { id: session.id, expiresAt: session.expiresAt },
+    };
+  }
+
+  async rotateRefreshToken(
+    refreshToken: string,
+    metadata: RequestMetadata,
+  ): Promise<AuthResult> {
+    const payload       = verifyRefreshToken(refreshToken);
+    const presentedHash = hashToken(refreshToken);
+
+    const session = await sessionRepository.findByIdWithUser(payload.sessionId);
+
+    if (!session || session.userId !== payload.sub) {
+      throw AppError.unauthorized("Refresh session is invalid.");
+    }
+
+    if (!safeTokenEquals(presentedHash, session.tokenHash)) {
+      throw AppError.unauthorized("Refresh token is invalid.");
+    }
+
+    if (session.revokedAt) {
+      await this.revokeAllUserSessions(session.userId);
+      throw AppError.unauthorized("Refresh token reuse detected.");
+    }
+
+    if (session.expiresAt <= new Date()) {
+      await sessionRepository.revokeById(session.id);
+      throw AppError.unauthorized("Refresh token expired.");
+    }
+
+    const nextSessionId    = randomToken(24);
+    const nextRefreshToken = signRefreshToken({ sub: session.user.id, sessionId: nextSessionId });
+
+    const rotated = await sessionRepository.rotate(
+      session.id,
+      session.userId,
+      presentedHash,
+      {
+        id:         nextSessionId,
+        tokenHash:  hashToken(nextRefreshToken),
+        expiresAt:  this.buildRefreshExpiry(),
+        lastUsedAt: new Date(),
+        ipAddress:  metadata.ipAddress,
+        userAgent:  metadata.userAgent,
+      },
+    );
+
+    if (!rotated) {
+      // Distinguish a concurrent legitimate refresh from actual token theft.
+      // If a successor session (rotatedFromId = session.id) already exists,
+      // this was a race between two simultaneous refresh attempts — fail this
+      // request gracefully without nuking all sessions.
+      const successor = await sessionRepository.findRotatedFrom(session.id);
+      if (successor) {
+        throw AppError.unauthorized("Session already refreshed. Please retry.");
+      }
+
+      // No successor found — this looks like genuine token reuse after theft.
+      await this.revokeAllUserSessions(session.userId);
+      throw AppError.unauthorized("Refresh token reuse detected.");
+    }
+
+    const accessToken = signAccessToken({
+      sub:       session.user.id,
+      sessionId: nextSessionId,
+      role:      session.user.role,
+    });
+
+    return {
+      accessToken,
+      refreshToken: nextRefreshToken,
+      csrfToken:    randomToken(24),
+      user:         session.user,
+    };
+  }
+
+  async revokeSessionByRefreshToken(refreshToken: string): Promise<void> {
+    try {
+      const payload = verifyRefreshToken(refreshToken);
+      await sessionRepository.revokeById(payload.sessionId, payload.sub);
+    } catch {
+      return;
+    }
+  }
+
+  async revokeAllUserSessions(userId: string): Promise<void> {
+    await sessionRepository.revokeAllForUser(userId);
+  }
+
+  private async createSessionForUser(
+    user: AuthenticatedUser,
+    metadata: RequestMetadata,
+  ): Promise<AuthResult> {
+    const sessionId    = randomToken(24);
+    const refreshToken = signRefreshToken({ sub: user.id, sessionId });
+
+    await sessionRepository.create({
+      id:         sessionId,
+      userId:     user.id,
+      tokenHash:  hashToken(refreshToken),
+      expiresAt:  this.buildRefreshExpiry(),
+      lastUsedAt: new Date(),
+      ipAddress:  metadata.ipAddress,
+      userAgent:  metadata.userAgent,
+    });
+
+    const accessToken = signAccessToken({
+      sub:       user.id,
+      sessionId,
+      role:      user.role,
+    });
+
+    return { accessToken, refreshToken, csrfToken: randomToken(24), user };
+  }
+
+  private buildRefreshExpiry(): Date {
+    const d = new Date();
+    d.setDate(d.getDate() + env.refreshTokenTtlDays);
+    return d;
+  }
+
+  private async findOrCreateOAuthUser(input: {
+    provider:          string;
+    providerAccountId: string;
+    email:             string | null;
+    name:              string | null;
+    image:             string | null;
+  }): Promise<AuthenticatedUser> {
+    return prisma.$transaction(async (tx) => {
+      const existingAccount = await tx.account.findUnique({
+        where: {
+          provider_providerAccountId: {
+            provider:          input.provider,
+            providerAccountId: input.providerAccountId,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id:       true,
+              email:    true,
+              username: true,
+              name:     true,
+              image:    true,
+              role:     true,
+            },
+          },
+        },
+      });
+
+      if (existingAccount) {
+        return tx.user.update({
+          where: { id: existingAccount.userId },
+          data: {
+            email: input.email ?? existingAccount.user.email,
+            name:  input.name,
+            image: input.image,
+          },
+          select: {
+            id:       true,
+            email:    true,
+            username: true,
+            name:     true,
+            image:    true,
+            role:     true,
+          },
+        });
+      }
+
+      const existingUser =
+        input.email !== null
+          ? await tx.user.findUnique({
+              where: { email: input.email },
+              select: {
+                id:       true,
+                email:    true,
+                username: true,
+                name:     true,
+                image:    true,
+                role:     true,
+              },
+            })
+          : null;
+
+      const user =
+        existingUser ??
+        (await tx.user.create({
+          data: {
+            email: input.email,
+            role:  Role.USER,
+            name:  input.name,
+            image: input.image,
+          },
+          select: {
+            id:       true,
+            email:    true,
+            username: true,
+            name:     true,
+            image:    true,
+            role:     true,
+          },
+        }));
+
+      await tx.account.create({
+        data: {
+          provider:          input.provider,
+          providerAccountId: input.providerAccountId,
+          userId:            user.id,
+        },
+      });
+
+      if (existingUser) {
+        return tx.user.update({
+          where: { id: existingUser.id },
+          data:  { name: input.name, image: input.image },
+          select: {
+            id:       true,
+            email:    true,
+            username: true,
+            name:     true,
+            image:    true,
+            role:     true,
+          },
+        });
+      }
+
+      return user;
+    });
+  }
+}
+
+export const authService = new AuthService();

@@ -13,10 +13,13 @@ function requireEnv(name: string): string {
 
 function parseInteger(name: string, fallback: number): number {
   const rawValue = process.env[name];
-  if (!rawValue) return fallback;
+  if (rawValue === undefined || rawValue.trim() === "") return fallback;
   const parsed = Number(rawValue);
-  // if (!Number.isInteger(parsed) || parsed <= 0)
-  //   throw new Error(`Environment variable ${name} must be a positive integer.`);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(
+      `Environment variable ${name} must be a positive integer (got "${rawValue}").`,
+    );
+  }
   return parsed;
 }
 
@@ -49,6 +52,20 @@ const isProduction = nodeEnv === "production";
 const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
 const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
 
+// Provider-specific validation: only the selected provider's settings are required.
+const openRouterApiKeys = parseList("OPENROUTER_API_KEYS");
+const openRouterFreeModels = parseList("OPENROUTER_FREE_MODELS");
+if (aiProvider === "openrouter") {
+  if (openRouterApiKeys.length === 0)
+    throw new Error("OPENROUTER_API_KEYS must be set when AI_PROVIDER=openrouter.");
+  if (openRouterFreeModels.length === 0)
+    throw new Error("OPENROUTER_FREE_MODELS must be set when AI_PROVIDER=openrouter.");
+}
+const geminiApiKey =
+  aiProvider === "gemini" ? requireEnv("GEMINI_API_KEY") : (process.env.GEMINI_API_KEY ?? "");
+// No hard-coded model: it must be chosen explicitly when Gemini is the provider.
+const aiModel = aiProvider === "gemini" ? requireEnv("AI_MODEL") : (process.env.AI_MODEL ?? "");
+
 export const env = {
   nodeEnv,
   isProduction,
@@ -64,20 +81,21 @@ export const env = {
   refreshTokenTtlDays: parseInteger("REFRESH_TOKEN_TTL_DAYS", 30),
   authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
   authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
-  geminiApiKey: requireEnv("GEMINI_API_KEY"),
+  geminiApiKey,
+  // NOTE: hard-coded default kept on purpose; removed in Phase 2 (S-04).
   adminUpgradeSecret:
     process.env.ADMIN_UPGRADE_SECRET ?? "1d201bf1-eb81-42ec-bd13-3e627b0fc4e9",
   ai: {
     provider: aiProvider as AIProvider,
-    model: process.env.AI_MODEL ?? "gemini-2.0-flash",
+    model: aiModel,
     timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
     maxRetries: parseInteger("AI_MAX_RETRIES", 1),
   },
   openRouter: {
     baseUrl:
       process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-    apiKeys: parseList("OPENROUTER_API_KEYS"),
-    freeModels: parseList("OPENROUTER_FREE_MODELS"),
+    apiKeys: openRouterApiKeys,
+    freeModels: openRouterFreeModels,
     appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
     siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
   },

@@ -7,7 +7,7 @@ import { AlgorithmExecutionSchema, type AlgorithmExecution } from "@algoforge/fo
 import { algorithmRepository } from "../../repositories/algorithm.repository";
 import { algorithmCacheKeys } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
-import { layeredCache } from "../lib/Layered.cache";
+import { layeredCache } from "../lib/layered-cache";
 
 export async function getAlgorithmVisualization(id: string): Promise<AlgorithmExecution> {
   const key    = algorithmCacheKeys.viz(id);

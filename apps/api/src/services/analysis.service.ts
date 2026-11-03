@@ -7,13 +7,14 @@
  *   - The DB record is always written — cache only shields the AI call.
  */
 import { createHash, randomBytes } from "crypto";
+import type { Prisma } from "@algoforge/db";
 import { env } from "../config/env";
 import { analysisRepository } from "../repositories/analysis.repository";
 import { aiService } from "./ai.service";
 import { AppError } from "../utils/app-error";
 import { SharedAnalysisSchema, type AnalysisResult } from "@algoforge/analysis";
 import type { AnalysisInput, AnalysisHistoryQuery } from "../validation/analysis";
-import { layeredCache } from "./lib/Layered.cache";
+import { layeredCache } from "./lib/layered-cache";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ class AnalysisService {
       language:   input.language,
       complexity: aiResult.complexity?.time?.average ?? null,
       suggestion: aiResult.improvements?.[0]?.suggestion ?? null,
-      result:     aiResult as object,
+      result:     aiResult as unknown as Prisma.InputJsonValue,
     });
   }
 

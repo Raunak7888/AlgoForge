@@ -11,8 +11,9 @@ import algorithmRouter          from "./routes/algorithm";
 import analysisRouter           from "./routes/analysis";
 import authRouter               from "./routes/auth";
 import categoryRouter           from "./routes/category";
+import healthRouter             from "./routes/health";
 import shareRouter              from "./routes/share";
-import explanationRouter        from "./routes/exaplantion";
+import explanationRouter        from "./routes/explanation";
 import explanationSessionRouter from "./routes/explanation-session";
 
 const app = express();
@@ -30,9 +31,8 @@ app.use(
 );
 app.use(express.json({ limit: "256kb" }));
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+// Liveness (/health) and readiness (/ready)
+app.use(healthRouter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);

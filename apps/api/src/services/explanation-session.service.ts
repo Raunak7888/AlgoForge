@@ -11,7 +11,7 @@ import type {
   SendMessageInput,
   ListSessionsQuery,
 } from "../validation/explanation-session";
-import { layeredCache } from "./lib/Layered.cache";
+import { layeredCache } from "./lib/layered-cache";
 
 export type SessionMessage = {
   id:        string;

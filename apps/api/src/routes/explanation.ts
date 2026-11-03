@@ -10,7 +10,7 @@ router.post(
   "/",
   requireAuth,
   requireCsrf,
-  aiRateLimiter(),
+  aiRateLimiter("explain"),
   explanationController.explain,
 );
 

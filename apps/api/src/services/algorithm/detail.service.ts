@@ -5,7 +5,7 @@
  */
 import { AlgorithmDetailSchema, type AlgorithmDetail } from "@algoforge/forge";
 import { algorithmRepository, type AlgorithmDetailRow } from "../../repositories/algorithm.repository";
-import { layeredCache } from "../lib/Layered.cache";
+import { layeredCache } from "../lib/layered-cache";
 import { algorithmCacheKeys } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
 

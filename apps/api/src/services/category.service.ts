@@ -44,9 +44,7 @@ class CategoryService {
   async createCategory(input: CreateCategory): Promise<CategoryResponse> {
 
     
-    console.log("Creating category with input:", input);
     const normalizedId = normalizeCategoryId(input.id ?? input.label);
-    console.log("Normalized category ID:", normalizedId);
 
     const existing = await categoryRepository.findByIdentifier(normalizedId);
     if (existing) throw AppError.badRequest("Category already exists.");

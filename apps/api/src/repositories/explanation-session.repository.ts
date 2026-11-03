@@ -1,4 +1,4 @@
-import { prisma } from "@algoforge/db";
+import { prisma, Prisma } from "@algoforge/db";
 import type { SessionMessage } from "../services/explanation-session.service";
 
 export const explanationSessionRepository = {
@@ -56,7 +56,7 @@ export const explanationSessionRepository = {
     return prisma.explanationSession.update({
       where: { id },
       data:  {
-        messages: messages as object[],
+        messages: messages as unknown as Prisma.InputJsonValue,
         ...(title ? { title } : {}),
       },
     });

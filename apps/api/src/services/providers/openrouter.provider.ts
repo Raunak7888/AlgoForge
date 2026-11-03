@@ -72,7 +72,7 @@ export class OpenRouterProvider implements AIProvider {
             model: modelState.model,
             messages: this.toOpenRouterMessages(request.messages),
             reasoning: { enabled: true },
-          } as OpenRouterChatRequest);
+          } as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
 
           const assistantMessage = this.toAssistantMessage(
             completion as unknown as OpenRouterCompletionResponse,

@@ -1,5 +1,5 @@
 import { prisma } from "@algoforge/db";
-import { layeredCache } from "../services/lib/Layered.cache";
+import { layeredCache } from "../services/lib/layered-cache";
 
 export type QueryScope = {
   intent: "explain_flow" | "explain_failure" | "explain_algorithm" | "explain_api" | "general";

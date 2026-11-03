@@ -1,1 +1,0 @@
-export { layeredCache as cache } from "./Layered.cache";

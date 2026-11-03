@@ -6,7 +6,7 @@ import { Prisma, Difficulty } from "@algoforge/db";
 import { AlgorithmListItemSchema, type AlgorithmListItem } from "@algoforge/forge";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
 import { algorithmCacheKeys } from "./cache-keys";
-import { layeredCache } from "../lib/Layered.cache";
+import { layeredCache } from "../lib/layered-cache";
 import type { AlgorithmQuery } from "../../types/algorithm.types";
 
 export async function listAlgorithms(query: AlgorithmQuery): Promise<AlgorithmListItem[]> {

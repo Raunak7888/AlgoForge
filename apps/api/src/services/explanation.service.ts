@@ -5,7 +5,7 @@ import { processQuery, type QueryScope } from "../ai/query-processor";
 import { buildExplanationPrompt } from "../prompts/explanation.prompt";
 import { formatExplanationResponse, type ExplanationResponse } from "../ai/response-formatter";
 import { AppError } from "../utils/app-error";
-import { layeredCache } from "./lib/Layered.cache";
+import { layeredCache } from "./lib/layered-cache";
 
 const EXPLAIN_CACHE_PREFIX = "ai:explain:";
 const MAX_QUERY_LENGTH = 2000;

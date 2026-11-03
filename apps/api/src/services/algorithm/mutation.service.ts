@@ -10,7 +10,7 @@ import { algorithmRepository } from "../../repositories/algorithm.repository";
 import { categoryRepository } from "../../repositories/category.repository";
 import { algorithmCacheKeys } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
-import { layeredCache } from "../lib/Layered.cache";
+import { layeredCache } from "../lib/layered-cache";
 
 type ExistingForge = {
   forgeCode:   Prisma.JsonValue;
