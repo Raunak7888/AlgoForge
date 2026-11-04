@@ -144,7 +144,7 @@ export default function Hero() {
                         </motion.div>
 
                         <motion.div className="mt-8 flex flex-wrap gap-x-5 gap-y-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 1 }}>
-                            {["No account needed", "Runs in your browser", `${PRODUCT_FACTS.structures} data structures`].map((t) => (
+                            {["No account needed to visualize", "Runs in your browser", `${PRODUCT_FACTS.structures} data structures`].map((t) => (
                                 <span key={t} className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground/55">
                                     <HugeiconsIcon icon={Tick02Icon} size={12} color="currentColor" strokeWidth={2} className="text-accent" />
                                     {t}

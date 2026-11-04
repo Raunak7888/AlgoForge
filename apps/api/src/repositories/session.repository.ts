@@ -32,9 +32,10 @@ export const sessionRepository = {
         expiresAt: { gt: new Date() },
       },
       select: {
-        id:        true,
-        expiresAt: true,
-        user:      { select: userSelect },
+        id:         true,
+        expiresAt:  true,
+        lastUsedAt: true,
+        user:       { select: userSelect },
       },
     });
   },
@@ -103,6 +104,49 @@ export const sessionRepository = {
     return prisma.session.updateMany({
       where: { userId, revokedAt: null },
       data:  { revokedAt: new Date() },
+    });
+  },
+
+  /**
+   * Writes lastUsedAt only if it is still older than the throttle window.
+   * The condition lives in the query, so concurrent requests cannot both write.
+   */
+  touchLastUsed(sessionId: string, now: Date, minIntervalMs: number) {
+    return prisma.session.updateMany({
+      where: {
+        id:         sessionId,
+        revokedAt:  null,
+        lastUsedAt: { lt: new Date(now.getTime() - minIntervalMs) },
+      },
+      data: { lastUsedAt: now },
+    });
+  },
+
+  /** Devices that can still sign in: not revoked, not expired. One row per device (rotation replaces the row). */
+  listActiveForUser(userId: string, now: Date) {
+    return prisma.session.findMany({
+      where:   { userId, revokedAt: null, expiresAt: { gt: now } },
+      orderBy: { lastUsedAt: "desc" },
+      take:    50,
+      select: {
+        id:         true,
+        createdAt:  true,
+        lastUsedAt: true,
+        ipAddress:  true,
+        userAgent:  true,
+      },
+    });
+  },
+
+  /** Removes expired sessions, and revoked sessions older than the retention window. */
+  deleteStale(now: Date, revokedRetentionMs: number) {
+    return prisma.session.deleteMany({
+      where: {
+        OR: [
+          { expiresAt: { lt: now } },
+          { revokedAt: { lt: new Date(now.getTime() - revokedRetentionMs) } },
+        ],
+      },
     });
   },
 };

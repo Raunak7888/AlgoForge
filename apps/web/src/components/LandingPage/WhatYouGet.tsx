@@ -24,7 +24,7 @@ const features: Feature[] = [
     },
     {
         id: "ai-analysis", icon: AiBrain01Icon, title: "AI Analysis", short: "Complexity and bottlenecks", tag: "Core", index: "02", status: "preview",
-        description: "A report with complexity, bottlenecks and edge cases. The report screen is built; the analysis engine is not connected yet, so it shows a fixed sample.",
+        description: "A report with complexity, bottlenecks and edge cases. The report screen is built; the analysis engine is not connected yet, so it shows a fixed sample. Real analysis will need an account.",
     },
     {
         id: "explainer", icon: MessageMultiple01Icon, title: "AI Explainer", short: "Plain-English breakdowns", tag: "Learn", index: "03", status: "planned",

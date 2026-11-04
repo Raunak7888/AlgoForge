@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import MotionProvider from "@/components/MotionProvider";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -67,7 +68,9 @@ export default function RootLayout({
             </head>
             <body className="bg-background text-white antialiased">
                 <MotionProvider>
-                    <QueryProvider>{children}</QueryProvider>
+                    <QueryProvider>
+                        <AuthProvider>{children}</AuthProvider>
+                    </QueryProvider>
                 </MotionProvider>
             </body>
         </html>

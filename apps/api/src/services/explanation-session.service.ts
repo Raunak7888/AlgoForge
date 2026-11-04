@@ -35,7 +35,7 @@ function sessionCacheKey(userId: string, id: string): string {
   return `explain:session:${userId}:${id}`;
 }
 
-function publicCacheKey(shareId: string): string {
+export function publicCacheKey(shareId: string): string {
   return `explain:public:${shareId}`;
 }
 

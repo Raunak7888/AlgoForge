@@ -27,6 +27,7 @@ model User {
   name      String?
   image     String?
   role      Role       @default(USER)
+  lastLoginAt DateTime? @map("last_login_at")
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
@@ -63,11 +64,14 @@ model Session {
   ipAddress     String?   @map("ip_address")
   userAgent     String?   @map("user_agent")
   rotatedFromId String?   @map("rotated_from_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
+  @@index([rotatedFromId])
+  @@index([expiresAt])
   @@map("sessions")
 }
 

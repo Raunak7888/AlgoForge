@@ -10,7 +10,7 @@ import { ErrorResponseSchema } from "./errors";
 import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainResponseSchema, ExplainSessionDetailSchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SessionMessageSchema, SharedExplainSessionResponseSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CreateShareRequestSchema, PublicShareResponseSchema, ShareSchema } from "./shares";
-import { DeviceSessionSchema, SafeUserSchema, UpdateProfileRequestSchema } from "./users";
+import { DeviceSessionListResponseSchema, DeviceSessionSchema, SafeUserSchema, UpdateProfileRequestSchema } from "./users";
 import { CreateVisualizationRequestSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationSchema } from "./visualizations";
 
 /** Named schemas published under components.schemas. A name ending in "Request" is documented by its input shape. */
@@ -22,6 +22,7 @@ export const SCHEMA_REGISTRY = {
   SafeUser: SafeUserSchema,
   UpdateProfileRequest: UpdateProfileRequestSchema,
   DeviceSession: DeviceSessionSchema,
+  DeviceSessionListResponse: DeviceSessionListResponseSchema,
   AlgorithmSummary: AlgorithmSummarySchema,
   AlgorithmDetailResponse: AlgorithmDetailResponseSchema,
   AlgorithmListResponse: AlgorithmListResponseSchema,

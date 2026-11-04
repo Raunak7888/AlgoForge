@@ -2,13 +2,14 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { motion, type Variants } from "framer-motion";
-import { Check, Copy, ExternalLink, Globe, Link2, Lock, Share2, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Globe, Link2, Lock, LogIn, Share2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useAuth, useFeatureState } from "@/lib/auth";
 
 interface ShareModalProps {
     isOpen: boolean;
     onClose: VoidFunction;
-    /** Public URL of the shared item. Without one, sharing is shown as unavailable (no backend yet). */
+    /** Public URL of the shared item. Without one, sharing is shown as unavailable (or as needing an account). */
     link?: string | null;
     title?: string;
 }
@@ -46,6 +47,9 @@ const SECONDARY =
 
 const ShareModal = ({ isOpen, onClose, link = null, title = "Share analysis" }: ShareModalProps) => {
     const canShare = !!link;
+    const { openLoginModal } = useAuth();
+    const featureState = useFeatureState("sharing", { uiReady: link !== null });
+    const needsAccount = !canShare && featureState === "needs-account";
     const [copied, setCopied] = useState(false);
     const [failed, setFailed] = useState(false);
     const [isPublic, setIsPublic] = useState(true);
@@ -84,6 +88,11 @@ const ShareModal = ({ isOpen, onClose, link = null, title = "Share analysis" }: 
         }
     };
 
+    const handleSignIn = () => {
+        onClose();
+        openLoginModal({ message: "Sign in to share your work with a link." });
+    };
+
     return (
         <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <Dialog.Portal>
@@ -101,7 +110,7 @@ const ShareModal = ({ isOpen, onClose, link = null, title = "Share analysis" }: 
                                     <div className="flex flex-col leading-tight">
                                         <Dialog.Title className="text-[15px] font-semibold tracking-tight text-primary-foreground">{title}</Dialog.Title>
                                         <Dialog.Description className="text-[12px] text-primary-foreground/60">
-                                            {canShare ? "Send this report to anyone" : "Not available yet"}
+                                            {canShare ? "Send this report to anyone" : needsAccount ? "Sign in to share" : "Not available yet"}
                                         </Dialog.Description>
                                     </div>
                                 </div>
@@ -112,17 +121,40 @@ const ShareModal = ({ isOpen, onClose, link = null, title = "Share analysis" }: 
 
                             {!canShare ? (
                                 <motion.div variants={rise} className="px-5 pb-5">
-                                    <div role="status" className="rounded-xl border border-primary-foreground/8! bg-primary-foreground/3 p-4 text-[13px] leading-relaxed">
-                                        <p className="font-medium text-primary-foreground">Sharing isn&apos;t available yet</p>
-                                        <p className="mt-1 text-primary-foreground/60">
-                                            Links need saved visualizations, which need a backend. Until then there is nothing to share, so no link is shown.
-                                        </p>
-                                    </div>
-                                    <div className="mt-4 flex justify-end">
-                                        <Dialog.Close className="cursor-pointer rounded-lg border border-primary-foreground/10! px-3 py-1.5 text-[12px] text-primary-foreground/70 transition hover:bg-primary-foreground/8 hover:text-primary-foreground">
-                                            Got it
-                                        </Dialog.Close>
-                                    </div>
+                                    {needsAccount ? (
+                                        <>
+                                            <div role="status" className="rounded-xl border border-primary-foreground/8! bg-primary-foreground/3 p-4 text-[13px] leading-relaxed">
+                                                <p className="font-medium text-primary-foreground">Sharing needs an account</p>
+                                                <p className="mt-1 text-primary-foreground/60">
+                                                    Links belong to the person who made them, so you need to sign in first. The editor and the visualizer keep working without an account.
+                                                </p>
+                                            </div>
+                                            <div className="mt-4 flex justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSignIn}
+                                                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-foreground px-3 py-1.5 text-[12px] font-medium text-primary-background transition hover:opacity-90"
+                                                >
+                                                    <LogIn size={13} aria-hidden />
+                                                    Sign in with Google
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div role="status" className="rounded-xl border border-primary-foreground/8! bg-primary-foreground/3 p-4 text-[13px] leading-relaxed">
+                                                <p className="font-medium text-primary-foreground">Sharing isn&apos;t available yet</p>
+                                                <p className="mt-1 text-primary-foreground/60">
+                                                    Share links arrive together with saved work. Until then there is nothing to share, so no link is shown.
+                                                </p>
+                                            </div>
+                                            <div className="mt-4 flex justify-end">
+                                                <Dialog.Close className="cursor-pointer rounded-lg border border-primary-foreground/10! px-3 py-1.5 text-[12px] text-primary-foreground/70 transition hover:bg-primary-foreground/8 hover:text-primary-foreground">
+                                                    Got it
+                                                </Dialog.Close>
+                                            </div>
+                                        </>
+                                    )}
                                 </motion.div>
                             ) : (
                                 <div className="space-y-4 px-5 pb-5">

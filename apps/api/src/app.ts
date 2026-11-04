@@ -14,8 +14,10 @@ import analysisRouter           from "./routes/analysis";
 import authRouter               from "./routes/auth";
 import categoryRouter           from "./routes/category";
 import healthRouter             from "./routes/health";
+import metaRouter               from "./routes/meta";
 import openapiRouter            from "./routes/openapi";
 import shareRouter              from "./routes/share";
+import userRouter               from "./routes/users";
 import explanationRouter        from "./routes/explanation";
 import explanationSessionRouter from "./routes/explanation-session";
 
@@ -44,6 +46,8 @@ app.use(healthRouter);
 if (!env.isProduction) app.use(openapiRouter);
 
 app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
+app.use("/api/meta", metaRouter);
 app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/analysis",  generalRateLimiter(), analysisRouter);

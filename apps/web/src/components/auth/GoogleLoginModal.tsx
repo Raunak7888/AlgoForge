@@ -1,228 +1,84 @@
-// PARKED since Phase 3: not mounted anywhere. Before remounting, rebuild the shell on
-// @base-ui/react/dialog like DashBoard/ShareModal.tsx (focus trap, Escape, focus return, aria-modal).
 "use client";
 
-import { useEffect } from "react";
-import { createPortal } from "react-dom";
-import { useIsClient } from "@/hooks/useIsClient";
-import { AnimatePresence, motion, Variants } from "framer-motion";
+import { Dialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
+import Link from "next/link";
+import type { AuthErrorCode } from "@algoforge/contracts";
+import AlgoForgeLogo from "@/components/Logo";
 import { GlassCard } from "@/components/auth/GlassCard";
 import { GoogleButton } from "@/components/auth/GoogleButton";
-import { ModalBackdrop } from "@/components/auth/ModalBackdrop";
-import { useModalAnimations } from "@/components/auth/useModalAnimations";
-import AlgoForgeLogo from "../Logo";
-import Link from "next/link";
+import { AUTH_ERROR_MESSAGES } from "@/lib/auth/loginUrl";
 
-const MotionLink = motion.create(Link);
 interface GoogleLoginModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onGoogleLogin?: () => Promise<void>;
+    /** Starts the real sign-in: a full-page navigation to /api/auth/google/start. */
+    onGoogleLogin: () => Promise<void>;
+    /** Why the previous attempt ended without a session (from ?authError). */
+    error?: AuthErrorCode | null;
+    /** Why signing in helps on the page the person was on. */
+    message?: string | null;
 }
 
-const cardVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.88, y: 32, rotateX: 6 },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        y: 0,
-        rotateX: 0,
-        transition: { type: "spring", stiffness: 220, damping: 22, mass: 0.9 },
-    },
-    exit: {
-        opacity: 0,
-        scale: 0.92,
-        y: 20,
-        filter: "blur(8px)",
-        transition: { duration: 0.22, ease: "easeIn" },
-    },
-};
+const DEFAULT_MESSAGE = "Sign in to unlock analysis, the AI assistant, history and sharing. The editor and the visualizer work without an account.";
 
-export function GoogleLoginModal({
-    isOpen,
-    onClose,
-    onGoogleLogin,
-}: GoogleLoginModalProps) {
-    const { cardRef, logoRef, contentRef } = useModalAnimations(isOpen);
-    const isClient = useIsClient();
-
-    useEffect(() => {
-        document.body.style.overflow = isOpen ? "hidden" : "";
-        return () => {
-            document.body.style.overflow = "";
-        };
-    }, [isOpen]);
-
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [onClose]);
-
-    const handleLogin = async () => {
-        await onGoogleLogin?.();
-        onClose();
-    };
-
-    if (!isClient) return null; // all hooks are above this line
-
-    return createPortal(
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <ModalBackdrop onClose={onClose} />
-
-                    <div
-                        className="fixed inset-0 z-9999 flex items-center justify-center p-4 backdrop-blur-2xl sm:p-6"
-                        onMouseDown={(e) => {
-                            if (e.target === e.currentTarget) onClose(); // this layer now covers the backdrop
-                        }}
-                    >
-                        <motion.div
-                            className="relative w-full max-w-97.5"
-                            style={{ perspective: "1200px" }}
-                            variants={cardVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                        >
-                            <GlassCard
-                                ref={cardRef}
-                                className="px-8 py-8 sm:px-9 sm:py-9"
-                            >
-                                {/* ── Close button — subtle slide + fade, no spin ── */}
-                                <motion.button
-                                    className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-md text-white/60"
-                                    onClick={onClose}
-                                    initial={false}
-                                    whileHover={{
-                                        color: "rgba(255,255,255,0.75)",
-                                        backgroundColor:
-                                            "rgba(255,255,255,0.06)",
-                                        borderColor: "rgba(255,255,255,0.12)",
-                                    }}
-                                    whileTap={{ scale: 0.92 }}
-                                    style={{
-                                        border: "1px solid rgba(255,255,255,0.05)",
-                                        transition:
-                                            "background 0.2s, color 0.2s, border-color 0.2s",
-                                    }}
-                                >
-                                    <motion.span
-                                        whileHover={{ x: 0.5, y: -0.5 }}
-                                        transition={{
-                                            type: "spring",
-                                            stiffness: 500,
-                                            damping: 18,
-                                        }}
-                                    >
-                                        <X
-                                            className="h-3.5 w-3.5"
-                                            strokeWidth={2}
-                                        />
-                                    </motion.span>
-                                </motion.button>
-
-                                {/* ── Logo / brand ── */}
+/**
+ * Built on the Base UI Dialog, so it traps focus, closes on Escape and returns focus to where it was opened.
+ * The first focusable control is the Google button, because the close button comes last in the DOM.
+ */
+export function GoogleLoginModal({ isOpen, onClose, onGoogleLogin, error = null, message = null }: GoogleLoginModalProps) {
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Backdrop className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+                <div className="pointer-events-none fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-6">
+                    <Dialog.Popup className="pointer-events-auto relative w-full max-w-97.5 outline-none transition-[opacity,transform] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+                        <GlassCard className="px-8 py-8 sm:px-9 sm:py-9">
+                            <div className="mb-7 flex flex-col items-center text-center">
                                 <div
-                                    ref={logoRef}
-                                    className="mb-8 flex flex-col items-center"
+                                    className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl p-2"
+                                    style={{
+                                        background: "linear-gradient(135deg, rgba(255,77,0,0.18) 0%, rgba(255,255,255,0.05) 100%)",
+                                        border: "1px solid rgba(255,77,0,0.25)",
+                                    }}
                                 >
-                                    <div className="relative mb-4">
-                                        {/* Orange pulse rings */}
-                                        {[0, 0.55].map((delay, i) => (
-                                            <motion.div
-                                                key={i}
-                                                className="absolute inset-0 rounded-2xl"
-                                                style={{
-                                                    border: "1px solid rgba(255,77,0,0.3)",
-                                                }}
-                                                animate={{
-                                                    scale: [1, 1.55],
-                                                    opacity: [0.4, 0],
-                                                }}
-                                                transition={{
-                                                    duration: 2,
-                                                    repeat: Infinity,
-                                                    delay,
-                                                    ease: "easeOut",
-                                                }}
-                                            />
-                                        ))}
-
-                                        <div
-                                            className="relative flex h-14 w-14 items-center p-2 justify-center rounded-2xl"
-                                            style={{
-                                                background:
-                                                    "linear-gradient(135deg, rgba(255,77,0,0.18) 0%, rgba(255,255,255,0.05) 100%)",
-                                                border: "1px solid rgba(255,77,0,0.25)",
-                                                boxShadow:
-                                                    "inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 32px rgba(255,77,0,0.12)",
-                                            }}
-                                        >
-                                            <AlgoForgeLogo />
-                                        </div>
-                                    </div>
-
-                                    <h1 className="font-display text-xl font-semibold tracking-tight text-white">
-                                        Welcome back
-                                    </h1>
-                                    <p
-                                        className="mt-1 text-center text-sm"
-                                        style={{
-                                            color: "rgba(255,255,255,0.38)",
-                                        }}
-                                    >
-                                        Sign in to continue to your workspace
-                                    </p>
+                                    <AlgoForgeLogo />
                                 </div>
+                                <Dialog.Title className="text-xl font-semibold tracking-tight text-white">Sign in to AlgoForge</Dialog.Title>
+                                <Dialog.Description className="mt-1.5 text-sm leading-relaxed text-white/50">{message ?? DEFAULT_MESSAGE}</Dialog.Description>
+                            </div>
 
-                                {/* ── Content ── */}
-                                <div ref={contentRef} className="space-y-4">
-                                    <GoogleButton onLogin={handleLogin} />
-                                </div>
-
-                                {/* Footer */}
-                                <p
-                                    className="mt-5 text-center text-[11px] leading-relaxed font-body"
-                                    style={{ color: "rgba(255,255,255,0.18)" }}
-                                >
-                                    By continuing, you agree to our{" "}
-                                    <MotionLink
-                                        href="/terms"
-                                        className="underline-offset-2 hover:underline"
-                                        style={{
-                                            color: "rgba(255,255,255,0.38)",
-                                        }}
-                                        whileHover={{
-                                            color: "rgba(255,255,255,0.6)",
-                                        }}
-                                    >
-                                        Terms
-                                    </MotionLink>{" "}
-                                    and{" "}
-                                    <MotionLink
-                                        href="/privacy"
-                                        className="underline-offset-2 hover:underline"
-                                        style={{
-                                            color: "rgba(255,255,255,0.38)",
-                                        }}
-                                        whileHover={{
-                                            color: "rgba(255,255,255,0.6)",
-                                        }}
-                                    >
-                                        Privacy Policy
-                                    </MotionLink>
+                            {error && (
+                                <p role="alert" className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-center text-xs leading-relaxed text-red-200">
+                                    {AUTH_ERROR_MESSAGES[error]}
                                 </p>
-                            </GlassCard>
-                        </motion.div>
-                    </div>
-                </>
-            )}
-        </AnimatePresence>,
-        document.body,
+                            )}
+
+                            <div className="space-y-4">
+                                <GoogleButton onLogin={onGoogleLogin} />
+                            </div>
+
+                            <p className="mt-5 text-center text-[11px] leading-relaxed text-white/35">
+                                By continuing, you agree to our{" "}
+                                <Link href="/terms" className="text-white/55 underline-offset-2 hover:underline">
+                                    Terms
+                                </Link>{" "}
+                                and{" "}
+                                <Link href="/privacy" className="text-white/55 underline-offset-2 hover:underline">
+                                    Privacy Policy
+                                </Link>
+                            </p>
+
+                            <Dialog.Close
+                                aria-label="Close"
+                                className="absolute right-4 top-4 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-white/5 text-white/60 transition hover:border-white/15 hover:bg-white/6 hover:text-white/80"
+                            >
+                                <X className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                            </Dialog.Close>
+                        </GlassCard>
+                    </Dialog.Popup>
+                </div>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

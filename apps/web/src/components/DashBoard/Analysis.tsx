@@ -2,7 +2,7 @@
 
 import { growthFor } from "@/lib/complexity";
 import { wait } from "@/lib/async";
-import { MOCK_DATA_ENABLED } from "@/lib/featureFlags";
+import { FeatureGate, type FeatureCopy } from "@/components/auth/FeatureGate";
 import { SampleChip } from "@/components/ui/SampleChip";
 import type {
     AnalysisLanguage,
@@ -1675,26 +1675,17 @@ function SampleAnalysisPanel({
     );
 }
 
-function UnavailableScreen() {
-    return (
-        <div
-            role="status"
-            className="flex h-full items-center justify-center bg-primary-background p-8 text-center"
-        >
-            <div className="flex max-w-sm flex-col gap-2">
-                <h2 className="text-lg font-semibold tracking-tight text-zinc-100">
-                    Analysis isn&apos;t available yet
-                </h2>
-                <p className="text-sm leading-relaxed text-zinc-400">
-                    The analysis engine is not connected to this build. The
-                    Visualizer works today: pick it in the toolbar.
-                </p>
-            </div>
-        </div>
-    );
-}
+const ANALYSIS_COPY: FeatureCopy = {
+    signInTitle: "Sign in to analyze your code",
+    signInBody: "Analysis, history and sharing belong to your account. The editor and the visualizer keep working without one.",
+    unavailableTitle: "Analysis isn't available yet",
+    unavailableBody: "The analysis engine is not connected to this build. The Visualizer works today: pick it in the toolbar.",
+};
 
-/** Real analysis does not exist yet. Outside development (and without the override) the panel says so instead of faking it. */
+/**
+ * Real analysis needs an account and a connected engine. The server's capabilities decide what is shown;
+ * the fixed sample report appears only in development.
+ */
 export default function AnalysisPanel(props: AnalysisPanelProps) {
-    return MOCK_DATA_ENABLED ? <SampleAnalysisPanel {...props} /> : <UnavailableScreen />;
+    return <FeatureGate feature="analysis" copy={ANALYSIS_COPY} preview={<SampleAnalysisPanel {...props} />} />;
 }

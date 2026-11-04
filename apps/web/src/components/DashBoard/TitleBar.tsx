@@ -1,7 +1,6 @@
 "use client";
 
-import { UserCircleFreeIcons } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import AccountAvatar from "./AccountAvatar";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowDown, ArrowUp, CornerDownLeft, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -578,7 +577,7 @@ export default function TopNav({
                         }
                     `}
                     >
-                        <HugeiconsIcon icon={UserCircleFreeIcons} size={25} />
+                        <AccountAvatar size={25} />
                     </motion.button>
 
                     <SettingsDropdown

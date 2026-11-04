@@ -37,6 +37,15 @@ function parseStringEnum<T extends string>(
   return rawValue as T;
 }
 
+function parseBoolean(name: string, fallback: boolean): boolean {
+  const rawValue = process.env[name];
+  if (rawValue === undefined || rawValue.trim() === "") return fallback;
+  const value = rawValue.trim().toLowerCase();
+  if (value === "true" || value === "1") return true;
+  if (value === "false" || value === "0") return false;
+  throw new Error(`Environment variable ${name} must be true or false (got "${rawValue}").`);
+}
+
 function parseList(name: string): string[] {
   const rawValue = process.env[name];
   if (!rawValue) return [];
@@ -96,6 +105,14 @@ export const env = {
     appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
     siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
   },
+  session: {
+    /** A session's lastUsedAt is written at most this often. */
+    lastUsedThrottleMinutes: parseInteger("SESSION_LAST_USED_THROTTLE_MINUTES", 5),
+    cleanupEnabled: parseBoolean("SESSION_CLEANUP_ENABLED", true),
+    cleanupIntervalMinutes: parseInteger("SESSION_CLEANUP_INTERVAL_MINUTES", 60),
+    /** Revoked sessions are kept this long (refresh-token reuse detection), expired ones are removed at once. */
+    revokedRetentionDays: parseInteger("SESSION_REVOKED_RETENTION_DAYS", 7),
+  },
   redis: {
     url: process.env.REDIS_URL ?? "redis://localhost:6379",
     ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
@@ -109,6 +126,7 @@ export const authCookies = {
   refreshToken: "af_refresh",
   csrfToken: "af_csrf",
   oauthState: "af_oauth_state",
+  returnTo: "af_return_to",
 } as const;
 
 export const googleOAuthConfig = {

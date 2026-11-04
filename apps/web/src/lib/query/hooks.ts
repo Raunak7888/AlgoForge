@@ -28,3 +28,12 @@ export function useCategories() {
 export function useExplainSessions(options: { enabled?: boolean } = {}) {
   return useQuery({ queryKey: queryKeys.explainSessions(), queryFn: ({ signal }) => endpoints.explainSessions({}, signal), enabled: options.enabled ?? true });
 }
+
+/** What the server can do right now. This, not an environment flag, decides "available" versus "not available". */
+export function useCapabilities() {
+  return useQuery({
+    queryKey: queryKeys.capabilities(),
+    queryFn: ({ signal }) => endpoints.capabilities(signal),
+    staleTime: 5 * 60_000,
+  });
+}

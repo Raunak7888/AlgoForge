@@ -11,7 +11,7 @@ import {
     type PointerEvent as ReactPointerEvent,
 } from "react";
 import { LoaderOne } from "../ui/loader";
-import { MOCK_DATA_ENABLED } from "@/lib/featureFlags";
+import { useAuth, useFeatureState } from "@/lib/auth";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,8 @@ const STORAGE_KEY = "algoforge:ai-drawer-width";
 const PREVIEW_GREETING =
     "This is a preview. The assistant is not connected yet, so replies are fixed samples and do not look at your code.";
 const UNAVAILABLE_TEXT = "The AI assistant isn't available yet.";
+const SIGN_IN_TEXT = "Sign in to use the AI assistant. The editor and the visualizer work without an account.";
+const LOADING_TEXT = "Checking availability…";
 
 const SUGGESTIONS = [
     "Explain my graph",
@@ -88,12 +90,23 @@ function AIChatDrawer({
     open: boolean;
     onClose: VoidFunction;
 }) {
-    const available = MOCK_DATA_ENABLED;
+    const featureState = useFeatureState("assistant", { uiReady: false });
+    const { openLoginModal } = useAuth();
+    const available = featureState === "preview";
+    const needsAccount = featureState === "needs-account";
+    const greeting =
+        featureState === "preview"
+            ? PREVIEW_GREETING
+            : needsAccount
+              ? SIGN_IN_TEXT
+              : featureState === "loading"
+                ? LOADING_TEXT
+                : UNAVAILABLE_TEXT;
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 0,
             role: "ai",
-            text: available ? PREVIEW_GREETING : UNAVAILABLE_TEXT,
+            text: "",
         },
     ]);
     const [input, setInput] = useState("");
@@ -336,7 +349,7 @@ function AIChatDrawer({
                                                 : "bg-primary-foreground/30")
                                         }
                                     />
-                                    {available ? "Preview" : "Unavailable"}
+                                    {available ? "Preview" : needsAccount ? "Sign in required" : "Unavailable"}
                                 </span>
                             </div>
                         </div>
@@ -389,7 +402,7 @@ function AIChatDrawer({
                                         <span className="sr-only">
                                             {isUser ? "You: " : "Assistant: "}
                                         </span>
-                                        {m.text}
+                                        {m.id === 0 ? greeting : m.text}
                                     </div>
                                 </motion.div>
                             );
@@ -427,6 +440,17 @@ function AIChatDrawer({
                                     <LoaderOne size={5} />
                                 </div>
                             </motion.div>
+                        )}
+                        {needsAccount && (
+                            <div className="pl-8">
+                                <button
+                                    type="button"
+                                    onClick={() => openLoginModal({ message: "Sign in to use the AI assistant." })}
+                                    className="cursor-pointer rounded-full border border-accent/40! bg-accent/10 px-3.5 py-1.5 text-[11px] font-medium text-primary-foreground/90 transition hover:bg-accent/20"
+                                >
+                                    Sign in with Google
+                                </button>
+                            </div>
                         )}
                         <div ref={bottomRef} />
                     </div>
@@ -469,7 +493,7 @@ function AIChatDrawer({
                         <p className="mt-1.5 text-center text-[11px] text-primary-foreground/60">
                             {available
                                 ? "Enter to send · Shift + Enter for a new line"
-                                : "Chat is turned off in this build"}
+                                : (needsAccount ? "Sign in to use the assistant" : "Chat is turned off in this build")}
                         </p>
                     </div>
                 </motion.aside>

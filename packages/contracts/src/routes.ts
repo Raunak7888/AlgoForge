@@ -2,11 +2,13 @@ import type { z } from "zod";
 import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListQuerySchema, AdminUserListResponseSchema } from "./admin";
 import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmLangQuerySchema, AlgorithmListQuerySchema, AlgorithmListResponseSchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
 import { AnalysisHistoryQuerySchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
-import { MeResponseSchema, RefreshResponseSchema } from "./auth";
+import { AuthStartQuerySchema, MeResponseSchema, RefreshResponseSchema } from "./auth";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
 import { IdParamsSchema, ShareIdParamsSchema, SlugParamsSchema } from "./common";
 import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainResponseSchema, ExplainSessionDetailSchema, ExplainSessionListQuerySchema, ExplainSessionListResponseSchema, SendMessageRequestSchema, SendMessageResponseSchema, SharedExplainSessionResponseSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
+import { CapabilitiesResponseSchema } from "./capabilities";
+import { DeviceSessionListResponseSchema, UpdateProfileRequestSchema } from "./users";
 
 export type HttpMethod = "get" | "post" | "patch" | "delete";
 export type AuthLevel = "none" | "optional" | "user" | "admin";
@@ -35,9 +37,9 @@ export const routes: readonly RouteDef[] = [
   { id: "health", method: "get", path: "/health", summary: "Liveness", tag: "Health", auth: "none", csrf: false, responses: { 200: HealthResponseSchema } },
   { id: "ready", method: "get", path: "/ready", summary: "Readiness (database and Redis)", tag: "Health", auth: "none", csrf: false, responses: { 200: ReadyResponseSchema, 503: ReadyResponseSchema } },
 
-  { id: "authGoogleStart", method: "get", path: "/api/auth/google/start", summary: "Start Google sign-in (redirect)", tag: "Auth", auth: "none", csrf: false, responses: { 302: "empty" } },
+  { id: "authGoogleStart", method: "get", path: "/api/auth/google/start", summary: "Start Google sign-in (redirect)", tag: "Auth", auth: "none", csrf: false, query: AuthStartQuerySchema, responses: { 302: "empty" } },
   { id: "authGoogleCallback", method: "get", path: "/api/auth/google/callback", summary: "Google OAuth callback (redirect to the web app)", tag: "Auth", auth: "none", csrf: false, responses: { 302: "empty" } },
-  { id: "authMe", method: "get", path: "/api/auth/me", summary: "Current user", tag: "Auth", auth: "user", csrf: false, responses: { 200: MeResponseSchema }, notes: "Known gap until Phase 4 (A-03): the implementation still returns the public user shape without email and role." },
+  { id: "authMe", method: "get", path: "/api/auth/me", summary: "Current user", tag: "Auth", auth: "user", csrf: false, responses: { 200: MeResponseSchema } },
   { id: "authRefresh", method: "post", path: "/api/auth/refresh", summary: "Rotate the session cookies", tag: "Auth", auth: "none", csrf: false, responses: { 200: RefreshResponseSchema } },
   { id: "authLogout", method: "post", path: "/api/auth/logout", summary: "Sign out this device", tag: "Auth", auth: "none", csrf: true, responses: { 204: "empty" } },
   { id: "authLogoutAll", method: "post", path: "/api/auth/logout-all", summary: "Sign out every device", tag: "Auth", auth: "user", csrf: true, responses: { 204: "empty" } },
@@ -76,6 +78,14 @@ export const routes: readonly RouteDef[] = [
   { id: "adminUsers", method: "get", path: "/api/admin/users", summary: "List users (cursor pagination)", tag: "Admin", auth: "admin", csrf: false, query: AdminUserListQuerySchema, responses: { 200: AdminUserListResponseSchema } },
   { id: "adminUpgrade", method: "post", path: "/api/admin/upgrade-user", summary: "Promote a user to ADMIN", tag: "Admin", auth: "admin", csrf: true, body: AdminRoleChangeRequestSchema, responses: { 200: AdminRoleChangeResponseSchema } },
   { id: "adminDowngrade", method: "post", path: "/api/admin/downgrade-user", summary: "Demote a user to USER", tag: "Admin", auth: "admin", csrf: true, body: AdminRoleChangeRequestSchema, responses: { 200: AdminRoleChangeResponseSchema } },
+
+  { id: "authSessions", method: "get", path: "/api/auth/sessions", summary: "Devices signed in to this account", tag: "Auth", auth: "user", csrf: false, responses: { 200: DeviceSessionListResponseSchema } },
+  { id: "authSessionRevoke", method: "delete", path: "/api/auth/sessions/{id}", summary: "Sign out one device", tag: "Auth", auth: "user", csrf: true, params: IdParamsSchema, responses: { 204: "empty" } },
+
+  { id: "usersUpdateMe", method: "patch", path: "/api/users/me", summary: "Update my name and username", tag: "Users", auth: "user", csrf: true, rateLimit: "general", body: UpdateProfileRequestSchema, responses: { 200: MeResponseSchema } },
+  { id: "usersDeleteMe", method: "delete", path: "/api/users/me", summary: "Delete my account and everything it owns", tag: "Users", auth: "user", csrf: true, rateLimit: "general", responses: { 204: "empty" } },
+
+  { id: "metaCapabilities", method: "get", path: "/api/meta/capabilities", summary: "What this server can do, and its size limits", tag: "Meta", auth: "none", csrf: false, responses: { 200: CapabilitiesResponseSchema } },
 ];
 
 export const toExpressPath = (path: string): string => path.replace(/\{(\w+)\}/g, ":$1");

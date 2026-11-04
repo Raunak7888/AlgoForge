@@ -359,9 +359,9 @@ const NAV = [
 
 const FEATURES: { tag: string; status: FeatureStatus; headline: string; points: string[] }[] = [
     { tag: "Algorithm Visualizer", status: "available", headline: "See operations run.", points: ["Step-by-step execution", "Arrays, stacks, queues, lists, trees, hash maps, graphs", "Play, pause, step back and replay", "Narration you write into the script"] },
-    { tag: "AI Code Analysis", status: "preview", headline: "Complexity and bottlenecks.", points: ["Time and space complexity", "Bottlenecks and edge cases", "Today: a fixed sample, not based on your code"] },
-    { tag: "AI Explainer", status: "planned", headline: "Ask what a step means.", points: ["Plain-language explanations", "Follow-up questions"] },
-    { tag: "Shareable Links", status: "planned", headline: "Send a visualization.", points: ["One link per saved visualization", "Needs a backend, not built yet"] },
+    { tag: "AI Code Analysis", status: "preview", headline: "Complexity and bottlenecks.", points: ["Time and space complexity", "Bottlenecks and edge cases", "Needs an account. Today it shows a fixed sample, not based on your code"] },
+    { tag: "AI Explainer", status: "planned", headline: "Ask what a step means.", points: ["Plain-language explanations", "Follow-up questions", "Needs an account"] },
+    { tag: "Shareable Links", status: "planned", headline: "Send a visualization.", points: ["One link per saved visualization", "Needs an account and saved work, not built yet"] },
 ];
 
 const STEPS = [
@@ -386,7 +386,7 @@ const USE_CASES = [
 ];
 
 const FAQ = [
-    { q: "Do I need an account?", a: "No. Open the visualizer and start. It runs in your browser." },
+    { q: "Do I need an account?", a: "Not to visualize. The editor and the visualizer run in your browser without one. Signing in with Google is for the features that belong to you: analysis, the AI assistant, history and sharing." },
     { q: "Is the AI analysis real?", a: "Not yet. The report screen is built, but it shows a fixed sample that is not based on your code." },
     { q: "Which structures can I visualize?", a: "Arrays, stacks, queues, linked lists, trees, hash maps and graphs." },
     { q: "Can I go backwards?", a: "Yes. Step back one operation, scrub the timeline, or replay from the start." },
@@ -952,7 +952,7 @@ export default function AlgoForgeLanding() {
                         <div className="rounded-[2rem] bg-accent p-7 text-black">
                             <p className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-black/60">Try it now</p>
                             <h2 className="mb-3 text-[2.1rem] font-black leading-[1.05] tracking-tight">Stop guessing. Start visualizing.</h2>
-                            <p className="mb-7 text-sm font-medium text-black/65">No account. Nothing to install.</p>
+                            <p className="mb-7 text-sm font-medium text-black/65">No account to visualize. Nothing to install.</p>
                             <div className="flex flex-col gap-3">
                                 <div className="relative">
                                     <span aria-hidden className="m-ring pointer-events-none absolute inset-0 rounded-full border-2 border-black" />

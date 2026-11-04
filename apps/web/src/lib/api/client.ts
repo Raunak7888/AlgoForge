@@ -3,6 +3,7 @@ import { CSRF_HEADER_NAME, ERROR_CODES, ErrorResponseSchema, REQUEST_ID_HEADER, 
 import { API_BASE_URL } from "./config";
 import { getCsrfToken } from "./csrf";
 import { ApiError, NetworkError, ResponseValidationError } from "./errors";
+import { notifySessionExpired } from "../auth/sessionEvents";
 
 export type QueryParams = Readonly<Record<string, string | number | boolean | null | undefined>>;
 
@@ -170,5 +171,5 @@ export function createApiClient(options: ApiClientOptions = {}) {
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-/** The app-wide client. Phase 4 passes onSessionExpired when the auth provider exists. */
-export const apiClient: ApiClient = createApiClient();
+/** The app-wide client. When a 401 cannot be fixed by refreshing, the AuthProvider is told so it can show the guest state. */
+export const apiClient: ApiClient = createApiClient({ onSessionExpired: notifySessionExpired });

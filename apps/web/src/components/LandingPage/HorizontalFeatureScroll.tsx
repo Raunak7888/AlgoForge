@@ -38,12 +38,12 @@ const features: Feature[] = [
     {
         id: "ai-analysis", tag: "Analysis", index: "02", status: "preview", title: "AI Code Analysis",
         description: "Complexity and bottleneck analysis. The report screen is built; the engine is not connected, so it currently shows a fixed sample.",
-        points: ["Time and space complexity", "Bottlenecks and edge cases", "Today: a sample report, not based on your code"],
+        points: ["Time and space complexity", "Bottlenecks and edge cases", "Needs an account. Today it shows a sample report, not based on your code"],
     },
     {
         id: "ai-explainer", tag: "Learning", index: "03", status: "planned", title: "AI Explainer",
         description: "Plain-language explanations of an algorithm or snippet.",
-        points: ["Explain an algorithm in plain English", "Answer follow-up questions"],
+        points: ["Explain an algorithm in plain English", "Answer follow-up questions", "Needs an account"],
     },
     {
         id: "dashboard", tag: "Productivity", index: "04", status: "planned", title: "Saved Work",
@@ -53,7 +53,7 @@ const features: Feature[] = [
     {
         id: "share", tag: "Collaboration", index: "05", status: "planned", title: "Shareable Links",
         description: "A link to a visualization that anyone can open.",
-        points: ["One link per saved visualization", "Needs a backend, not built yet"],
+        points: ["One link per saved visualization", "Needs an account and saved work, not built yet"],
     },
 ];
 

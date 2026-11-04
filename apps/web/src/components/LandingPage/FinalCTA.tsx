@@ -12,7 +12,7 @@ import { prefersReducedMotion } from "@/lib/reducedMotion";
 import { Buddy, Eyebrow, LandingStyles } from "./shared";
 import ParticleField from "./ParticleField";
 
-const TRUST_ITEMS = ["No account needed", "Runs in your browser"];
+const TRUST_ITEMS = ["No account needed to visualize", "Runs in your browser"];
 const BARS = [40, 72, 55, 90, 35, 80, 62, 48, 85, 58];
 const EASE = [0.16, 1, 0.3, 1] as const;
 
