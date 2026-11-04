@@ -77,6 +77,7 @@ async function fetchMe(signal: AbortSignal): Promise<AuthUser | null> {
 function clearPrivateData(queryClient: QueryClient): void {
   queryClient.removeQueries({ queryKey: ["analysis"] });
   queryClient.removeQueries({ queryKey: ["explain"] });
+  queryClient.removeQueries({ queryKey: ["visualizations"] });
   queryClient.removeQueries({ queryKey: queryKeys.deviceSessions() });
 }
 

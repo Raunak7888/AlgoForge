@@ -20,3 +20,5 @@ coverage/
 *.phase1.tmp
 .phase1-backup/
 .phase2-backup/
+
+.phase6-backup/

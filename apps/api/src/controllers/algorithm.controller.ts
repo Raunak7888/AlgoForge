@@ -8,8 +8,6 @@ import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
 import { parseCreateAlgorithm, parseUpdateAlgorithm, parseAlgorithmQuery } from "../validation/algorithm";
 
-// const ADMIN_VIEW: AlgorithmVisibility = { isAdmin: true };
-
 function visibilityOf(req: Request): AlgorithmVisibility {
   return { isAdmin: req.auth?.user.role === Role.ADMIN };
 }
@@ -17,29 +15,26 @@ function visibilityOf(req: Request): AlgorithmVisibility {
 class AlgorithmController {
   list = asyncHandler(async (req: Request, res: Response) => {
     const query = parseAlgorithmQuery(req.query);
-    const algorithms = await algorithmService.listAlgorithms(query, visibilityOf(req));
-    const body: AlgorithmListResponse = { data: algorithms };
+    const page = await algorithmService.listAlgorithms(query, visibilityOf(req));
+    const body: AlgorithmListResponse = { data: page.items, meta: page.meta };
     res.json(body);
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
     const id = ensureString(req.params.id, "Algorithm ID is required.");
     const lang = typeof req.query.lang === "string" ? req.query.lang : undefined;
-    const algorithm = await algorithmService.getAlgorithmById(id, lang, visibilityOf(req));
-    res.json(algorithm);
+    res.json(await algorithmService.getAlgorithmById(id, lang, visibilityOf(req)));
   });
 
   getBySlug = asyncHandler(async (req: Request, res: Response) => {
     const slug = ensureString(req.params.slug, "Algorithm slug is required.");
     const lang = typeof req.query.lang === "string" ? req.query.lang : undefined;
-    const algorithm = await algorithmService.getAlgorithmBySlug(slug, lang, visibilityOf(req));
-    res.json(algorithm);
+    res.json(await algorithmService.getAlgorithmBySlug(slug, lang, visibilityOf(req)));
   });
 
   getVisualize = asyncHandler(async (req: Request, res: Response) => {
     const id = ensureString(req.params.id, "Algorithm ID is required.");
-    const execution = await algorithmService.getAlgorithmExecution(id, visibilityOf(req));
-    res.json(execution);
+    res.json(await algorithmService.getAlgorithmExecution(id, visibilityOf(req)));
   });
 
   create = asyncHandler(async (req: Request, res: Response) => {

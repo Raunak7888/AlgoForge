@@ -1,11 +1,11 @@
 //# filename: apps/api/src/services/category.service.ts
 
 import {
-  CategoryResponseSchema,
-  type CreateCategory,
-  type UpdateCategory,
-  type CategoryResponse,
-} from "@algoforge/forge";
+  CategorySchema,
+  type CategoryDto,
+  type CreateCategoryRequest,
+  type UpdateCategoryRequest,
+} from "@algoforge/contracts";
 import { categoryRepository } from "../repositories/category.repository";
 import { AppError } from "../utils/app-error";
 
@@ -17,8 +17,8 @@ function serialize(category: {
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
-}): CategoryResponse {
-  return CategoryResponseSchema.parse({
+}): CategoryDto {
+  return CategorySchema.parse({
     id: category.id,
     label: category.label,
     description: category.description,
@@ -29,22 +29,29 @@ function serialize(category: {
   });
 }
 
+function normalizeCategoryId(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
 class CategoryService {
-  async listCategories(): Promise<CategoryResponse[]> {
-    const rows = await categoryRepository.findAll();
-    return rows.map(serialize);
+  async listCategories(): Promise<CategoryDto[]> {
+    return (await categoryRepository.findAll()).map(serialize);
   }
 
-  async getCategoryById(id: string): Promise<CategoryResponse> {
+  async getCategoryById(id: string): Promise<CategoryDto> {
     const row = await categoryRepository.findByIdentifier(id);
     if (!row) throw AppError.notFound("Category not found.");
     return serialize(row);
   }
 
-  async createCategory(input: CreateCategory): Promise<CategoryResponse> {
-
-    
+  async createCategory(input: CreateCategoryRequest): Promise<CategoryDto> {
     const normalizedId = normalizeCategoryId(input.id ?? input.label);
+    if (!normalizedId) throw AppError.badRequest("Category id cannot be empty.");
 
     const existing = await categoryRepository.findByIdentifier(normalizedId);
     if (existing) throw AppError.badRequest("Category already exists.");
@@ -54,12 +61,12 @@ class CategoryService {
       label: input.label,
       description: input.description,
       iconName: input.iconName,
-      sortOrder: input.sortOrder,
+      sortOrder: input.sortOrder ?? 0,
     });
     return serialize(row);
   }
 
-  async updateCategory(id: string, input: UpdateCategory): Promise<CategoryResponse> {
+  async updateCategory(id: string, input: UpdateCategoryRequest): Promise<CategoryDto> {
     const existing = await categoryRepository.findByIdentifier(id);
     if (!existing) throw AppError.notFound("Category not found.");
 
@@ -77,28 +84,9 @@ class CategoryService {
     if (!existing) throw AppError.notFound("Category not found.");
 
     const count = await categoryRepository.countAlgorithmsInCategory(existing.id);
-    if (count > 0) {
-      throw AppError.badRequest(
-        "Cannot delete category with associated algorithms.",
-      );
-    }
+    if (count > 0) throw AppError.badRequest("Cannot delete category with associated algorithms.");
     await categoryRepository.delete(existing.id);
   }
 }
 
 export const categoryService = new CategoryService();
-
-function normalizeCategoryId(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
-
-
-/*
-
-
-*/

@@ -9,6 +9,8 @@ import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainRespons
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CapabilitiesResponseSchema } from "./capabilities";
 import { DeviceSessionListResponseSchema, UpdateProfileRequestSchema } from "./users";
+import { SearchQuerySchema, SearchResponseSchema } from "./search";
+import { CreateVisualizationRequestSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationListQuerySchema, VisualizationListResponseSchema, VisualizationSchema } from "./visualizations";
 
 export type HttpMethod = "get" | "post" | "patch" | "delete";
 export type AuthLevel = "none" | "optional" | "user" | "admin";
@@ -85,6 +87,14 @@ export const routes: readonly RouteDef[] = [
   { id: "usersUpdateMe", method: "patch", path: "/api/users/me", summary: "Update my name and username", tag: "Users", auth: "user", csrf: true, rateLimit: "general", body: UpdateProfileRequestSchema, responses: { 200: MeResponseSchema } },
   { id: "usersDeleteMe", method: "delete", path: "/api/users/me", summary: "Delete my account and everything it owns", tag: "Users", auth: "user", csrf: true, rateLimit: "general", responses: { 204: "empty" } },
 
+  { id: "visualizationsList", method: "get", path: "/api/visualizations", summary: "List my saved visualizations (cursor pagination)", tag: "Visualizations", auth: "user", csrf: false, rateLimit: "general", query: VisualizationListQuerySchema, responses: { 200: VisualizationListResponseSchema } },
+  { id: "visualizationsValidate", method: "post", path: "/api/visualizations/validate", summary: "Compile a script on the server and return diagnostics", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", body: ValidateScriptRequestSchema, responses: { 200: ValidateScriptResponseSchema } },
+  { id: "visualizationsCreate", method: "post", path: "/api/visualizations", summary: "Save a visualization (the script must compile without errors)", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", body: CreateVisualizationRequestSchema, responses: { 201: VisualizationSchema } },
+  { id: "visualizationsGet", method: "get", path: "/api/visualizations/{id}", summary: "One of my visualizations", tag: "Visualizations", auth: "user", csrf: false, rateLimit: "general", params: IdParamsSchema, responses: { 200: VisualizationSchema } },
+  { id: "visualizationsUpdate", method: "patch", path: "/api/visualizations/{id}", summary: "Update one of my visualizations", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, body: UpdateVisualizationRequestSchema, responses: { 200: VisualizationSchema } },
+  { id: "visualizationsDelete", method: "delete", path: "/api/visualizations/{id}", summary: "Delete one of my visualizations", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 204: "empty" } },
+
+  { id: "search", method: "get", path: "/api/search", summary: "Search published algorithms (and my saved visualizations when signed in)", tag: "Search", auth: "optional", csrf: false, rateLimit: "general", query: SearchQuerySchema, responses: { 200: SearchResponseSchema } },
   { id: "metaCapabilities", method: "get", path: "/api/meta/capabilities", summary: "What this server can do, and its size limits", tag: "Meta", auth: "none", csrf: false, responses: { 200: CapabilitiesResponseSchema } },
 ];
 

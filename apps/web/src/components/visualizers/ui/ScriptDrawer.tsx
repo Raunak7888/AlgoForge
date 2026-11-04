@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import type { StoreApi } from "zustand/vanilla";
 import { cn } from "@/lib/utils";
 import type { Diagnostic } from "../core/types";
@@ -13,7 +13,16 @@ import { loadScript, saveScript } from "../script/storage";
 import { btn, btnPrimary, inputCls } from "../shared/styles";
 import type { EditorHandle, ScriptEditorProps } from "./ScriptEditor";
 
+export interface ScriptApi {
+    /** The script text in the editor right now. */
+    text: string;
+    /** Replace the editor text and run it. */
+    load: (text: string) => void;
+}
+
 interface Props {
+    /** Extra controls rendered in the header, for example saved work. */
+    extras?: (api: ScriptApi) => ReactNode;
     /** Pass LazyScriptEditor in the app. Tests pass a plain textarea. */
     editor: ComponentType<ScriptEditorProps>;
     store?: StoreApi<VisualizerStore>;
@@ -29,7 +38,7 @@ const dot: Record<Diagnostic["severity"], string> = { error: "bg-destructive", w
  * Script drawer: a JSON editor with problems, quick fixes, examples and Run.
  * Typing only lints (the canvas does not rebuild); Run (button or Ctrl/Cmd+Enter) loads the script into the one visualizer store.
  */
-export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, defaultOpen = false }: Props) {
+export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, defaultOpen = false, extras }: Props) {
     const [open, setOpen] = useState(defaultOpen);
     const [text, setText] = useState("");
     const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
@@ -102,6 +111,10 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
         if (next !== null) setText(next);
     };
 
+    const loadText = (t: string) => {
+        setText(t);
+        runText(t);
+    };
     const { errors, warnings } = countBySeverity(diagnostics);
     const blank = text.trim() === "";
 
@@ -125,6 +138,7 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
                 <button type="button" className={btnPrimary} onClick={run} aria-keyshortcuts="Control+Enter Meta+Enter" title="Run (Ctrl/Cmd+Enter)">
                     Run
                 </button>
+                {extras?.({ text, load: loadText })}
                 <span role="status" aria-live="polite" className={cn("ml-auto text-xs", errors > 0 || (ran && !ran.ok) ? "text-destructive" : "text-muted-foreground")}>
                     {errors > 0 ? `${errors} error${errors === 1 ? "" : "s"}` : ran?.ok ? `Ready · ${ran.steps} step${ran.steps === 1 ? "" : "s"}` : ""}
                     {warnings > 0 ? `${errors > 0 ? " · " : ""}${warnings} warning${warnings === 1 ? "" : "s"}` : ""}

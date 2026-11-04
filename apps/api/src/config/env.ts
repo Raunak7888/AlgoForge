@@ -118,6 +118,9 @@ export const env = {
     ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
     aiRateLimitPerHour: parseInteger("AI_RATE_LIMIT_PER_HOUR", 5),
     defaultRateLimitPerMinute: parseInteger("DEFAULT_RATE_LIMIT_PER_MINUTE", 10),
+    /** Catalog and search are cheap, cached reads: a dashboard plus a catalog page must not hit the analysis limit (A-13). */
+    catalogRateLimitPerMinute: parseInteger("CATALOG_RATE_LIMIT_PER_MINUTE", 120),
+    visualizationRateLimitPerMinute: parseInteger("VISUALIZATION_RATE_LIMIT_PER_MINUTE", 60),
   },
 };
 

@@ -19,6 +19,7 @@
   "dependencies": {
     "@algoforge/analysis": "workspace:*",
     "@algoforge/contracts": "workspace:*",
+    "@algoforge/visualizer-core": "workspace:*",
     "@base-ui/react": "^1.9.0",
     "@gsap/react": "^2.1.2",
     "@hugeicons/core-free-icons": "^4.4.0",

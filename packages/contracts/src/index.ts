@@ -10,6 +10,7 @@ export * from "./analysis";
 export * from "./stored-results";
 export * from "./explain";
 export * from "./visualizations";
+export * from "./search";
 export * from "./shares";
 export * from "./capabilities";
 export * from "./admin";

@@ -4,6 +4,9 @@ import AccountAvatar from "./AccountAvatar";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowDown, ArrowUp, CornerDownLeft, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { NAV_EVENT } from "@/lib/navEvents";
+import { useSearch } from "@/lib/search/useSearch";
+import type { SearchResultItem } from "@/lib/search/items";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { AccountMenuItem, AccountUser } from "./Setting";
@@ -39,58 +42,8 @@ function Kbd({ children }: { children: React.ReactNode }) {
 /* Search                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export interface SearchResultItem {
-    id: string;
-    title: string;
-    category: "Algorithm" | "Data Structure" | "Guide" | "Utility";
-    href: string;
-    description: string;
-}
+export type { SearchResultItem };
 
-export const searchData: SearchResultItem[] = [
-    {
-        id: "1",
-        title: "Dijkstra's Shortest Path",
-        category: "Algorithm",
-        href: "/algorithms/dijkstra",
-        description: "Find the shortest path between nodes in a graph.",
-    },
-    {
-        id: "2",
-        title: "A* Pathfinding Search",
-        category: "Algorithm",
-        href: "/algorithms/astar",
-        description: "Heuristic-based graph traversal and path planning.",
-    },
-    {
-        id: "3",
-        title: "Red-Black Tree Visualizer",
-        category: "Data Structure",
-        href: "/data-structures/red-black-tree",
-        description: "Self-balancing binary search tree operations.",
-    },
-    {
-        id: "4",
-        title: "Dynamic Programming Guide",
-        category: "Guide",
-        href: "/guides/dynamic-programming",
-        description: "Master overlapping subproblems and optimal substructure.",
-    },
-    {
-        id: "5",
-        title: "Asymptotic Complexity Analyzer",
-        category: "Utility",
-        href: "/tools/complexity-analyzer",
-        description: "Analyze Big-O time and space complexity automatically.",
-    },
-    {
-        id: "6",
-        title: "Breadth-First Search (BFS)",
-        category: "Algorithm",
-        href: "/algorithms/bfs",
-        description: "Level-order traversal for trees and graphs.",
-    },
-];
 
 const MAX_RESULTS = 6;
 
@@ -123,7 +76,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 function SearchBox({
     onSearch,
     onSelect,
-    items = searchData,
+    items,
 }: {
     onSearch?: (query: string) => void;
     onSelect?: (item: SearchResultItem) => void;
@@ -147,24 +100,7 @@ function SearchBox({
     const query = value.trim();
 
     /* Filter by title, description, or category. Empty query shows suggestions. */
-    const results = useMemo(() => {
-        if (!query) return items.slice(0, MAX_RESULTS);
-        const q = query.toLowerCase();
-        return items
-            .filter(
-                (i) =>
-                    i.title.toLowerCase().includes(q) ||
-                    i.description.toLowerCase().includes(q) ||
-                    i.category.toLowerCase().includes(q),
-            )
-            .sort((a, b) => {
-                // Title matches first
-                const at = a.title.toLowerCase().includes(q) ? 0 : 1;
-                const bt = b.title.toLowerCase().includes(q) ? 0 : 1;
-                return at - bt;
-            })
-            .slice(0, MAX_RESULTS);
-    }, [items, query]);
+    const remote = useSearch(query, items === undefined); const results = useMemo(() => (items ?? remote.items).slice(0, MAX_RESULTS), [items, remote.items]);
 
     const open = focused;
 
@@ -212,7 +148,7 @@ function SearchBox({
         setValue("");
         inputRef.current?.blur();
         onSelect?.(item);
-        router.push(item.href);
+        if (item.href.startsWith("/dashboard") && window.location.pathname === "/dashboard") { window.history.pushState(null, "", item.href); window.dispatchEvent(new Event(NAV_EVENT)); } else router.push(item.href);
     };
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -397,7 +333,7 @@ function SearchBox({
                         ) : (
                             <div className="px-3 py-6 text-center">
                                 <p className="text-[13px] text-primary-foreground/80">
-                                    No results for “{query}”
+                                    {query ? (remote.loading ? "Searching…" : "No results for “" + query + "”") : "Type to search algorithms"}
                                 </p>
                                 <p className="mt-0.5 text-[11px] text-primary-foreground/40">
                                     Try an algorithm, data structure, or guide name.

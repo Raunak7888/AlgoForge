@@ -11,6 +11,7 @@ import FeaturePanel from "./FeaturePanel";
 import Toolbar from "./Toolbar";
 import ShareModal from "./ShareModal";
 import { SPLIT, loadSplit, saveSplit } from "@/lib/split";
+import { NAV_EVENT, readDashboardParams } from "@/lib/navEvents";
 
 export type FeatureType = "analysis" | "visualizer" | "history";
 const FEATURE_LABEL: Record<FeatureType, string> = { analysis: "Analysis", visualizer: "Visualizer", history: "History" };
@@ -23,6 +24,22 @@ export default function AlgoforgeDashboard() {
     const [isShareOpen, setShareOpen] = useState(false);
 
     const containerRef = useRef<HTMLElement | null>(null);
+
+    // ?tab=visualizer opens that tool; search results and the catalog use it.
+    useEffect(() => {
+        const sync = () => {
+            const { tab } = readDashboardParams();
+            if (tab) setActiveFeature(tab);
+        };
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- the address only exists in the browser
+        sync();
+        window.addEventListener(NAV_EVENT, sync);
+        window.addEventListener("popstate", sync);
+        return () => {
+            window.removeEventListener(NAV_EVENT, sync);
+            window.removeEventListener("popstate", sync);
+        };
+    }, []);
 
     // Read after mount (the server cannot know the saved value), write only once that read is done.
     useEffect(() => {

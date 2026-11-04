@@ -5,6 +5,7 @@
    Sessions/accounts are intentionally not seeded (they hold auth tokens). */
 import { createHash } from "node:crypto";
 import { prisma, Difficulty, Role, Prisma } from "../src/index";
+import { CATALOG_SCRIPTS } from "@algoforge/visualizer-core/src/catalog-scripts";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Refusing to seed: NODE_ENV=production.");
@@ -240,7 +241,7 @@ async function main() {
   let order = 0;
   for (const a of algorithms) {
     order += 1;
-    const script = scripts[a.slug] ?? null;
+    const script = CATALOG_SCRIPTS[a.slug] ?? scripts[a.slug] ?? null;
     const fields = {
       name: a.name, description: a.description, categoryId: a.categoryId, difficulty: a.difficulty,
       isPublished: true, timeBest: a.timeBest, timeAverage: a.timeAverage, timeWorst: a.timeWorst,

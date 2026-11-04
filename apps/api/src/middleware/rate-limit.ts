@@ -115,12 +115,12 @@ redis.call('PEXPIRE', key, windowMs)
 return redis.call('ZCARD', key)
 `;
 
-export function generalRateLimiter() {
+export function generalRateLimiter(options: { scope?: string; limitPerMinute?: number } = {}) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const ip = clientIp(req);
     const windowMs = 60_000;
-    const limit = env.redis.defaultRateLimitPerMinute;
-    const key = `rl:general:${ip}`;
+    const limit = options.limitPerMinute ?? env.redis.defaultRateLimitPerMinute;
+    const key = `rl:${options.scope ?? "general"}:${ip}`;
     const now = Date.now();
     const member = `${now}:${process.hrtime.bigint().toString()}`;
 

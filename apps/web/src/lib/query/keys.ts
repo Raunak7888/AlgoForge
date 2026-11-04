@@ -7,6 +7,9 @@ export const queryKeys = {
   capabilities: () => ["meta", "capabilities"] as const,
   analysisHistory: () => ["analysis", "history"] as const,
   algorithms: (params: AlgorithmListQuery = {}) => ["algorithms", "list", params] as const,
+  algorithmCatalog: (params: AlgorithmListQuery = {}) => ["algorithms", "catalog", params] as const,
+  algorithm: (slug: string) => ["algorithms", "detail", slug] as const,
   categories: () => ["categories", "list"] as const,
   explainSessions: () => ["explain", "sessions"] as const,
+  visualizations: () => ["visualizations", "list"] as const,
 };

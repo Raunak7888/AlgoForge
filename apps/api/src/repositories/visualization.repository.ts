@@ -84,6 +84,17 @@ export const visualizationRepository = {
     });
   },
 
+  /** Title or description contains the term. Scoped to the owner inside the query. */
+  searchByUser(userId: string, term: string, take: number) {
+    const mode = Prisma.QueryMode.insensitive;
+    return prisma.visualization.findMany({
+      where: { userId, OR: [{ title: { contains: term, mode } }, { description: { contains: term, mode } }] },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take,
+      select: { id: true, title: true, description: true },
+    });
+  },
+
   countByUser(userId: string) {
     return prisma.visualization.count({ where: { userId } });
   },

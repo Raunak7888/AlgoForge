@@ -21,8 +21,32 @@ export function useAlgorithms(params: AlgorithmListQuery = {}) {
   return useQuery({ queryKey: queryKeys.algorithms(params), queryFn: ({ signal }) => endpoints.algorithms(params, signal) });
 }
 
+/** The public catalog: search, filters and "load more" by cursor. */
+export function useAlgorithmCatalog(params: Omit<AlgorithmListQuery, "cursor">) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.algorithmCatalog(params),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) => endpoints.algorithms({ ...params, ...(pageParam ? { cursor: pageParam } : {}) }, signal),
+    getNextPageParam: (last) => (last.meta.hasMore ? (last.meta.nextCursor ?? undefined) : undefined),
+  });
+}
+
+export function useAlgorithm(slug: string) {
+  return useQuery({ queryKey: queryKeys.algorithm(slug), queryFn: ({ signal }) => endpoints.algorithmBySlug(slug, signal), retry: false });
+}
+
 export function useCategories() {
   return useQuery({ queryKey: queryKeys.categories(), queryFn: ({ signal }) => endpoints.categories(signal) });
+}
+
+export function useVisualizations(options: { enabled?: boolean } = {}) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.visualizations(),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) => endpoints.visualizations({ limit: 20, ...(pageParam ? { cursor: pageParam } : {}) }, signal),
+    getNextPageParam: (last) => (last.meta.hasMore ? (last.meta.nextCursor ?? undefined) : undefined),
+    enabled: options.enabled ?? true,
+  });
 }
 
 export function useExplainSessions(options: { enabled?: boolean } = {}) {

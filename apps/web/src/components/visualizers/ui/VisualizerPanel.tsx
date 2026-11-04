@@ -6,6 +6,7 @@ import { visualizer } from "../engine/instance";
 import type { VisualizerStore } from "../engine/store";
 import { LazyScriptEditor } from "./LazyScriptEditor";
 import { PlayerChrome } from "./PlayerChrome";
+import { SavedWork } from "./SavedWork";
 import { ScriptDrawer } from "./ScriptDrawer";
 import type { ScriptEditorProps } from "./ScriptEditor";
 
@@ -30,7 +31,7 @@ export function parkPlayback(store: StoreApi<VisualizerStore>): void {
     if (t.running !== null) s.seek(t.cursor);
 }
 
-/** The one component the dashboard mounts: canvas, narration, transport and script. Sized by its parent. */
+/** The one component the dashboard mounts: canvas, narration, transport, script and saved work. Sized by its parent. */
 export function VisualizerPanel({ store = visualizer, editor = LazyScriptEditor, dark = true }: Props) {
     // First visit (nothing compiled yet): open the script drawer so the empty state and examples are visible.
     const [openDrawer] = useState(() => store.getState().compiled === null);
@@ -43,7 +44,7 @@ export function VisualizerPanel({ store = visualizer, editor = LazyScriptEditor,
                 <VisualizerCanvas store={store} className={CANVAS_CLASS} />
             </div>
             <PlayerChrome store={store} />
-            <ScriptDrawer editor={editor} store={store} dark={dark} defaultOpen={openDrawer} />
+            <ScriptDrawer editor={editor} store={store} dark={dark} defaultOpen={openDrawer} extras={(api) => <SavedWork api={api} />} />
         </div>
     );
 }

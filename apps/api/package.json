@@ -28,7 +28,7 @@
     "@algoforge/analysis": "workspace:*",
     "@algoforge/contracts": "workspace:*",
     "@algoforge/db": "workspace:*",
-    "@algoforge/forge": "workspace:*",
+    "@algoforge/visualizer-core": "workspace:*",
     "@eslint/js": "^9.39.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

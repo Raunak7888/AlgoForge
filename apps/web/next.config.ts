@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
     root: path.resolve(process.cwd(), "../.."),
   },
   // Workspace packages export TypeScript source.
-  transpilePackages: ["@algoforge/analysis", "@algoforge/contracts", "@algoforge/forge"],
+  transpilePackages: ["@algoforge/analysis", "@algoforge/contracts", "@algoforge/visualizer-core"],
   async rewrites() {
     return apiUrl ? [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }] : [];
   },

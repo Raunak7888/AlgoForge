@@ -7,14 +7,14 @@ export interface CapabilityInputs {
 
 /**
  * What this server can do right now. Pure, so it can be tested without any environment.
- * savedWork stays false until the visualization endpoints exist (Phase 6).
+ * savedWork is on: the visualization endpoints exist (Phase 6).
  */
 export function buildCapabilities(input: CapabilityInputs): CapabilitiesResponse {
   return {
     analysis: input.aiConfigured,
     assistant: input.aiConfigured,
     sharing: input.aiConfigured,
-    savedWork: false,
+    savedWork: true,
     limits: { ...CAPABILITY_LIMITS },
   };
 }

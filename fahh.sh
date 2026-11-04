@@ -1,9 +1,8 @@
-
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
 # ==========================================
-# AlgoForge Source Code Dumper
+# AlgoForge FAST Source Code Dumper
 # Output: sssss.sh
 # Includes: package.json, *.ts, *.tsx, *.prisma
 # ==========================================
@@ -11,19 +10,28 @@ set -Eeuo pipefail
 export MSYS_NO_PATHCONV=1
 export MSYS2_ARG_CONV_EXCL="*"
 
-OUT="sssss.sh"
+OUT="./sssss.sh"
 
-# Ensure script runs from repository root.
+# ==========================================
+# Preflight
+# ==========================================
+
 if [[ ! -d "apps" || ! -d "packages" ]]; then
-    echo "Error: Run fahh.sh from the AlgoForge repository root."
+    echo "Error: Run this script from the AlgoForge repository root."
     exit 1
 fi
 
-# Resolve output path.
-OUT="./${OUT#./}"
+# Generate one high-entropy delimiter for the entire dump.
+NONCE=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+DELIMITER="__ALGOFORGE_${NONCE}__"
 
-# Collect eligible files, excluding generated/dependency directories.
-mapfile -d '' FILES < <(
+# ==========================================
+# Collect files
+# ==========================================
+
+echo "Collecting source files..."
+
+mapfile -d '' -t FILES < <(
     find . \
         -type d \( \
             -name node_modules -o \
@@ -42,19 +50,15 @@ mapfile -d '' FILES < <(
     sort -z
 )
 
-# Exclude the generated output itself.
-FILTERED=()
-
-for FILE in "${FILES[@]}"; do
-    [[ "$FILE" == "$OUT" ]] && continue
-    FILTERED+=("$FILE")
-done
-
 # ==========================================
 # Generate restoration script
 # ==========================================
 
-cat > "$OUT" <<'HEADER'
+echo "Generating restoration script..."
+
+: > "$OUT"
+
+cat >> "$OUT" <<'HEADER'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -62,23 +66,52 @@ echo "Restoring AlgoForge files..."
 
 HEADER
 
-for FILE in "${FILTERED[@]}"; do
+TOTAL=0
+PACKAGE_COUNT=0
+TS_COUNT=0
+TSX_COUNT=0
+PRISMA_COUNT=0
 
-    # Generate a unique heredoc delimiter for each file.
-    DELIMITER="__ALGOFORGE_FILE_$(printf '%s' "$FILE" | sha256sum | cut -c1-16)__"
+for FILE in "${FILES[@]}"; do
 
-    while grep -Fqx "$DELIMITER" "$FILE"; do
-        DELIMITER="${DELIMITER}_X"
-    done
+    # Exclude generated output.
+    [[ "$FILE" == "$OUT" ]] && continue
 
+    # Count file types.
+    case "$FILE" in
+        */package.json|./package.json)
+            ((PACKAGE_COUNT+=1))
+            ;;
+        *.tsx)
+            ((TSX_COUNT+=1))
+            ;;
+        *.ts)
+            ((TS_COUNT+=1))
+            ;;
+        *.prisma)
+            ((PRISMA_COUNT+=1))
+            ;;
+    esac
+
+    ((TOTAL+=1))
+
+    # Generate restoration commands.
     {
         printf 'mkdir -p %q\n' "$(dirname "$FILE")"
+
         printf 'cat > %q <<'\''%s'\''\n' "$FILE" "$DELIMITER"
-        cat "$FILE"
+
+        cat -- "$FILE"
+
         printf '\n%s\n\n' "$DELIMITER"
+
     } >> "$OUT"
 
 done
+
+# ==========================================
+# Restoration footer
+# ==========================================
 
 cat >> "$OUT" <<'FOOTER'
 echo "All AlgoForge files restored successfully."
@@ -87,7 +120,7 @@ FOOTER
 chmod +x "$OUT"
 
 # ==========================================
-# Display included files
+# Display results
 # ==========================================
 
 echo ""
@@ -95,44 +128,28 @@ echo "================================================"
 echo "          ALGOFORGE SOURCE CODE DUMP"
 echo "================================================"
 
-for TYPE in package.json "*.ts" "*.tsx" "*.prisma"; do
+echo ""
+echo "[package.json]"
+echo "  Total: $PACKAGE_COUNT"
 
-    echo ""
-    echo "[$TYPE]"
+echo ""
+echo "[*.ts]"
+echo "  Total: $TS_COUNT"
 
-    COUNT=0
+echo ""
+echo "[*.tsx]"
+echo "  Total: $TSX_COUNT"
 
-    for FILE in "${FILTERED[@]}"; do
-
-        case "$TYPE" in
-            package.json)
-                [[ "$(basename "$FILE")" == "package.json" ]] || continue
-                ;;
-            "*.ts")
-                [[ "$FILE" == *.ts && "$FILE" != *.tsx ]] || continue
-                ;;
-            "*.tsx")
-                [[ "$FILE" == *.tsx ]] || continue
-                ;;
-            "*.prisma")
-                [[ "$FILE" == *.prisma ]] || continue
-                ;;
-        esac
-
-        printf "  %s\n" "$FILE"
-        COUNT=$((COUNT + 1))
-
-    done
-
-    echo "  Total: $COUNT"
-
-done
+echo ""
+echo "[*.prisma]"
+echo "  Total: $PRISMA_COUNT"
 
 echo ""
 echo "================================================"
-echo "Total files included : ${#FILTERED[@]}"
+echo "Total files included : $TOTAL"
 echo "Generated file       : $OUT"
 echo "================================================"
+
 echo ""
 echo "Run the generated script with:"
 echo "  bash $OUT"

@@ -1,66 +1,51 @@
 import { Prisma, Difficulty } from "@algoforge/db";
-import {
-  ForgeCodeSchema,
-  GuardRangesSchema,
-  InputSchema,
-  type CreateAlgorithm,
-  type UpdateAlgorithm,
-} from "@algoforge/forge";
+import type { AlgorithmDetailResponse, CreateAlgorithmRequest, UpdateAlgorithmRequest } from "@algoforge/contracts";
+import { SCRIPT_SCHEMA_VERSION } from "@algoforge/visualizer-core";
 import { algorithmRepository } from "../../repositories/algorithm.repository";
 import { categoryRepository } from "../../repositories/category.repository";
+import { serializeAlgorithmDetail } from "../../serializers/algorithm";
 import { ALGO_CACHE_NAMESPACE } from "./cache-keys";
 import { AppError } from "../../utils/app-error";
 import { bumpCacheVersion } from "../lib/cache-version";
 import { layeredCache } from "../lib/layered-cache";
+import { assertValidScript } from "../script.service";
 
-type ExistingForge = {
-  forgeCode:   Prisma.JsonValue;
-  inputSchema: Prisma.JsonValue;
-  guardRanges: Prisma.JsonValue;
-  version:     number;
-} | null;
+const NEEDS_SCRIPT = "A published algorithm needs a visualizer script.";
 
-export async function createAlgorithm(input: CreateAlgorithm, actorId?: string) {
-  if (input.forge) validateForge(input.forge);
+export async function createAlgorithm(input: CreateAlgorithmRequest, actorId?: string): Promise<AlgorithmDetailResponse> {
+  const script = input.script ?? null;
+  if (script !== null) assertValidScript(script);
+  const isPublished = input.isPublished ?? false;
+  if (isPublished && script === null) throw AppError.badRequest(NEEDS_SCRIPT);
+
   const category = await resolveCategory(input.categoryId);
   const created = await algorithmRepository.create({
-    ...toCreateData(input, category.id),
-    publishedAt: input.isPublished ? new Date() : null,
+    ...toCreateData(input, category.id, script),
+    publishedAt: isPublished ? new Date() : null,
     createdById: actorId ?? null,
   });
   await bustCache();
-  return created;
+  return serializeAlgorithmDetail(created);
 }
 
-export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
+export async function updateAlgorithm(id: string, input: UpdateAlgorithmRequest): Promise<AlgorithmDetailResponse> {
   const existing = await algorithmRepository.findById(id);
   if (!existing) throw AppError.notFound("Algorithm not found.");
 
-  if (input.forge) {
-    validateForge(input.forge);
-    if (!existing.forge) {
-      if (!input.forge.forgeCode || !input.forge.inputSchema || !input.forge.guardRanges) {
-        throw AppError.badRequest(
-          "forgeCode, inputSchema, and guardRanges are all required when adding forge configuration for the first time.",
-        );
-      }
-    }
-  }
+  if (typeof input.script === "string") assertValidScript(input.script);
+  const script = input.script !== undefined ? input.script : existing.script;
+  const willBePublished = input.isPublished ?? existing.isPublished;
+  if (willBePublished && !script) throw AppError.badRequest(NEEDS_SCRIPT);
 
-  const categoryId = input.categoryId
-    ? (await resolveCategory(input.categoryId)).id
-    : undefined;
+  const categoryId = input.categoryId ? (await resolveCategory(input.categoryId)).id : undefined;
 
-  const updated = await algorithmRepository.update(
-    id,
-    {
-      ...toUpdateData(input, existing.forge ?? null, categoryId),
-      // First publication time: set when a draft becomes published, never rewritten afterwards.
-      ...(input.isPublished === true && !existing.isPublished ? { publishedAt: new Date() } : {}),
-    },
-  );
+  const updated = await algorithmRepository.update(id, {
+    ...toUpdateData(input, null, categoryId),
+    // First publication time: set when a draft becomes published, never rewritten afterwards.
+    ...(input.isPublished === true && !existing.isPublished ? { publishedAt: new Date() } : {}),
+  });
   await bustCache();
-  return updated;
+  return serializeAlgorithmDetail(updated);
 }
 
 export async function deleteAlgorithm(id: string): Promise<void> {
@@ -80,43 +65,22 @@ async function bustCache(): Promise<void> {
   await layeredCache.del("meta:slugs");
 }
 
-function validateForge(
-  forge: { forgeCode?: unknown; guardRanges?: unknown; inputSchema?: unknown },
-): void {
-  try {
-    if (forge.forgeCode   !== undefined) ForgeCodeSchema.parse(forge.forgeCode);
-    if (forge.guardRanges !== undefined) GuardRangesSchema.parse(forge.guardRanges);
-    if (forge.inputSchema !== undefined) InputSchema.parse(forge.inputSchema);
-  } catch (err) {
-    throw AppError.badRequest(
-      "Invalid forge configuration: " + (err instanceof Error ? err.message : "unknown"),
-    );
-  }
-}
-
-function toJsonValue(value: unknown): Prisma.InputJsonValue {
-  return value as Prisma.InputJsonValue;
-}
-
-function toCreateData(input: CreateAlgorithm, categoryId: string) {
+function toCreateData(input: CreateAlgorithmRequest, categoryId: string, script: string | null) {
   return {
-    slug:            input.slug,
-    name:            input.name,
-    description:     input.description,
+    slug: input.slug,
+    name: input.name,
+    description: input.description,
     categoryId,
-    difficulty:      input.difficulty as Difficulty,
-    isPublished:     input.isPublished ?? false,
-    timeBest:        input.complexity?.time?.best    ?? null,
-    timeAverage:     input.complexity?.time?.average ?? null,
-    timeWorst:       input.complexity?.time?.worst   ?? null,
-    spaceComplexity: input.complexity?.space         ?? null,
-    displayCodes:    input.displayCodes,
-    forge: {
-      forgeCode:   toJsonValue(input.forge.forgeCode),
-      inputSchema: toJsonValue(input.forge.inputSchema),
-      guardRanges: toJsonValue(input.forge.guardRanges),
-    },
-    tags: input.tags,
+    difficulty: (input.difficulty ?? "beginner") as Difficulty,
+    isPublished: input.isPublished ?? false,
+    timeBest: input.complexity.time.best,
+    timeAverage: input.complexity.time.average,
+    timeWorst: input.complexity.time.worst,
+    spaceComplexity: input.complexity.space,
+    displayCodes: input.displayCodes,
+    script,
+    scriptVersion: SCRIPT_SCHEMA_VERSION,
+    tags: input.tags ?? [],
   };
 }
 
@@ -124,64 +88,37 @@ function toCreateData(input: CreateAlgorithm, categoryId: string) {
  * Only fields the caller actually sent are written. A partial `complexity` update
  * (e.g. only time.best) must never null out the other complexity columns.
  */
-function complexityPatch(c: NonNullable<UpdateAlgorithm["complexity"]>) {
+function complexityPatch(c: NonNullable<UpdateAlgorithmRequest["complexity"]>) {
   return {
-    ...(c.time?.best    !== undefined ? { timeBest:        c.time.best }    : {}),
-    ...(c.time?.average !== undefined ? { timeAverage:     c.time.average } : {}),
-    ...(c.time?.worst   !== undefined ? { timeWorst:       c.time.worst }   : {}),
-    ...(c.space         !== undefined ? { spaceComplexity: c.space }        : {}),
+    ...(c.time?.best !== undefined ? { timeBest: c.time.best } : {}),
+    ...(c.time?.average !== undefined ? { timeAverage: c.time.average } : {}),
+    ...(c.time?.worst !== undefined ? { timeWorst: c.time.worst } : {}),
+    ...(c.space !== undefined ? { spaceComplexity: c.space } : {}),
   };
 }
 
+/** The second argument is kept only so older call sites keep compiling; it is ignored. */
 export function toUpdateData(
-  input: UpdateAlgorithm,
-  existingForge: ExistingForge,
+  input: UpdateAlgorithmRequest,
+  _legacy?: unknown,
   categoryId?: string,
 ): Prisma.AlgorithmUpdateInput & {
   displayCodes?: { language: string; code: string }[];
-  tags?:         string[];
+  tags?: string[];
 } {
   return {
-    ...(input.slug        && { slug:        input.slug }),
-    ...(input.name        && { name:        input.name }),
+    ...(input.slug && { slug: input.slug }),
+    ...(input.name && { name: input.name }),
     ...(input.description && { description: input.description }),
     // Relation connect, not the unchecked scalar: Prisma rejects mixing checked
     // (nested relation writes) and unchecked (scalar foreign key) update input.
     ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
-    ...(input.difficulty  && { difficulty:  input.difficulty as Difficulty }),
+    ...(input.difficulty && { difficulty: input.difficulty as Difficulty }),
     ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
     ...(input.complexity ? complexityPatch(input.complexity) : {}),
     ...(input.displayCodes && { displayCodes: input.displayCodes }),
-    ...(input.tags         && { tags:         input.tags }),
-    ...(input.forge ? buildForgeWrite(input.forge, existingForge) : {}),
-  };
-}
-
-function buildForgeWrite(
-  forgeInput: NonNullable<UpdateAlgorithm["forge"]>,
-  existingForge: ExistingForge,
-): Pick<Prisma.AlgorithmUpdateInput, "forge"> {
-  if (!existingForge) {
-    return {
-      forge: {
-        create: {
-          forgeCode:   toJsonValue(forgeInput.forgeCode),
-          inputSchema: toJsonValue(forgeInput.inputSchema),
-          guardRanges: toJsonValue(forgeInput.guardRanges),
-          version:     1,
-        },
-      },
-    };
-  }
-
-  return {
-    forge: {
-      update: {
-        ...(forgeInput.forgeCode   !== undefined && { forgeCode:   toJsonValue(forgeInput.forgeCode) }),
-        ...(forgeInput.inputSchema !== undefined && { inputSchema: toJsonValue(forgeInput.inputSchema) }),
-        ...(forgeInput.guardRanges !== undefined && { guardRanges: toJsonValue(forgeInput.guardRanges) }),
-      },
-    },
+    ...(input.tags && { tags: input.tags }),
+    ...(input.script !== undefined ? { script: input.script, scriptVersion: SCRIPT_SCHEMA_VERSION } : {}),
   };
 }
 

@@ -18,6 +18,8 @@ import metaRouter               from "./routes/meta";
 import openapiRouter            from "./routes/openapi";
 import shareRouter              from "./routes/share";
 import userRouter               from "./routes/users";
+import visualizationRouter from "./routes/visualizations";
+import searchRouter from "./routes/search";
 import explanationRouter        from "./routes/explanation";
 import explanationSessionRouter from "./routes/explanation-session";
 
@@ -48,7 +50,9 @@ if (!env.isProduction) app.use(openapiRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/meta", metaRouter);
-app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
+app.use("/api/visualizations", visualizationRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/algorithms", generalRateLimiter({ scope: "catalog", limitPerMinute: env.redis.catalogRateLimitPerMinute }), algorithmRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
 
