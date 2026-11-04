@@ -3,7335 +3,6 @@ set -Eeuo pipefail
 
 echo "Restoring AlgoForge files..."
 
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src
-cat > ./.phase4-backup/20261104-182108/apps/api/src/app.ts <<'__ALGOFORGE_FILE_fe7603f7b9dcdf3c__'
-import cors from "cors";
-import { JSON_BODY_LIMIT_BYTES } from "@algoforge/contracts";
-import express from "express";
-import { env } from "./config/env";
-import { errorHandler } from "./middleware/error-handler";
-import { notFoundHandler } from "./middleware/not-found";
-import { requestId } from "./middleware/request-id";
-import { securityHeaders } from "./middleware/security-headers";
-import { generalRateLimiter } from "./middleware/rate-limit";
-
-import adminRouter              from "./routes/admin";
-import algorithmRouter          from "./routes/algorithm";
-import analysisRouter           from "./routes/analysis";
-import authRouter               from "./routes/auth";
-import categoryRouter           from "./routes/category";
-import healthRouter             from "./routes/health";
-import openapiRouter            from "./routes/openapi";
-import shareRouter              from "./routes/share";
-import explanationRouter        from "./routes/explanation";
-import explanationSessionRouter from "./routes/explanation-session";
-
-const app = express();
-
-app.disable("x-powered-by");
-app.set("trust proxy", 1);
-
-app.use(requestId);
-app.use(securityHeaders);
-app.use(
-  cors({
-    origin:         env.webAppUrl,
-    credentials:    true,
-    methods:        ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "X-CSRF-Token"],
-    exposedHeaders: ["X-Request-Id"],
-  }),
-);
-app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
-
-// Liveness (/health) and readiness (/ready)
-app.use(healthRouter);
-
-// OpenAPI document generated from @algoforge/contracts (development only).
-if (!env.isProduction) app.use(openapiRouter);
-
-app.use("/api/auth", authRouter);
-app.use("/api/algorithms", generalRateLimiter(), algorithmRouter);
-app.use("/api/categories", categoryRouter);
-app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
-
-// Sessions mounted at a path that cannot be prefix-matched by the explain router.
-app.use("/api/explain-sessions", explanationSessionRouter);
-app.use("/api/explain",          explanationRouter);
-
-app.use("/api/share", shareRouter);
-app.use("/api/admin", adminRouter);
-
-app.use(notFoundHandler);
-app.use(errorHandler);
-
-export { app };
-
-__ALGOFORGE_FILE_fe7603f7b9dcdf3c__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/config
-cat > ./.phase4-backup/20261104-182108/apps/api/src/config/env.ts <<'__ALGOFORGE_FILE_4a244cea0324b0cc__'
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const AI_PROVIDERS = ["gemini", "openrouter"] as const;
-type AIProvider = (typeof AI_PROVIDERS)[number];
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable: ${name}`);
-  return value;
-}
-
-function parseInteger(name: string, fallback: number): number {
-  const rawValue = process.env[name];
-  if (rawValue === undefined || rawValue.trim() === "") return fallback;
-  const parsed = Number(rawValue);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(
-      `Environment variable ${name} must be a positive integer (got "${rawValue}").`,
-    );
-  }
-  return parsed;
-}
-
-function parseStringEnum<T extends string>(
-  name: string,
-  allowedValues: readonly T[],
-  fallback: T,
-): T {
-  const rawValue = process.env[name];
-  if (!rawValue) return fallback;
-  if (!allowedValues.includes(rawValue as T))
-    throw new Error(
-      `Environment variable ${name} must be one of: ${allowedValues.join(", ")}.`,
-    );
-  return rawValue as T;
-}
-
-function parseList(name: string): string[] {
-  const rawValue = process.env[name];
-  if (!rawValue) return [];
-  return rawValue
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-}
-
-const port = parseInteger("PORT", 4000);
-const nodeEnv = process.env.NODE_ENV ?? "development";
-const isProduction = nodeEnv === "production";
-const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
-const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
-
-// Provider-specific validation: only the selected provider's settings are required.
-const openRouterApiKeys = parseList("OPENROUTER_API_KEYS");
-const openRouterFreeModels = parseList("OPENROUTER_FREE_MODELS");
-if (aiProvider === "openrouter") {
-  if (openRouterApiKeys.length === 0)
-    throw new Error("OPENROUTER_API_KEYS must be set when AI_PROVIDER=openrouter.");
-  if (openRouterFreeModels.length === 0)
-    throw new Error("OPENROUTER_FREE_MODELS must be set when AI_PROVIDER=openrouter.");
-}
-const geminiApiKey =
-  aiProvider === "gemini" ? requireEnv("GEMINI_API_KEY") : (process.env.GEMINI_API_KEY ?? "");
-// No hard-coded model: it must be chosen explicitly when Gemini is the provider.
-const aiModel = aiProvider === "gemini" ? requireEnv("AI_MODEL") : (process.env.AI_MODEL ?? "");
-
-export const env = {
-  nodeEnv,
-  isProduction,
-  port,
-  apiBaseUrl,
-  webAppUrl: process.env.WEB_APP_URL ?? "http://localhost:3000",
-  cookieDomain: process.env.COOKIE_DOMAIN,
-  googleClientId: requireEnv("GOOGLE_CLIENT_ID"),
-  googleClientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
-  jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
-  jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
-  accessTokenTtlMinutes: parseInteger("ACCESS_TOKEN_TTL_MINUTES", 15),
-  refreshTokenTtlDays: parseInteger("REFRESH_TOKEN_TTL_DAYS", 30),
-  authIssuer: process.env.AUTH_ISSUER ?? "algoforge-api",
-  authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
-  geminiApiKey,
-  ai: {
-    provider: aiProvider as AIProvider,
-    model: aiModel,
-    timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
-    maxRetries: parseInteger("AI_MAX_RETRIES", 1),
-  },
-  openRouter: {
-    baseUrl:
-      process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-    apiKeys: openRouterApiKeys,
-    freeModels: openRouterFreeModels,
-    appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
-    siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
-  },
-  redis: {
-    url: process.env.REDIS_URL ?? "redis://localhost:6379",
-    ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
-    aiRateLimitPerHour: parseInteger("AI_RATE_LIMIT_PER_HOUR", 5),
-    defaultRateLimitPerMinute: parseInteger("DEFAULT_RATE_LIMIT_PER_MINUTE", 10),
-  },
-};
-
-export const authCookies = {
-  accessToken: "af_access",
-  refreshToken: "af_refresh",
-  csrfToken: "af_csrf",
-  oauthState: "af_oauth_state",
-} as const;
-
-export const googleOAuthConfig = {
-  redirectUri: `${apiBaseUrl}/api/auth/google/callback`,
-  scopes: ["openid", "email", "profile"],
-};
-
-__ALGOFORGE_FILE_4a244cea0324b0cc__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/controllers
-cat > ./.phase4-backup/20261104-182108/apps/api/src/controllers/auth.controller.ts <<'__ALGOFORGE_FILE_b18ef81d4f9022f7__'
-import { Request, Response } from "express";
-import { authCookies, env } from "../config/env";
-import { authService } from "../services/auth.service";
-import { userService } from "../services/user.service";
-import { AppError } from "../utils/app-error";
-import { asyncHandler } from "../utils/async-handler";
-import {
-  clearAuthCookies,
-  clearOAuthStateCookie,
-  getCookie,
-  setAuthCookies,
-  setOAuthStateCookie,
-} from "../utils/cookies";
-import { logger, serializeError } from "../utils/logger";
-import { ensureString } from "../validation/common";
-
-class AuthController {
-  startGoogleAuth = asyncHandler(async (_req: Request, res: Response) => {
-    const { url, state } = authService.buildGoogleAuthorizationUrl();
-    setOAuthStateCookie(res, state);
-    res.redirect(url);
-  });
-
-  handleGoogleCallback = asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const state         = ensureString(req.query.state, "OAuth state is missing.");
-      const code          = ensureString(req.query.code, "Authorization code is missing.");
-      const expectedState = getCookie(req, authCookies.oauthState);
-
-      clearOAuthStateCookie(res);
-
-      if (!expectedState || expectedState !== state) {
-        throw AppError.unauthorized("Invalid OAuth state.");
-      }
-
-      const authResult = await authService.authenticateGoogleCallback(code, {
-        ipAddress: req.ip ?? null,
-        userAgent: req.get("user-agent") ?? null,
-      });
-
-      setAuthCookies(res, authResult);
-      res.redirect(`${env.webAppUrl}/`);
-    } catch (error) {
-      clearOAuthStateCookie(res);
-      clearAuthCookies(res);
-      logger.warn("oauth callback failed", {
-        requestId: req.requestId,
-        ...serializeError(error),
-      });
-      res.redirect(`${env.webAppUrl}/?authError=oauth_failed`);
-    }
-  });
-
-  getMe = asyncHandler(async (req: Request, res: Response) => {
-    const user = await userService.getUserById(req.auth!.user.id);
-
-    if (!user) {
-      throw AppError.notFound("User not found.");
-    }
-
-    res.json({ user });
-  });
-
-  refreshSession = asyncHandler(async (req: Request, res: Response) => {
-    const refreshToken = getCookie(req, authCookies.refreshToken);
-
-    if (!refreshToken) {
-      clearAuthCookies(res);
-      throw AppError.unauthorized("Refresh token is missing.");
-    }
-
-    const authResult = await authService.rotateRefreshToken(refreshToken, {
-      ipAddress: req.ip ?? null,
-      userAgent: req.get("user-agent") ?? null,
-    });
-
-    setAuthCookies(res, authResult);
-    res.json({ user: authResult.user });
-  });
-
-  logout = asyncHandler(async (req: Request, res: Response) => {
-    const refreshToken = getCookie(req, authCookies.refreshToken);
-
-    if (refreshToken) {
-      await authService.revokeSessionByRefreshToken(refreshToken);
-    }
-
-    clearAuthCookies(res);
-    res.status(204).send();
-  });
-
-  logoutAll = asyncHandler(async (req: Request, res: Response) => {
-    await authService.revokeAllUserSessions(req.auth!.user.id);
-    clearAuthCookies(res);
-    res.status(204).send();
-  });
-}
-
-export const authController = new AuthController();
-
-__ALGOFORGE_FILE_b18ef81d4f9022f7__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/repositories
-cat > ./.phase4-backup/20261104-182108/apps/api/src/repositories/session.repository.ts <<'__ALGOFORGE_FILE_e64711921633865d__'
-import { prisma } from "@algoforge/db";
-
-const userSelect = {
-  id:       true,
-  email:    true,
-  username: true,
-  name:     true,
-  image:    true,
-  role:     true,
-} as const;
-
-export const sessionRepository = {
-  create(data: {
-    id:            string;
-    userId:        string;
-    tokenHash:     string;
-    expiresAt:     Date;
-    lastUsedAt:    Date;
-    ipAddress:     string | null;
-    userAgent:     string | null;
-    rotatedFromId?: string;
-  }) {
-    return prisma.session.create({ data });
-  },
-
-  findActiveById(sessionId: string, userId: string) {
-    return prisma.session.findFirst({
-      where: {
-        id:        sessionId,
-        userId,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      select: {
-        id:        true,
-        expiresAt: true,
-        user:      { select: userSelect },
-      },
-    });
-  },
-
-  findByIdWithUser(sessionId: string) {
-    return prisma.session.findUnique({
-      where:   { id: sessionId },
-      include: { user: { select: userSelect } },
-    });
-  },
-
-  /** Find a session that was created by rotating the given session id. */
-  findRotatedFrom(originalId: string) {
-    return prisma.session.findFirst({
-      where: { rotatedFromId: originalId },
-    });
-  },
-
-  async rotate(
-    currentId:      string,
-    currentUserId:  string,
-    currentTokenHash: string,
-    next: {
-      id:          string;
-      tokenHash:   string;
-      expiresAt:   Date;
-      lastUsedAt:  Date;
-      ipAddress:   string | null;
-      userAgent:   string | null;
-    },
-  ) {
-    const now = new Date();
-
-    return prisma.$transaction(async (tx) => {
-      const revoked = await tx.session.updateMany({
-        where: {
-          id:        currentId,
-          userId:    currentUserId,
-          tokenHash: currentTokenHash,
-          revokedAt: null,
-          expiresAt: { gt: now },
-        },
-        data: { revokedAt: now, lastUsedAt: now },
-      });
-
-      if (revoked.count !== 1) return null;
-
-      return tx.session.create({
-        data: {
-          ...next,
-          userId:        currentUserId,
-          rotatedFromId: currentId,
-        },
-      });
-    });
-  },
-
-  revokeById(sessionId: string, userId?: string) {
-    return prisma.session.updateMany({
-      where: { id: sessionId, ...(userId ? { userId } : {}), revokedAt: null },
-      data:  { revokedAt: new Date() },
-    });
-  },
-
-  revokeAllForUser(userId: string) {
-    return prisma.session.updateMany({
-      where: { userId, revokedAt: null },
-      data:  { revokedAt: new Date() },
-    });
-  },
-};
-__ALGOFORGE_FILE_e64711921633865d__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/repositories
-cat > ./.phase4-backup/20261104-182108/apps/api/src/repositories/user.repository.ts <<'__ALGOFORGE_FILE_6093dd6156d75f92__'
-//# filename: apps/api/src/repositories/user.repository.ts
-
-import { prisma } from "@algoforge/db";
-import { Role } from "@algoforge/db";
-
-const userSelect = {
-  id: true,
-  email: true,
-  username: true,
-  name: true,
-  image: true,
-  role: true,
-} as const;
-
-export const userRepository = {
-  findById(id: string) {
-    return prisma.user.findUnique({ where: { id }, select: userSelect });
-  },
-
-  findByEmail(email: string) {
-    return prisma.user.findUnique({ where: { email }, select: userSelect });
-  },
-
-  findPublicById(id: string) {
-    return prisma.user.findUnique({
-      where: { id },
-      select: { id: true, name: true, username: true, image: true },
-    });
-  },
-
-  /** Keyset-style page over users, newest first. `take` should be limit + 1 to detect a next page. */
-  findPage(opts: { take: number; cursor?: string }) {
-    return prisma.user.findMany({
-      take: opts.take,
-      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-  },
-
-  create(data: {
-    email: string | null;
-    name: string | null;
-    image: string | null;
-    role: Role;
-  }) {
-    return prisma.user.create({ data, select: userSelect });
-  },
-
-  updateProfile(
-    id: string,
-    data: { email?: string | null; name?: string | null; image?: string | null },
-  ) {
-    return prisma.user.update({ where: { id }, data, select: userSelect });
-  },
-
-  setRole(id: string, role: Role) {
-    return prisma.user.update({ where: { id }, data: { role }, select: userSelect });
-  },
-};
-
-__ALGOFORGE_FILE_6093dd6156d75f92__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/routes
-cat > ./.phase4-backup/20261104-182108/apps/api/src/routes/auth.ts <<'__ALGOFORGE_FILE_e0b24b2bfcd43fd0__'
-import { Router } from "express";
-import { authController } from "../controllers/auth.controller";
-import { requireAuth } from "../middleware/auth";
-import { requireCsrf } from "../middleware/csrf";
-
-const router = Router();
-
-router.get("/google/start", authController.startGoogleAuth);
-router.get("/google/callback", authController.handleGoogleCallback);
-router.get("/me", requireAuth, authController.getMe);
-
-// No CSRF token on refresh by design: the refresh cookie is httpOnly, scoped to
-// /api/auth and SameSite=Lax, the endpoint only rotates the caller's own session,
-// and it returns no cross-origin-readable secret. Do not weaken those cookie flags.
-router.post("/refresh", authController.refreshSession);
-
-router.post("/logout", requireCsrf, authController.logout);
-router.post("/logout-all", requireAuth, requireCsrf, authController.logoutAll);
-
-export default router;
-
-__ALGOFORGE_FILE_e0b24b2bfcd43fd0__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src
-cat > ./.phase4-backup/20261104-182108/apps/api/src/server.ts <<'__ALGOFORGE_FILE_05ba20f4acb03e83__'
-import { app } from "./app";
-import { env } from "./config/env";
-import { connectRedis, closeRedis } from "./config/redis";
-
-async function bootstrap(): Promise<void> {
-  // Attempt Redis connection; non-fatal — rate limiting and caching degrade gracefully
-  try {
-    await connectRedis();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[Redis] Startup connection failed: ${message}. Continuing without Redis.`);
-  }
-
-  const server = app.listen(env.port, () => {
-    if (!env.isProduction) {
-      console.log(`[API] Running at ${env.apiBaseUrl}`);
-      console.log(`[API] Health: ${env.apiBaseUrl}/health`);
-    }
-  });
-
-  async function shutdown(signal: string): Promise<void> {
-    if (!env.isProduction) {
-      console.log(`[API] ${signal} — shutting down.`);
-    }
-    server.close(async () => {
-      await closeRedis();
-      process.exit(0);
-    });
-
-    // Force exit if graceful shutdown stalls
-    setTimeout(() => process.exit(1), 10_000).unref();
-  }
-
-  process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
-  process.on("SIGINT",  () => { void shutdown("SIGINT"); });
-  process.on("uncaughtException", (err) => {
-    console.error("[API] Uncaught exception:", err);
-    void shutdown("uncaughtException");
-  });
-  process.on("unhandledRejection", (reason) => {
-    console.error("[API] Unhandled rejection:", reason);
-  });
-}
-
-bootstrap().catch((err) => {
-  console.error("[API] Failed to start:", err);
-  process.exit(1);
-});
-__ALGOFORGE_FILE_05ba20f4acb03e83__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/services
-cat > ./.phase4-backup/20261104-182108/apps/api/src/services/auth.service.ts <<'__ALGOFORGE_FILE_93b6143c362736ab__'
-import { OAuth2Client } from "google-auth-library";
-import { Role } from "@algoforge/db";
-import { prisma } from "@algoforge/db";
-import { env, googleOAuthConfig } from "../config/env";
-import { sessionRepository } from "../repositories/session.repository";
-import { userRepository } from "../repositories/user.repository";
-import { AppError } from "../utils/app-error";
-import { hashToken, randomToken, safeTokenEquals } from "../utils/crypto";
-import {
-  signAccessToken,
-  signRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken,
-} from "../utils/token";
-
-type RequestMetadata = {
-  ipAddress: string | null;
-  userAgent: string | null;
-};
-
-type AuthenticatedUser = {
-  id:       string;
-  email:    string | null;
-  username: string | null;
-  name:     string | null;
-  image:    string | null;
-  role:     Role;
-};
-
-type SessionCookies = {
-  accessToken:  string;
-  refreshToken: string;
-  csrfToken:    string;
-};
-
-type AuthResult = SessionCookies & { user: AuthenticatedUser };
-
-const googleClient = new OAuth2Client(
-  env.googleClientId,
-  env.googleClientSecret,
-  googleOAuthConfig.redirectUri,
-);
-
-class AuthService {
-  buildGoogleAuthorizationUrl(): { url: string; state: string } {
-    const state = randomToken(32);
-    const url = googleClient.generateAuthUrl({
-      access_type:            "offline",
-      scope:                  googleOAuthConfig.scopes,
-      include_granted_scopes: true,
-      state,
-      prompt:                 "select_account",
-    });
-    return { url, state };
-  }
-
-  async authenticateGoogleCallback(
-    code: string,
-    metadata: RequestMetadata,
-  ): Promise<AuthResult> {
-    const { tokens } = await googleClient.getToken(code);
-    const idToken = tokens.id_token;
-    if (!idToken) throw AppError.unauthorized("Google did not return an ID token.");
-
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: env.googleClientId,
-    });
-    const payload = ticket.getPayload();
-    if (!payload?.sub) throw AppError.unauthorized("Google account data is invalid.");
-
-    const user = await this.findOrCreateOAuthUser({
-      provider:          "google",
-      providerAccountId: payload.sub,
-      email:             payload.email_verified ? (payload.email ?? null) : null,
-      name:              payload.name ?? null,
-      image:             payload.picture ?? null,
-    });
-
-    return this.createSessionForUser(user, metadata);
-  }
-
-  async authenticateAccessToken(accessToken: string) {
-    const payload = verifyAccessToken(accessToken);
-
-    const session = await sessionRepository.findActiveById(
-      payload.sessionId,
-      payload.sub,
-    );
-
-    if (!session) throw AppError.unauthorized("Session is invalid.");
-
-    return {
-      user:    session.user,
-      session: { id: session.id, expiresAt: session.expiresAt },
-    };
-  }
-
-  async rotateRefreshToken(
-    refreshToken: string,
-    metadata: RequestMetadata,
-  ): Promise<AuthResult> {
-    const payload       = verifyRefreshToken(refreshToken);
-    const presentedHash = hashToken(refreshToken);
-
-    const session = await sessionRepository.findByIdWithUser(payload.sessionId);
-
-    if (!session || session.userId !== payload.sub) {
-      throw AppError.unauthorized("Refresh session is invalid.");
-    }
-
-    if (!safeTokenEquals(presentedHash, session.tokenHash)) {
-      throw AppError.unauthorized("Refresh token is invalid.");
-    }
-
-    if (session.revokedAt) {
-      await this.revokeAllUserSessions(session.userId);
-      throw AppError.unauthorized("Refresh token reuse detected.");
-    }
-
-    if (session.expiresAt <= new Date()) {
-      await sessionRepository.revokeById(session.id);
-      throw AppError.unauthorized("Refresh token expired.");
-    }
-
-    const nextSessionId    = randomToken(24);
-    const nextRefreshToken = signRefreshToken({ sub: session.user.id, sessionId: nextSessionId });
-
-    const rotated = await sessionRepository.rotate(
-      session.id,
-      session.userId,
-      presentedHash,
-      {
-        id:         nextSessionId,
-        tokenHash:  hashToken(nextRefreshToken),
-        expiresAt:  this.buildRefreshExpiry(),
-        lastUsedAt: new Date(),
-        ipAddress:  metadata.ipAddress,
-        userAgent:  metadata.userAgent,
-      },
-    );
-
-    if (!rotated) {
-      // Distinguish a concurrent legitimate refresh from actual token theft.
-      // If a successor session (rotatedFromId = session.id) already exists,
-      // this was a race between two simultaneous refresh attempts — fail this
-      // request gracefully without nuking all sessions.
-      const successor = await sessionRepository.findRotatedFrom(session.id);
-      if (successor) {
-        throw AppError.unauthorized("Session already refreshed. Please retry.");
-      }
-
-      // No successor found — this looks like genuine token reuse after theft.
-      await this.revokeAllUserSessions(session.userId);
-      throw AppError.unauthorized("Refresh token reuse detected.");
-    }
-
-    const accessToken = signAccessToken({
-      sub:       session.user.id,
-      sessionId: nextSessionId,
-      role:      session.user.role,
-    });
-
-    return {
-      accessToken,
-      refreshToken: nextRefreshToken,
-      csrfToken:    randomToken(24),
-      user:         session.user,
-    };
-  }
-
-  async revokeSessionByRefreshToken(refreshToken: string): Promise<void> {
-    try {
-      const payload = verifyRefreshToken(refreshToken);
-      await sessionRepository.revokeById(payload.sessionId, payload.sub);
-    } catch {
-      return;
-    }
-  }
-
-  async revokeAllUserSessions(userId: string): Promise<void> {
-    await sessionRepository.revokeAllForUser(userId);
-  }
-
-  private async createSessionForUser(
-    user: AuthenticatedUser,
-    metadata: RequestMetadata,
-  ): Promise<AuthResult> {
-    const sessionId    = randomToken(24);
-    const refreshToken = signRefreshToken({ sub: user.id, sessionId });
-
-    await sessionRepository.create({
-      id:         sessionId,
-      userId:     user.id,
-      tokenHash:  hashToken(refreshToken),
-      expiresAt:  this.buildRefreshExpiry(),
-      lastUsedAt: new Date(),
-      ipAddress:  metadata.ipAddress,
-      userAgent:  metadata.userAgent,
-    });
-
-    const accessToken = signAccessToken({
-      sub:       user.id,
-      sessionId,
-      role:      user.role,
-    });
-
-    return { accessToken, refreshToken, csrfToken: randomToken(24), user };
-  }
-
-  private buildRefreshExpiry(): Date {
-    const d = new Date();
-    d.setDate(d.getDate() + env.refreshTokenTtlDays);
-    return d;
-  }
-
-  private async findOrCreateOAuthUser(input: {
-    provider:          string;
-    providerAccountId: string;
-    email:             string | null;
-    name:              string | null;
-    image:             string | null;
-  }): Promise<AuthenticatedUser> {
-    return prisma.$transaction(async (tx) => {
-      const existingAccount = await tx.account.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider:          input.provider,
-            providerAccountId: input.providerAccountId,
-          },
-        },
-        include: {
-          user: {
-            select: {
-              id:       true,
-              email:    true,
-              username: true,
-              name:     true,
-              image:    true,
-              role:     true,
-            },
-          },
-        },
-      });
-
-      if (existingAccount) {
-        return tx.user.update({
-          where: { id: existingAccount.userId },
-          data: {
-            email: input.email ?? existingAccount.user.email,
-            name:  input.name,
-            image: input.image,
-          },
-          select: {
-            id:       true,
-            email:    true,
-            username: true,
-            name:     true,
-            image:    true,
-            role:     true,
-          },
-        });
-      }
-
-      const existingUser =
-        input.email !== null
-          ? await tx.user.findUnique({
-              where: { email: input.email },
-              select: {
-                id:       true,
-                email:    true,
-                username: true,
-                name:     true,
-                image:    true,
-                role:     true,
-              },
-            })
-          : null;
-
-      const user =
-        existingUser ??
-        (await tx.user.create({
-          data: {
-            email: input.email,
-            role:  Role.USER,
-            name:  input.name,
-            image: input.image,
-          },
-          select: {
-            id:       true,
-            email:    true,
-            username: true,
-            name:     true,
-            image:    true,
-            role:     true,
-          },
-        }));
-
-      await tx.account.create({
-        data: {
-          provider:          input.provider,
-          providerAccountId: input.providerAccountId,
-          userId:            user.id,
-        },
-      });
-
-      if (existingUser) {
-        return tx.user.update({
-          where: { id: existingUser.id },
-          data:  { name: input.name, image: input.image },
-          select: {
-            id:       true,
-            email:    true,
-            username: true,
-            name:     true,
-            image:    true,
-            role:     true,
-          },
-        });
-      }
-
-      return user;
-    });
-  }
-}
-
-export const authService = new AuthService();
-__ALGOFORGE_FILE_93b6143c362736ab__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/services
-cat > ./.phase4-backup/20261104-182108/apps/api/src/services/explanation-session.service.ts <<'__ALGOFORGE_FILE_1b3cc3630bea7c44__'
-import { randomBytes } from "crypto";
-import { explanationSessionRepository } from "../repositories/explanation-session.repository";
-import { processQuery } from "../ai/query-processor";
-import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
-import { buildExplanationPrompt } from "../prompts/explanation.prompt";
-import { aiService } from "./ai.service";
-import { AppError } from "../utils/app-error";
-import { env } from "../config/env";
-import type {
-  CreateSessionInput,
-  SendMessageInput,
-  ListSessionsQuery,
-} from "../validation/explanation-session";
-import { layeredCache } from "./lib/layered-cache";
-import { paginate } from "../utils/pagination";
-
-export type SessionMessage = {
-  id:        string;
-  role:      "user" | "assistant";
-  content:   string;
-  intent?:   string;
-  createdAt: string;
-};
-
-type SessionRecord = NonNullable<
-  Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
->;
-
-const SESSION_CACHE_TTL_SECONDS = 300;
-const MAX_STORED_MESSAGES       = 100; // 50 exchanges
-const AI_HISTORY_MESSAGES       = 10;  // last 5 exchanges sent to AI
-
-/** Private session cache entries are scoped to the owner, so one user can never be served another's session. */
-function sessionCacheKey(userId: string, id: string): string {
-  return `explain:session:${userId}:${id}`;
-}
-
-function publicCacheKey(shareId: string): string {
-  return `explain:public:${shareId}`;
-}
-
-function newMessageId(): string {
-  return randomBytes(6).toString("hex");
-}
-
-function newShareId(): string {
-  return randomBytes(9).toString("base64url");
-}
-
-function buildShareUrl(shareId: string): string {
-  return `${env.webAppUrl}/share/explain/${shareId}`;
-}
-
-class ExplanationSessionService {
-  async createSession(userId: string, input: CreateSessionInput) {
-    return explanationSessionRepository.create(userId, input.title);
-  }
-
-  async listSessions(userId: string, query: ListSessionsQuery) {
-    // One extra row proves whether another page exists.
-    const rows = await explanationSessionRepository.findManyByUser(userId, {
-      take:   query.limit + 1,
-      cursor: query.cursor,
-    });
-    return paginate(rows, query.limit, (row) => row.id);
-  }
-
-  async getSession(userId: string, id: string) {
-    const key = sessionCacheKey(userId, id);
-    const cached = await layeredCache.get<SessionRecord>(key);
-
-    // Defense in depth: even under the owner-scoped key, verify ownership.
-    if (cached && cached.userId === userId) return cached;
-
-    const session = await explanationSessionRepository.findOneByUser(id, userId);
-    if (!session) throw AppError.notFound("Session not found.");
-
-    await layeredCache.set(key, session, SESSION_CACHE_TTL_SECONDS);
-    return session;
-  }
-
-  async sendMessage(userId: string, sessionId: string, input: SendMessageInput) {
-    const session = await explanationSessionRepository.findOneByUser(sessionId, userId);
-    if (!session) throw AppError.notFound("Session not found.");
-
-    const existingMessages = (session.messages as unknown as SessionMessage[]) ?? [];
-
-    const userMessage: SessionMessage = {
-      id:        newMessageId(),
-      role:      "user",
-      content:   input.query,
-      createdAt: new Date().toISOString(),
-    };
-
-    const scope       = await processQuery(input.query);
-    const context     = await buildCodebaseContext(scope.targetSlugs);
-    const contextText = serializeContext(context);
-    const prompt      = buildExplanationPrompt(contextText, scope);
-
-    // Include prior conversation history so the AI has multi-turn context.
-    const history = existingMessages
-      .slice(-AI_HISTORY_MESSAGES)
-      .map((m) => ({
-        role:    m.role as "user" | "assistant",
-        content: m.content,
-      }));
-
-    const rawAnswer = await aiService.generateText([
-      ...history,
-      { role: "user", content: prompt },
-    ]);
-
-    const assistantMessage: SessionMessage = {
-      id:        newMessageId(),
-      role:      "assistant",
-      content:   rawAnswer.trim(),
-      intent:    scope.intent,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Cap stored history to MAX_STORED_MESSAGES (drop oldest when over limit)
-    const updatedMessages: SessionMessage[] = [
-      ...existingMessages.slice(-(MAX_STORED_MESSAGES - 2)),
-      userMessage,
-      assistantMessage,
-    ];
-
-    const title = session.title ?? input.query.slice(0, 80);
-    await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
-    await layeredCache.del(sessionCacheKey(userId, sessionId));
-    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
-
-    return { userMessage, assistantMessage };
-  }
-
-  async deleteSession(userId: string, id: string): Promise<void> {
-    const session = await explanationSessionRepository.findOneByUser(id, userId);
-    if (!session) throw AppError.notFound("Session not found.");
-
-    const result = await explanationSessionRepository.delete(id, userId);
-    if (result.count === 0) throw AppError.notFound("Session not found.");
-
-    await layeredCache.del(sessionCacheKey(userId, id));
-    // A deleted public session must stop being readable immediately.
-    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
-  }
-
-  async shareSession(userId: string, id: string) {
-    const session = await explanationSessionRepository.findOneByUser(id, userId);
-    if (!session) throw AppError.notFound("Session not found.");
-
-    if (session.shareId && session.isPublic) {
-      return { shareUrl: buildShareUrl(session.shareId) };
-    }
-
-    const shareId = newShareId();
-    await explanationSessionRepository.share(id, shareId);
-    await layeredCache.del(sessionCacheKey(userId, id));
-
-    return { shareUrl: buildShareUrl(shareId) };
-  }
-
-  async getPublicSession(shareId: string) {
-    const cacheKey = publicCacheKey(shareId);
-
-    const cached = await layeredCache.get<
-      Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>
-    >(cacheKey);
-    if (cached) return cached;
-
-    const session = await explanationSessionRepository.findPublicByShareId(shareId);
-    if (!session) throw AppError.notFound("Session not found or not public.");
-
-    await layeredCache.set(cacheKey, session, SESSION_CACHE_TTL_SECONDS * 2);
-    return session;
-  }
-}
-
-export const explanationSessionService = new ExplanationSessionService();
-
-__ALGOFORGE_FILE_1b3cc3630bea7c44__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/services
-cat > ./.phase4-backup/20261104-182108/apps/api/src/services/user.service.ts <<'__ALGOFORGE_FILE_1d5d8a401c66894a__'
-//# filename: apps/api/src/services/user.service.ts
-
-import { type SafeUser } from "@algoforge/analysis";
-import { userRepository } from "../repositories/user.repository";
-import { verifyAccessToken } from "../utils/token";
-import { sessionRepository } from "../repositories/session.repository";
-
-class UserService {
-  async getUserById(userId: string): Promise<SafeUser | null> {
-    const user = await userRepository.findPublicById(userId);
-    if (!user) return null;
-    return {
-      id: user.id,
-      name: user.name,
-      username: user.username ?? user.name,
-      avatarUrl: user.image,
-    };
-  }
-
-  async getUserByToken(token: string): Promise<SafeUser | null> {
-    try {
-      const payload = verifyAccessToken(token);
-      const session = await sessionRepository.findActiveById(
-        payload.sessionId,
-        payload.sub,
-      );
-      if (!session) return null;
-      return this.getUserById(payload.sub);
-    } catch {
-      return null;
-    }
-  }
-}
-
-export const userService = new UserService();
-__ALGOFORGE_FILE_1d5d8a401c66894a__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/api/src/utils
-cat > ./.phase4-backup/20261104-182108/apps/api/src/utils/cookies.ts <<'__ALGOFORGE_FILE_34a80c00a53deea3__'
-import { Request, Response } from "express";
-import { authCookies, env } from "../config/env";
-
-type AuthCookieValues = {
-  accessToken: string;
-  refreshToken: string;
-  csrfToken: string;
-};
-
-function buildCookieOptions(
-  maxAgeMs: number,
-  httpOnly: boolean,
-  path = "/",
-) {
-  return {
-    httpOnly,
-    secure: env.isProduction,
-    sameSite: "lax" as const,
-    path,
-    maxAge: maxAgeMs,
-    ...(env.cookieDomain ? { domain: env.cookieDomain } : {}),
-  };
-}
-
-export function getCookie(req: Request, name: string): string | null {
-  const header = req.headers.cookie;
-  if (!header) return null;
-
-  const cookies = header.split(";").map((cookie) => cookie.trim());
-  for (const cookie of cookies) {
-    const separatorIndex = cookie.indexOf("=");
-    if (separatorIndex === -1) continue;
-
-    const key = cookie.slice(0, separatorIndex);
-    if (key !== name) continue;
-
-    return decodeURIComponent(cookie.slice(separatorIndex + 1));
-  }
-
-  return null;
-}
-
-export function setAuthCookies(res: Response, values: AuthCookieValues): void {
-  res.cookie(
-    authCookies.accessToken,
-    values.accessToken,
-    buildCookieOptions(env.accessTokenTtlMinutes * 60 * 1000, true),
-  );
-  res.cookie(
-    authCookies.refreshToken,
-    values.refreshToken,
-    buildCookieOptions(
-      env.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
-      true,
-      "/api/auth",
-    ),
-  );
-  res.cookie(
-    authCookies.csrfToken,
-    values.csrfToken,
-    buildCookieOptions(env.refreshTokenTtlDays * 24 * 60 * 60 * 1000, false),
-  );
-}
-
-export function clearAuthCookies(res: Response): void {
-  res.clearCookie(authCookies.accessToken, buildCookieOptions(0, true));
-  res.clearCookie(
-    authCookies.refreshToken,
-    buildCookieOptions(0, true, "/api/auth"),
-  );
-  res.clearCookie(authCookies.csrfToken, buildCookieOptions(0, false));
-}
-
-export function setOAuthStateCookie(res: Response, state: string): void {
-  res.cookie(
-    authCookies.oauthState,
-    state,
-    buildCookieOptions(10 * 60 * 1000, true, "/api/auth/google"),
-  );
-}
-
-export function clearOAuthStateCookie(res: Response): void {
-  res.clearCookie(
-    authCookies.oauthState,
-    buildCookieOptions(0, true, "/api/auth/google"),
-  );
-}
-__ALGOFORGE_FILE_34a80c00a53deea3__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web
-cat > ./.phase4-backup/20261104-182108/apps/web/next.config.ts <<'__ALGOFORGE_FILE_51cf1da0e97b1863__'
-import path from "node:path";
-import type { NextConfig } from "next";
-
-// Placeholder for Phase 4: when API_URL is set, /api/* is proxied to the API (same-origin cookies).
-const apiUrl = process.env.API_URL;
-
-const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve(process.cwd(), "../.."),
-  },
-  // Workspace packages export TypeScript source.
-  transpilePackages: ["@algoforge/analysis", "@algoforge/contracts", "@algoforge/forge"],
-  async rewrites() {
-    return apiUrl ? [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }] : [];
-  },
-};
-
-export default nextConfig;
-
-__ALGOFORGE_FILE_51cf1da0e97b1863__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/app
-cat > ./.phase4-backup/20261104-182108/apps/web/src/app/layout.tsx <<'__ALGOFORGE_FILE_017a386fe1d561fb__'
-import type { Metadata } from "next";
-import "./globals.css";
-import {
-    Alan_Sans,
-    JetBrains_Mono,
-    Playfair_Display,
-    Chango,
-    Inter,
-} from "next/font/google";
-import { cn } from "@/lib/utils";
-import MotionProvider from "@/components/MotionProvider";
-import { QueryProvider } from "@/lib/query/QueryProvider";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-
-const alan = Alan_Sans({
-    subsets: ["latin"],
-    variable: "--font-alan",
-    weight: ["300", "400", "500", "600", "700", "800", "900"],
-});
-
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
-
-const playfair = Playfair_Display({
-    subsets: ["latin"],
-    variable: "--font-playfair",
-});
-
-const chango = Chango({
-    subsets: ["latin"],
-    weight: "400", // Chango only has one weight
-    variable: "--font-chango",
-});
-
-export const metadata: Metadata = {
-    title: "AlgoForge — Visualize Data Structures Step by Step",
-    description:
-        "Write a short script and watch arrays, stacks, queues, linked lists, trees, hash maps and graphs change one operation at a time.",
-    keywords: ["algorithms", "DSA", "data structures", "visualization"],
-    openGraph: {
-        title: "AlgoForge",
-        description: "See your data structures run, one step at a time.",
-        type: "website",
-    },
-    icons: {
-        icon: "/Algoforgelogo.png",
-    },
-};
-
-// All font variables live on <html>, so :root can reference them.
-const fontVars = [inter, alan, mono, playfair, chango].map((f) => f.variable).join(" ");
-
-export default function RootLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    return (
-        <html lang="en" className={cn("dark", "font-sans", fontVars)}>
-            <head>
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link
-                    rel="preconnect"
-                    href="https://fonts.gstatic.com"
-                    crossOrigin="anonymous"
-                />
-            </head>
-            <body className="bg-background text-white antialiased">
-                <MotionProvider>
-                    <QueryProvider>{children}</QueryProvider>
-                </MotionProvider>
-            </body>
-        </html>
-    );
-}
-
-__ALGOFORGE_FILE_017a386fe1d561fb__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/auth
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/auth/GoogleLoginModal.tsx <<'__ALGOFORGE_FILE_bbfe973ee97ef8ee__'
-// PARKED since Phase 3: not mounted anywhere. Before remounting, rebuild the shell on
-// @base-ui/react/dialog like DashBoard/ShareModal.tsx (focus trap, Escape, focus return, aria-modal).
-"use client";
-
-import { useEffect } from "react";
-import { createPortal } from "react-dom";
-import { useIsClient } from "@/hooks/useIsClient";
-import { AnimatePresence, motion, Variants } from "framer-motion";
-import { X } from "lucide-react";
-import { GlassCard } from "@/components/auth/GlassCard";
-import { GoogleButton } from "@/components/auth/GoogleButton";
-import { ModalBackdrop } from "@/components/auth/ModalBackdrop";
-import { useModalAnimations } from "@/components/auth/useModalAnimations";
-import AlgoForgeLogo from "../Logo";
-import Link from "next/link";
-
-const MotionLink = motion.create(Link);
-interface GoogleLoginModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onGoogleLogin?: () => Promise<void>;
-}
-
-const cardVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.88, y: 32, rotateX: 6 },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        y: 0,
-        rotateX: 0,
-        transition: { type: "spring", stiffness: 220, damping: 22, mass: 0.9 },
-    },
-    exit: {
-        opacity: 0,
-        scale: 0.92,
-        y: 20,
-        filter: "blur(8px)",
-        transition: { duration: 0.22, ease: "easeIn" },
-    },
-};
-
-export function GoogleLoginModal({
-    isOpen,
-    onClose,
-    onGoogleLogin,
-}: GoogleLoginModalProps) {
-    const { cardRef, logoRef, contentRef } = useModalAnimations(isOpen);
-    const isClient = useIsClient();
-
-    useEffect(() => {
-        document.body.style.overflow = isOpen ? "hidden" : "";
-        return () => {
-            document.body.style.overflow = "";
-        };
-    }, [isOpen]);
-
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [onClose]);
-
-    const handleLogin = async () => {
-        await onGoogleLogin?.();
-        onClose();
-    };
-
-    if (!isClient) return null; // all hooks are above this line
-
-    return createPortal(
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <ModalBackdrop onClose={onClose} />
-
-                    <div
-                        className="fixed inset-0 z-9999 flex items-center justify-center p-4 backdrop-blur-2xl sm:p-6"
-                        onMouseDown={(e) => {
-                            if (e.target === e.currentTarget) onClose(); // this layer now covers the backdrop
-                        }}
-                    >
-                        <motion.div
-                            className="relative w-full max-w-97.5"
-                            style={{ perspective: "1200px" }}
-                            variants={cardVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                        >
-                            <GlassCard
-                                ref={cardRef}
-                                className="px-8 py-8 sm:px-9 sm:py-9"
-                            >
-                                {/* ── Close button — subtle slide + fade, no spin ── */}
-                                <motion.button
-                                    className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-md text-white/60"
-                                    onClick={onClose}
-                                    initial={false}
-                                    whileHover={{
-                                        color: "rgba(255,255,255,0.75)",
-                                        backgroundColor:
-                                            "rgba(255,255,255,0.06)",
-                                        borderColor: "rgba(255,255,255,0.12)",
-                                    }}
-                                    whileTap={{ scale: 0.92 }}
-                                    style={{
-                                        border: "1px solid rgba(255,255,255,0.05)",
-                                        transition:
-                                            "background 0.2s, color 0.2s, border-color 0.2s",
-                                    }}
-                                >
-                                    <motion.span
-                                        whileHover={{ x: 0.5, y: -0.5 }}
-                                        transition={{
-                                            type: "spring",
-                                            stiffness: 500,
-                                            damping: 18,
-                                        }}
-                                    >
-                                        <X
-                                            className="h-3.5 w-3.5"
-                                            strokeWidth={2}
-                                        />
-                                    </motion.span>
-                                </motion.button>
-
-                                {/* ── Logo / brand ── */}
-                                <div
-                                    ref={logoRef}
-                                    className="mb-8 flex flex-col items-center"
-                                >
-                                    <div className="relative mb-4">
-                                        {/* Orange pulse rings */}
-                                        {[0, 0.55].map((delay, i) => (
-                                            <motion.div
-                                                key={i}
-                                                className="absolute inset-0 rounded-2xl"
-                                                style={{
-                                                    border: "1px solid rgba(255,77,0,0.3)",
-                                                }}
-                                                animate={{
-                                                    scale: [1, 1.55],
-                                                    opacity: [0.4, 0],
-                                                }}
-                                                transition={{
-                                                    duration: 2,
-                                                    repeat: Infinity,
-                                                    delay,
-                                                    ease: "easeOut",
-                                                }}
-                                            />
-                                        ))}
-
-                                        <div
-                                            className="relative flex h-14 w-14 items-center p-2 justify-center rounded-2xl"
-                                            style={{
-                                                background:
-                                                    "linear-gradient(135deg, rgba(255,77,0,0.18) 0%, rgba(255,255,255,0.05) 100%)",
-                                                border: "1px solid rgba(255,77,0,0.25)",
-                                                boxShadow:
-                                                    "inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 32px rgba(255,77,0,0.12)",
-                                            }}
-                                        >
-                                            <AlgoForgeLogo />
-                                        </div>
-                                    </div>
-
-                                    <h1 className="font-display text-xl font-semibold tracking-tight text-white">
-                                        Welcome back
-                                    </h1>
-                                    <p
-                                        className="mt-1 text-center text-sm"
-                                        style={{
-                                            color: "rgba(255,255,255,0.38)",
-                                        }}
-                                    >
-                                        Sign in to continue to your workspace
-                                    </p>
-                                </div>
-
-                                {/* ── Content ── */}
-                                <div ref={contentRef} className="space-y-4">
-                                    <GoogleButton onLogin={handleLogin} />
-                                </div>
-
-                                {/* Footer */}
-                                <p
-                                    className="mt-5 text-center text-[11px] leading-relaxed font-body"
-                                    style={{ color: "rgba(255,255,255,0.18)" }}
-                                >
-                                    By continuing, you agree to our{" "}
-                                    <MotionLink
-                                        href="/terms"
-                                        className="underline-offset-2 hover:underline"
-                                        style={{
-                                            color: "rgba(255,255,255,0.38)",
-                                        }}
-                                        whileHover={{
-                                            color: "rgba(255,255,255,0.6)",
-                                        }}
-                                    >
-                                        Terms
-                                    </MotionLink>{" "}
-                                    and{" "}
-                                    <MotionLink
-                                        href="/privacy"
-                                        className="underline-offset-2 hover:underline"
-                                        style={{
-                                            color: "rgba(255,255,255,0.38)",
-                                        }}
-                                        whileHover={{
-                                            color: "rgba(255,255,255,0.6)",
-                                        }}
-                                    >
-                                        Privacy Policy
-                                    </MotionLink>
-                                </p>
-                            </GlassCard>
-                        </motion.div>
-                    </div>
-                </>
-            )}
-        </AnimatePresence>,
-        document.body,
-    );
-}
-
-__ALGOFORGE_FILE_bbfe973ee97ef8ee__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/auth
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/auth/ModalBackdrop.tsx <<'__ALGOFORGE_FILE_185ffd9caf5f8131__'
-"use client";
-
-import { motion } from "framer-motion";
-
-interface ModalBackdropProps {
-  onClose: () => void;
-}
-
-export function ModalBackdrop({ onClose }: ModalBackdropProps) {
-  return (
-    <motion.div
-      className="fixed inset-0 z-40 cursor-pointer"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      onClick={onClose}
-      style={{
-        background:
-          "radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.95) 100%)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}
-    >
-      {/* Scan-line effect */}
-      <div className="animate-scan-line pointer-events-none absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
-    </motion.div>
-  );
-}
-__ALGOFORGE_FILE_185ffd9caf5f8131__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/auth
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/auth/useModalAnimations.ts <<'__ALGOFORGE_FILE_f3ef52301c915ff8__'
-import { useEffect, useRef } from "react";
-import { gsap } from "gsap";
-
-export function useModalAnimations(isOpen: boolean) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const logoRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const dividerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen || !cardRef.current) return;
-
-    const ctx = gsap.context(() => {
-      // Staggered entrance
-      gsap.fromTo(
-        logoRef.current,
-        { y: -20, opacity: 0, scale: 0.8, rotateY: -15 },
-        {
-          y: 0, opacity: 1, scale: 1, rotateY: 0,
-          duration: 0.7, ease: "back.out(1.7)", delay: 0.15,
-        }
-      );
-
-      gsap.fromTo(
-        contentRef.current?.children ?? [],
-        { y: 24, opacity: 0, filter: "blur(8px)" },
-        {
-          y: 0, opacity: 1, filter: "blur(0px)",
-          duration: 0.55, ease: "power3.out",
-          stagger: 0.08, delay: 0.3,
-        }
-      );
-
-      gsap.fromTo(
-        dividerRef.current,
-        { scaleX: 0, opacity: 0 },
-        {
-          scaleX: 1, opacity: 1,
-          duration: 0.6, ease: "power2.out", delay: 0.5,
-        }
-      );
-
-      // Continuous idle: logo bob
-      gsap.to(logoRef.current, {
-        y: -4, duration: 3, ease: "sine.inOut",
-        repeat: -1, yoyo: true, delay: 1,
-      });
-    }, cardRef);
-
-    return () => ctx.revert();
-  }, [isOpen]);
-
-  return { cardRef, logoRef, contentRef, dividerRef };
-}
-__ALGOFORGE_FILE_f3ef52301c915ff8__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/AiChatDrawer.tsx <<'__ALGOFORGE_FILE_d49d4f976edefe9f__'
-"use client";
-
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, Maximize2, Minimize2, Sparkles, X } from "lucide-react";
-import {
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-    type KeyboardEvent,
-    type PointerEvent as ReactPointerEvent,
-} from "react";
-import { LoaderOne } from "../ui/loader";
-import { MOCK_DATA_ENABLED } from "@/lib/featureFlags";
-
-// ─── Config ──────────────────────────────────────────────────────────────────
-
-const MIN_WIDTH = 320;
-const DEFAULT_WIDTH = 400;
-const WIDE_WIDTH = 640;
-const MAX_RATIO = 0.8;
-const STORAGE_KEY = "algoforge:ai-drawer-width";
-const PREVIEW_GREETING =
-    "This is a preview. The assistant is not connected yet, so replies are fixed samples and do not look at your code.";
-const UNAVAILABLE_TEXT = "The AI assistant isn't available yet.";
-
-const SUGGESTIONS = [
-    "Explain my graph",
-    "Suggest optimizations",
-    "Generate BFS code",
-];
-
-type Role = "ai" | "user";
-interface Message {
-    id: number;
-    role: Role;
-    text: string;
-}
-
-const clamp = (w: number) => {
-    const max =
-        typeof window === "undefined"
-            ? WIDE_WIDTH
-            : Math.max(MIN_WIDTH, window.innerWidth * MAX_RATIO);
-    return Math.min(Math.max(w, MIN_WIDTH), max);
-};
-
-// ─── Small pieces ────────────────────────────────────────────────────────────
-
-function AiAvatar({ size = 24 }: { size?: number }) {
-    return (
-        <div
-            style={{ width: size, height: size }}
-            className="flex shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-accent to-accent/20 text-primary-foreground shadow-[0_0_14px_-2px] shadow-accent/40"
-        >
-            <Sparkles size={size * 0.5} />
-        </div>
-    );
-}
-
-function IconButton({
-    onClick,
-    label,
-    children,
-}: {
-    onClick: () => void;
-    label: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            aria-label={label}
-            title={label}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-primary-foreground/60 transition hover:bg-primary-foreground/8 hover:text-primary-foreground/80"
-        >
-            {children}
-        </button>
-    );
-}
-
-// ─── Drawer ──────────────────────────────────────────────────────────────────
-
-function AIChatDrawer({
-    open,
-    onClose,
-}: {
-    open: boolean;
-    onClose: VoidFunction;
-}) {
-    const available = MOCK_DATA_ENABLED;
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: 0,
-            role: "ai",
-            text: available ? PREVIEW_GREETING : UNAVAILABLE_TEXT,
-        },
-    ]);
-    const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [width, setWidth] = useState(DEFAULT_WIDTH);
-    const [dragging, setDragging] = useState(false);
-
-    const bottomRef = useRef<HTMLDivElement | null>(null);
-    const asideRef = useRef<HTMLElement | null>(null);
-    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-    const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const nextId = useRef(1);
-
-    // restore saved width
-    useEffect(() => {
-        let frame = 0;
-
-        try {
-            const saved = Number(localStorage.getItem(STORAGE_KEY));
-
-            if (saved) {
-                frame = requestAnimationFrame(() => {
-                    setWidth(clamp(saved));
-                });
-            }
-        } catch {
-            // Storage unavailable.
-        }
-
-        return () => {
-            if (frame) cancelAnimationFrame(frame);
-        };
-    }, []);
-
-    // keep width valid when the window shrinks
-    useEffect(() => {
-        const onResize = () => setWidth((w) => clamp(w));
-        window.addEventListener("resize", onResize);
-        return () => window.removeEventListener("resize", onResize);
-    }, []);
-
-    // Non-modal panel: move focus in when it opens, hand it back to the opener when it closes.
-    useEffect(() => {
-        if (!open) return;
-        const opener = document.activeElement as HTMLElement | null;
-        const id = requestAnimationFrame(() => {
-            const el = asideRef.current;
-            (
-                el?.querySelector<HTMLElement>("textarea:not(:disabled)") ??
-                el?.querySelector<HTMLElement>("button")
-            )?.focus();
-        });
-        return () => {
-            cancelAnimationFrame(id);
-            opener?.focus?.();
-        };
-    }, [open]);
-
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, loading]);
-
-    useEffect(
-        () => () => {
-            if (replyTimer.current) clearTimeout(replyTimer.current);
-        },
-        [],
-    );
-
-    const persist = useCallback((w: number) => {
-        try {
-            localStorage.setItem(STORAGE_KEY, String(Math.round(w)));
-        } catch {
-            /* ignore */
-        }
-    }, []);
-
-    // ── resize handlers ──
-    const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        setDragging(true);
-    };
-    const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-        if (!dragging) return;
-        setWidth(clamp(window.innerWidth - e.clientX));
-    };
-    const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-        if (!dragging) return;
-
-        e.currentTarget.releasePointerCapture(e.pointerId);
-
-        const next = clamp(window.innerWidth - e.clientX);
-        setWidth(next);
-        setDragging(false);
-        persist(next);
-    };
-
-    const cancelDrag = () => {
-        setDragging(false);
-    };
-    const onHandleKey = (e: KeyboardEvent<HTMLDivElement>) => {
-        const step = e.shiftKey ? 80 : 20;
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-            e.preventDefault();
-            const next = clamp(width + (e.key === "ArrowLeft" ? step : -step));
-            setWidth(next);
-            persist(next);
-        }
-    };
-    const resetWidth = () => {
-        const next = clamp(DEFAULT_WIDTH);
-        setWidth(next);
-        persist(next);
-    };
-    const toggleWide = () => {
-        const next = clamp(
-            width >= WIDE_WIDTH - 8 ? DEFAULT_WIDTH : WIDE_WIDTH,
-        );
-        setWidth(next);
-        persist(next);
-    };
-    const isWide = width >= WIDE_WIDTH - 8;
-
-    // ── chat ──
-    const resizeTextarea = () => {
-        const el = textareaRef.current;
-        if (!el) return;
-        el.style.height = "auto";
-        el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-    };
-
-    const send = (override?: string) => {
-        const text = (override ?? input).trim();
-        if (!available || !text || loading) return;
-
-        setInput("");
-        requestAnimationFrame(resizeTextarea);
-        setLoading(true);
-        setMessages((m) => [
-            ...m,
-            { id: nextId.current++, role: "user", text },
-        ]);
-
-        // fake AI delay (replace with API later)
-        replyTimer.current = setTimeout(() => {
-            setMessages((m) => [
-                ...m,
-                {
-                    id: nextId.current++,
-                    role: "ai",
-                    text: "Sample reply: this is placeholder text, not an analysis of your graph.",
-                },
-            ]);
-            setLoading(false);
-        }, 700);
-    };
-
-    const onInputKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-            e.preventDefault();
-            send();
-        }
-    };
-
-    const canSend = available && input.trim().length > 0 && !loading;
-
-    return (
-        <AnimatePresence>
-            {open && (
-                <motion.aside
-                    ref={asideRef}
-                    aria-label="AI assistant"
-                    onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                            e.stopPropagation();
-                            onClose();
-                        }
-                    }}
-                    initial={{ x: "100%", opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: "100%", opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 30 }}
-                    style={{ width }}
-                    className={`fixed right-0 top-0 z-30 flex h-screen max-w-full flex-col border-l border-primary-foreground/8! bg-primary-background shadow-2xl ${
-                        dragging ? "select-none" : ""
-                    }`}
-                >
-                    {/* Resize handle */}
-                    <div
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Resize chat drawer"
-                        aria-valuenow={Math.round(width)}
-                        aria-valuemin={MIN_WIDTH}
-                        tabIndex={0}
-                        onPointerDown={onPointerDown}
-                        onPointerMove={onPointerMove}
-                        onPointerUp={endDrag}
-                        onPointerCancel={cancelDrag}
-                        onDoubleClick={resetWidth}
-                        onKeyDown={onHandleKey}
-                        className="group absolute -left-1.5 top-0 z-40 flex h-full w-3 cursor-col-resize touch-none items-center justify-center outline-none"
-                    >
-                        <span
-                            className={`h-full w-px transition-colors ${
-                                dragging
-                                    ? "bg-accent"
-                                    : "bg-transparent group-hover:bg-accent/60 group-focus-visible:bg-accent"
-                            }`}
-                        />
-                        <span
-                            className={`absolute top-1/2 h-10 w-1 -translate-y-1/2 rounded-full transition-all ${
-                                dragging
-                                    ? "bg-accent"
-                                    : "bg-primary-foreground/15 group-hover:bg-accent/70"
-                            }`}
-                        />
-                    </div>
-
-                    {/* Ambient glow */}
-                    <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-b from-accent/8 to-transparent"
-                    />
-
-                    {/* Header */}
-                    <header className="relative flex items-center justify-between border-b border-primary-foreground/6! px-4 py-3 backdrop-blur-xl">
-                        <div className="flex items-center gap-3">
-                            <AiAvatar size={30} />
-                            <div className="flex flex-col leading-tight">
-                                <span className="text-[13px] font-semibold text-primary-foreground/90">
-                                    AlgoForge AI
-                                </span>
-                                <span className="flex items-center gap-1.5 text-[11px] text-primary-foreground/60">
-                                    <span
-                                        className={
-                                            "h-1.5 w-1.5 rounded-full " +
-                                            (available
-                                                ? "bg-amber-400"
-                                                : "bg-primary-foreground/30")
-                                        }
-                                    />
-                                    {available ? "Preview" : "Unavailable"}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                            <IconButton
-                                onClick={toggleWide}
-                                label={isWide ? "Shrink" : "Expand"}
-                            >
-                                {isWide ? (
-                                    <Minimize2 size={13} />
-                                ) : (
-                                    <Maximize2 size={13} />
-                                )}
-                            </IconButton>
-                            <IconButton onClick={onClose} label="Close">
-                                <X size={14} />
-                            </IconButton>
-                        </div>
-                    </header>
-
-                    {/* Messages */}
-                    <div
-                        role="log"
-                        aria-live="polite"
-                        aria-relevant="additions"
-                        aria-label="Conversation"
-                        tabIndex={0}
-                        className="scrollbar-thin relative min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
-                    >
-                        {messages.map((m) => {
-                            const isUser = m.role === "user";
-                            return (
-                                <motion.div
-                                    key={m.id}
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.22 }}
-                                    className={`flex items-end gap-2 ${
-                                        isUser ? "justify-end" : "justify-start"
-                                    }`}
-                                >
-                                    {!isUser && <AiAvatar />}
-                                    <div
-                                        className={`max-w-[85%] whitespace-pre-wrap wrap-break-word rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                                            isUser
-                                                ? "rounded-br-md bg-linear-to-br from-accent/90 to-accent/60 text-black shadow-lg shadow-accent/10"
-                                                : "rounded-bl-md border border-primary-foreground/8! bg-primary-foreground/4 text-primary-foreground/80"
-                                        }`}
-                                    >
-                                        <span className="sr-only">
-                                            {isUser ? "You: " : "Assistant: "}
-                                        </span>
-                                        {m.text}
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-
-                        {/* Suggestions on a fresh chat */}
-                        {available && messages.length === 1 && !loading && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.25 }}
-                                className="flex flex-wrap gap-2 pl-8"
-                            >
-                                {SUGGESTIONS.map((s) => (
-                                    <button
-                                        key={s}
-                                        onClick={() => send(s)}
-                                        className="cursor-pointer rounded-full border border-primary-foreground/10! bg-primary-foreground/3 px-3 py-1.5 text-[11px] text-primary-foreground/60 transition hover:border-accent/40! hover:bg-accent/10 hover:text-primary-foreground/90"
-                                    >
-                                        {s}
-                                    </button>
-                                ))}
-                            </motion.div>
-                        )}
-
-                        {/* Typing indicator */}
-                        {loading && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex items-end gap-2"
-                            >
-                                <AiAvatar />
-                                <div className="flex h-9 items-center rounded-2xl rounded-bl-md border border-primary-foreground/8! bg-primary-foreground/4 px-3.5 text-primary-foreground/60">
-                                    <LoaderOne size={5} />
-                                </div>
-                            </motion.div>
-                        )}
-                        <div ref={bottomRef} />
-                    </div>
-
-                    {/* Composer */}
-                    <div className="relative px-3 pb-3 pt-2">
-                        <div className="flex items-end gap-2 rounded-2xl border border-primary-foreground/10! bg-primary-foreground/3 p-2 pl-3.5 transition focus-within:border-accent/50! focus-within:bg-primary-foreground/5 focus-within:shadow-[0_0_0_3px] focus-within:shadow-accent/10">
-                            <textarea
-                                aria-label="Message to the assistant"
-                                ref={textareaRef}
-                                rows={1}
-                                value={input}
-                                onChange={(e) => {
-                                    setInput(e.target.value);
-                                    resizeTextarea();
-                                }}
-                                onKeyDown={onInputKey}
-                                placeholder={
-                                    available
-                                        ? "Ask about your algorithm…"
-                                        : "Not available yet"
-                                }
-                                disabled={!available}
-                                className="scrollbar-thin max-h-30 flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-snug text-primary-foreground/80 outline-none placeholder:text-primary-foreground/60"
-                            />
-                            <motion.button
-                                onClick={() => send()}
-                                whileTap={canSend ? { scale: 0.9 } : undefined}
-                                disabled={!canSend}
-                                aria-label="Send message"
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition ${
-                                    canSend
-                                        ? "cursor-pointer bg-accent text-black shadow-lg shadow-accent/30 hover:brightness-110"
-                                        : "cursor-not-allowed bg-primary-foreground/6 text-primary-foreground/60"
-                                }`}
-                            >
-                                <ArrowUp size={15} strokeWidth={2.25} />
-                            </motion.button>
-                        </div>
-                        <p className="mt-1.5 text-center text-[11px] text-primary-foreground/60">
-                            {available
-                                ? "Enter to send · Shift + Enter for a new line"
-                                : "Chat is turned off in this build"}
-                        </p>
-                    </div>
-                </motion.aside>
-            )}
-        </AnimatePresence>
-    );
-}
-
-export default AIChatDrawer;
-
-__ALGOFORGE_FILE_d49d4f976edefe9f__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/Analysis.tsx <<'__ALGOFORGE_FILE_31ee051d12596c88__'
-"use client";
-
-import { growthFor } from "@/lib/complexity";
-import { wait } from "@/lib/async";
-import { MOCK_DATA_ENABLED } from "@/lib/featureFlags";
-import { SampleChip } from "@/components/ui/SampleChip";
-import type {
-    AnalysisLanguage,
-    AnalysisReport,
-    AnalysisResult,
-    Bottleneck,
-    Breakdown,
-    Comparison,
-    ComplexityResult,
-    Improvement,
-} from "@algoforge/contracts";
-
-import {
-    ArrowRight,
-    ArrowUpRight,
-    Brain,
-    Check,
-    ChevronRight,
-    Code2,
-    Copy,
-    RotateCcw,
-    Search,
-    ShieldCheck,
-    Zap,
-} from "lucide-react";
-import {
-    ReactNode,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
-import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from "recharts";
-import {
-    AnimatePresence,
-    animate,
-    motion,
-    MotionConfig,
-    useMotionValue,
-    useScroll,
-    useTransform,
-    Variants,
-} from "framer-motion";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-// Analysis types come from the shared contracts package; none are declared here.
-export type { AnalysisResult, Bottleneck, Breakdown, Comparison, ComplexityResult, Improvement };
-export type Language = AnalysisLanguage;
-export type Analysis = AnalysisReport;
-type State = "idle" | "analyzing" | "completed";
-
-export type SeriesKey = "best" | "avg" | "worst" | "space";
-export interface ChartPoint {
-    n: number;
-    best: number | null;
-    avg: number | null;
-    worst: number | null;
-    space: number | null;
-}
-export interface ChartModel {
-    points: ChartPoint[];
-    /** Series whose complexity string we could not map to a known growth class. */
-    unsupported: { series: SeriesKey; value: string }[];
-}
-
-// ─── generateChartData ───────────────────────────────────────────────────────
-
-export function generateChartData(complexity: ComplexityResult): ChartModel {
-    const requested: [SeriesKey, string][] = [
-        ["best", complexity.time.best],
-        ["avg", complexity.time.average],
-        ["worst", complexity.time.worst],
-        ["space", complexity.space],
-    ];
-    const fns = {} as Record<SeriesKey, ReturnType<typeof growthFor>>;
-    const unsupported: ChartModel["unsupported"] = [];
-    for (const [series, value] of requested) {
-        fns[series] = growthFor(value);
-        if (!fns[series]) unsupported.push({ series, value });
-    }
-    const y = (k: SeriesKey, n: number) =>
-        fns[k] ? parseFloat(fns[k]!(n).toFixed(2)) : null;
-    const points: ChartPoint[] = [];
-    for (let n = 0; n <= 100; n += 5)
-        points.push({
-            n,
-            best: y("best", n),
-            avg: y("avg", n),
-            worst: y("worst", n),
-            space: y("space", n),
-        });
-    return { points, unsupported };
-}
-
-// ─── Mock data (updated shape) ────────────────────────────────────────────────
-
-export const codeAnalysis: Record<Language, Analysis> = {
-    python: {
-        language: "python",
-        result: {
-            summary:
-                "Iterative binary search on a sorted array. Correctly halves the search space each iteration with O(log n) time and O(1) space.",
-            complexity: {
-                time: { best: "O(1)", average: "O(log n)", worst: "O(log n)" },
-                space: "O(1)",
-            },
-            breakdown: {
-                approach:
-                    "Divide and conquer — maintain lo/hi pointers and check midpoint each iteration.",
-                steps: [
-                    "Initialise lo = 0, hi = len(arr) - 1",
-                    "While lo ≤ hi compute mid = (lo + hi) // 2",
-                    "Return mid if arr[mid] == target",
-                    "Narrow window: hi = mid-1 or lo = mid+1",
-                    "Return -1 when window collapses",
-                ],
-            },
-            bottlenecks: [
-                {
-                    issue: "No pre-sort guard",
-                    impact: "Silently returns wrong index on unsorted input",
-                    location: "function entry",
-                },
-                {
-                    issue: "Integer overflow risk",
-                    impact: "Rare in Python due to arbitrary-precision ints, but a concern in other runtimes",
-                    location: "mid = (lo + hi) // 2",
-                },
-            ],
-            antiPatterns: [
-                "Missing input validation (non-list, non-comparable elements)",
-                "No handling for duplicate values — returns arbitrary match",
-            ],
-            improvements: [
-                {
-                    suggestion: "Assert or raise if array is not sorted",
-                    expectedImpact: "Prevents silent incorrect results",
-                },
-                {
-                    suggestion: "Use mid = lo + (hi - lo) // 2",
-                    expectedImpact:
-                        "Portable overflow-safe midpoint calculation",
-                },
-                {
-                    suggestion:
-                        "Return all matching indices for duplicate values",
-                    expectedImpact: "Makes the API correct for multisets",
-                },
-            ],
-            optimizedCode: `def binary_search(arr: list[int], target: int) -> int:
-    if not arr:
-        return -1
-    lo, hi = 0, len(arr) - 1
-    while lo <= hi:
-        mid = lo + (hi - lo) // 2
-        if arr[mid] == target:
-            return mid
-        elif arr[mid] < target:
-            lo = mid + 1
-        else:
-            hi = mid - 1
-    return -1`,
-            comparison: {
-                originalVsOptimized:
-                    "Original used (lo+hi)//2 and lacked input validation; optimised version adds empty-array guard and overflow-safe midpoint.",
-                improvementSummary:
-                    "Correctness improved for edge inputs; algorithmic complexity unchanged at O(log n).",
-            },
-            edgeCases: [
-                "Empty array",
-                "Target missing",
-                "Single element",
-                "Duplicate values",
-                "Target at boundaries",
-            ],
-            readabilityScore: 82,
-            tags: [
-                "binary-search",
-                "divide-and-conquer",
-                "sorted-array",
-                "iterative",
-            ],
-        },
-    },
-    javascript: {
-        language: "javascript",
-        result: {
-            summary:
-                "Recursive binary search implementation. Functionally correct but risks call-stack overflow on very large arrays.",
-            complexity: {
-                time: { best: "O(1)", average: "O(log n)", worst: "O(log n)" },
-                space: "O(log n)",
-            },
-            breakdown: {
-                approach:
-                    "Recursive divide-and-conquer splitting the array by midpoint each call.",
-                steps: [
-                    "Base case: return -1 if lo > hi",
-                    "Compute mid = Math.floor((lo + hi) / 2)",
-                    "Return mid on match",
-                    "Recurse on left half if target < arr[mid]",
-                    "Recurse on right half otherwise",
-                ],
-            },
-            bottlenecks: [
-                {
-                    issue: "Recursive call stack",
-                    impact: "O(log n) stack frames — stack overflow possible for very large arrays in some engines",
-                    location: "recursive call sites",
-                },
-                {
-                    issue: "No type checking",
-                    impact: "Sparse arrays or non-numeric elements produce NaN comparisons",
-                    location: "comparison expression",
-                },
-            ],
-            antiPatterns: [
-                "Recursion where a simple while loop suffices",
-                "No guard against non-array or empty input",
-                "Assumes numeric elements without assertion",
-            ],
-            improvements: [
-                {
-                    suggestion: "Convert to iterative with a while loop",
-                    expectedImpact:
-                        "Eliminates O(log n) stack overhead entirely",
-                },
-                {
-                    suggestion: "Add Array.isArray and length guard at entry",
-                    expectedImpact: "Prevents TypeError on invalid inputs",
-                },
-                {
-                    suggestion: "Validate element types before comparison",
-                    expectedImpact:
-                        "Avoids silent NaN comparisons on non-numeric arrays",
-                },
-            ],
-            optimizedCode: `function binarySearch(arr, target) {
-  if (!Array.isArray(arr) || arr.length === 0) return -1;
-  let lo = 0, hi = arr.length - 1;
-  while (lo <= hi) {
-    const mid = lo + ((hi - lo) >> 1);
-    if (arr[mid] === target) return mid;
-    if (arr[mid] < target) lo = mid + 1;
-    else hi = mid - 1;
-  }
-  return -1;
-}`,
-            comparison: {
-                originalVsOptimized:
-                    "Original: recursive, no guards. Optimised: iterative while loop, input validation, bitwise midpoint.",
-                improvementSummary:
-                    "Space complexity reduced from O(log n) to O(1); correctness improved for edge inputs.",
-            },
-            edgeCases: [
-                "Empty array",
-                "Duplicate values",
-                "Target missing",
-                "Non-integer indices",
-                "Sparse arrays",
-            ],
-            readabilityScore: 74,
-            tags: ["binary-search", "recursive", "sorted-array", "javascript"],
-        },
-    },
-};
-
-const ANALYSIS_STEPS = [
-    { label: "Initializing deep scan", icon: Search },
-    { label: "Mapping structural patterns", icon: Code2 },
-    { label: "Computing complexity bounds", icon: Brain },
-    { label: "Verifying edge coverage", icon: ShieldCheck },
-];
-
-const SECTIONS = [
-    { id: "overview", label: "Overview" },
-    { id: "growth", label: "Growth" },
-    { id: "breakdown", label: "Breakdown" },
-    { id: "risks", label: "Risks" },
-    { id: "fixes", label: "Fixes" },
-    { id: "code", label: "Code" },
-];
-
-// ─── Motion ──────────────────────────────────────────────────────────────────
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-
-const stagger: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
-};
-
-const fadeUp: Variants = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
-};
-
-const rowIn: Variants = {
-    hidden: { opacity: 0, y: 6 },
-    show: (i: number = 0) => ({
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.35, delay: 0.05 + i * 0.045, ease: EASE },
-    }),
-};
-
-// ─── Tokens ──────────────────────────────────────────────────────────────────
-
-const SERIES_COLOR: Record<SeriesKey, string> = {
-    best: "#4ade80",
-    avg: "#60a5fa",
-    worst: "#f87171",
-    space: "#a78bfa",
-};
-
-// ─── Primitives ──────────────────────────────────────────────────────────────
-
-function Eyebrow({ children }: { children: ReactNode }) {
-    return (
-        <span className="select-none font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500">
-            {children}
-        </span>
-    );
-}
-
-function Kbd({ children }: { children: ReactNode }) {
-    return (
-        <kbd className="rounded border border-white/10 bg-white/4 px-1.5 py-px font-mono text-[10px] leading-4 text-zinc-400">
-            {children}
-        </kbd>
-    );
-}
-
-function Section({
-    id,
-    index,
-    title,
-    aside,
-    children,
-}: {
-    id: string;
-    index: string;
-    title: string;
-    aside?: ReactNode;
-    children: ReactNode;
-}) {
-    return (
-        <motion.section
-            id={id}
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-            transition={{ duration: 0.5, ease: EASE }}
-            className="scroll-mt-20 border-t border-white/8 py-10 first:border-t-0 first:pt-0"
-        >
-            <header className="flex items-center justify-between gap-4">
-                <div className="flex items-baseline gap-3">
-                    <span className="font-mono text-[11px] text-zinc-500 tabular-nums">
-                        {index}
-                    </span>
-                    <h3 className="text-sm font-medium tracking-tight text-zinc-100">
-                        {title}
-                    </h3>
-                </div>
-                {aside}
-            </header>
-            <div className="mt-6">{children}</div>
-        </motion.section>
-    );
-}
-
-function CountUp({ value, className }: { value: number; className?: string }) {
-    const mv = useMotionValue(0);
-    const text = useTransform(mv, (v) => Math.round(v).toString());
-    useEffect(() => {
-        const c = animate(mv, value, { duration: 1.1, ease: EASE });
-        return () => c.stop();
-    }, [value, mv]);
-    return <motion.span className={className}>{text}</motion.span>;
-}
-
-// ─── Readability meter ───────────────────────────────────────────────────────
-
-function gradeFor(score: number) {
-    if (score >= 85) return { label: "Excellent", color: "#4ade80" };
-    if (score >= 70) return { label: "Good", color: "#a3e635" };
-    if (score >= 50) return { label: "Fair", color: "#fbbf24" };
-    return { label: "Needs work", color: "#f87171" };
-}
-
-function ReadabilityMeter({ score }: { score: number }) {
-    const SEG = 25;
-    const filled = Math.round((score / 100) * SEG);
-    const grade = gradeFor(score);
-
-    return (
-        <div className="flex flex-col gap-4">
-            <div className="flex items-end justify-between">
-                <div className="flex items-baseline gap-1">
-                    <CountUp
-                        value={score}
-                        className="text-5xl font-semibold tracking-tight text-zinc-50 tabular-nums"
-                    />
-                    <span className="font-mono text-xs text-zinc-500">/100</span>
-                </div>
-                <span
-                    className="font-mono text-[11px] uppercase tracking-[0.12em]"
-                    style={{ color: grade.color }}
-                >
-                    {grade.label}
-                </span>
-            </div>
-
-            <div className="flex h-8 items-end gap-0.75">
-                {Array.from({ length: SEG }, (_, i) => {
-                    const on = i < filled;
-                    return (
-                        <motion.span
-                            key={i}
-                            initial={{ scaleY: 0.35, opacity: 0.5 }}
-                            animate={{ scaleY: 1, opacity: 1 }}
-                            transition={{
-                                duration: 0.4,
-                                delay: 0.25 + i * 0.022,
-                                ease: EASE,
-                            }}
-                            className="h-full flex-1 origin-bottom rounded-[1px]"
-                            style={{
-                                backgroundColor: on
-                                    ? grade.color
-                                    : "rgba(255,255,255,0.08)",
-                            }}
-                        />
-                    );
-                })}
-            </div>
-
-            <div className="relative h-3 font-mono text-[10px] text-zinc-500">
-                {[0, 50, 70, 85, 100].map((t) => (
-                    <span
-                        key={t}
-                        className="absolute -translate-x-1/2 first:translate-x-0 last:-translate-x-full"
-                        style={{ left: `${t}%` }}
-                    >
-                        {t}
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-// ─── Complexity matrix ───────────────────────────────────────────────────────
-
-const CLASS_LABELS = ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "O(2ⁿ)"];
-const CLASS_KEYS = ["o(1)", "o(logn)", "o(n)", "o(nlogn)", "o(n^2)", "o(2^n)"];
-
-const classIndex = (v: string) =>
-    CLASS_KEYS.indexOf(
-        v.toLowerCase().replace(/\s+/g, "").replace("²", "^2").replace("ⁿ", "^n"),
-    );
-
-function ComplexityMatrix({ complexity }: { complexity: ComplexityResult }) {
-    const rows: { label: string; value: string; key: SeriesKey }[] = [
-        { label: "Best", value: complexity.time.best, key: "best" },
-        { label: "Average", value: complexity.time.average, key: "avg" },
-        { label: "Worst", value: complexity.time.worst, key: "worst" },
-        { label: "Space", value: complexity.space, key: "space" },
-    ];
-
-    return (
-        <div className="overflow-x-auto">
-            <div className="min-w-130 rounded-lg border border-white/8">
-                <div className="grid grid-cols-[72px_1fr_84px] items-center border-b border-white/8 px-4 py-2.5">
-                    <span />
-                    <div className="grid grid-cols-6">
-                        {CLASS_LABELS.map((c) => (
-                            <span
-                                key={c}
-                                className="text-center font-mono text-[10px] text-zinc-500"
-                            >
-                                {c}
-                            </span>
-                        ))}
-                    </div>
-                    <span />
-                </div>
-
-                {rows.map((r, ri) => {
-                    const idx = classIndex(r.value);
-                    const color = SERIES_COLOR[r.key];
-                    return (
-                        <div
-                            key={r.key}
-                            className="grid grid-cols-[72px_1fr_84px] items-center border-b border-white/6 px-4 last:border-b-0"
-                        >
-                            <span className="font-mono text-[11px] text-zinc-400">
-                                {r.label}
-                            </span>
-
-                            <div className="relative grid h-11 grid-cols-6">
-                                {idx >= 0 && (
-                                    <motion.span
-                                        initial={{ scaleX: 0 }}
-                                        animate={{ scaleX: 1 }}
-                                        transition={{
-                                            duration: 0.7,
-                                            delay: 0.2 + ri * 0.08,
-                                            ease: EASE,
-                                        }}
-                                        className="absolute left-0 top-1/2 h-px origin-left"
-                                        style={{
-                                            width: `${((idx + 0.5) / 6) * 100}%`,
-                                            backgroundColor: color,
-                                            opacity: 0.45,
-                                        }}
-                                    />
-                                )}
-                                {CLASS_LABELS.map((c, ci) => (
-                                    <div
-                                        key={c}
-                                        className="relative flex items-center justify-center"
-                                    >
-                                        {ci === idx ? (
-                                            <motion.span
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{
-                                                    duration: 0.4,
-                                                    delay: 0.55 + ri * 0.08,
-                                                    ease: EASE,
-                                                }}
-                                                className="h-2.5 w-2.5 rounded-full"
-                                                style={{ backgroundColor: color }}
-                                            />
-                                        ) : (
-                                            <span className="h-1 w-1 rounded-full bg-white/15" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            <span
-                                className="text-right font-mono text-xs tabular-nums"
-                                style={{ color: idx >= 0 ? color : "#a1a1aa" }}
-                            >
-                                {r.value}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
-
-// ─── Charts ──────────────────────────────────────────────────────────────────
-
-interface SeriesDef {
-    key: SeriesKey;
-    color: string;
-    label: string;
-}
-
-const TIME_SERIES: SeriesDef[] = [
-    { key: "best", color: SERIES_COLOR.best, label: "Best" },
-    { key: "avg", color: SERIES_COLOR.avg, label: "Average" },
-    { key: "worst", color: SERIES_COLOR.worst, label: "Worst" },
-];
-const SPACE_SERIES: SeriesDef[] = [
-    { key: "space", color: SERIES_COLOR.space, label: "Space" },
-];
-
-export const plottedSeries = (model: ChartModel, defs: SeriesDef[]) =>
-    defs.filter((s) => !model.unsupported.some((u) => u.series === s.key));
-
-export function ComplexityChart({
-    model,
-    type,
-    hidden = [],
-}: {
-    model: ChartModel;
-    type: "time" | "space";
-    hidden?: SeriesKey[];
-}) {
-    const defs = type === "time" ? TIME_SERIES : SPACE_SERIES;
-    const available = plottedSeries(model, defs);
-    const series = available.filter((s) => !hidden.includes(s.key));
-    const missing = model.unsupported.filter((u) =>
-        defs.some((s) => s.key === u.series),
-    );
-    const [hoverN, setHoverN] = useState<number | null>(null);
-
-    if (available.length === 0)
-        return (
-            <div
-                role="note"
-                className="flex h-56 items-center justify-center rounded-lg border border-dashed border-white/10 px-6 text-center text-xs text-zinc-400"
-            >
-                No chart for {missing.map((m) => m.value).join(", ")}: this
-                growth rate is not one we can plot.
-            </div>
-        );
-
-    const point =
-        model.points.find((p) => p.n === hoverN) ??
-        model.points[model.points.length - 1];
-
-    return (
-        <div className="flex flex-col gap-4">
-            <div className="flex h-5 items-center gap-5 font-mono text-[11px] tabular-nums">
-                <span className="text-zinc-500">
-                    n = <span className="text-zinc-200">{point.n}</span>
-                </span>
-                {series.map((s) => (
-                    <span key={s.key} className="flex items-center gap-1.5">
-                        <span
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: s.color }}
-                        />
-                        <span className="text-zinc-500">{s.label}</span>
-                        <span className="text-zinc-100">{point[s.key]}</span>
-                    </span>
-                ))}
-            </div>
-
-            <div className="h-60 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                        data={model.points}
-                        margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
-                        onMouseMove={(s: unknown) => {
-                            const l = (s as { activeLabel?: string | number })
-                                ?.activeLabel;
-                            if (l !== undefined) setHoverN(Number(l));
-                        }}
-                        onMouseLeave={() => setHoverN(null)}
-                    >
-                        <defs>
-                            {series.map((s) => (
-                                <linearGradient
-                                    key={s.key}
-                                    id={`grad-${type}-${s.key}`}
-                                    x1="0"
-                                    y1="0"
-                                    x2="0"
-                                    y2="1"
-                                >
-                                    <stop
-                                        offset="0%"
-                                        stopColor={s.color}
-                                        stopOpacity={0.12}
-                                    />
-                                    <stop
-                                        offset="100%"
-                                        stopColor={s.color}
-                                        stopOpacity={0}
-                                    />
-                                </linearGradient>
-                            ))}
-                        </defs>
-                        <CartesianGrid
-                            stroke="rgba(255,255,255,0.06)"
-                            strokeDasharray="2 4"
-                            vertical={false}
-                        />
-                        <XAxis
-                            dataKey="n"
-                            tick={{ fontSize: 11, fill: "#71717a" }}
-                            tickLine={false}
-                            axisLine={false}
-                        />
-                        <YAxis
-                            tick={{ fontSize: 11, fill: "#71717a" }}
-                            tickLine={false}
-                            axisLine={false}
-                        />
-                        <Tooltip
-                            content={() => null}
-                            cursor={{
-                                stroke: "rgba(255,255,255,0.3)",
-                                strokeDasharray: "3 3",
-                            }}
-                        />
-                        {series.map((s) => (
-                            <Area
-                                key={s.key}
-                                type="monotone"
-                                dataKey={s.key}
-                                name={s.label}
-                                stroke={s.color}
-                                strokeWidth={1.5}
-                                fill={`url(#grad-${type}-${s.key})`}
-                                dot={false}
-                                activeDot={{
-                                    r: 3,
-                                    strokeWidth: 0,
-                                    fill: s.color,
-                                }}
-                                animationDuration={800}
-                            />
-                        ))}
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-
-            {missing.length > 0 && (
-                <p className="font-mono text-[11px] text-zinc-500">
-                    Not plotted:{" "}
-                    {missing.map((m) => `${m.series} = ${m.value}`).join(", ")}.
-                </p>
-            )}
-        </div>
-    );
-}
-
-function Segmented<T extends string>({
-    value,
-    options,
-    onChange,
-    id,
-}: {
-    value: T;
-    options: { value: T; label: string }[];
-    onChange: (v: T) => void;
-    id: string;
-}) {
-    return (
-        <div className="flex gap-0.5 rounded-lg border border-white/8 bg-white/2 p-0.5">
-            {options.map((o) => (
-                <button
-                    key={o.value}
-                    onClick={() => onChange(o.value)}
-                    className={`relative cursor-pointer rounded-md px-3 py-1 font-mono text-[11px] transition-colors ${
-                        value === o.value
-                            ? "text-zinc-50"
-                            : "text-zinc-500 hover:text-zinc-300"
-                    }`}
-                >
-                    {value === o.value && (
-                        <motion.span
-                            layoutId={id}
-                            transition={{ duration: 0.3, ease: EASE }}
-                            className="absolute inset-0 rounded-md bg-white/8"
-                        />
-                    )}
-                    <span className="relative">{o.label}</span>
-                </button>
-            ))}
-        </div>
-    );
-}
-
-function SeriesToggle({
-    def,
-    off,
-    onToggle,
-}: {
-    def: SeriesDef;
-    off: boolean;
-    onToggle: () => void;
-}) {
-    return (
-        <button
-            onClick={onToggle}
-            aria-pressed={!off}
-            className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[11px] transition-all duration-200 ${
-                off
-                    ? "border-white/6 text-zinc-600"
-                    : "border-white/10 text-zinc-300 hover:bg-white/4"
-            }`}
-        >
-            <span
-                className="h-1.5 w-1.5 rounded-full transition-opacity"
-                style={{
-                    backgroundColor: def.color,
-                    opacity: off ? 0.3 : 1,
-                }}
-            />
-            {def.label}
-        </button>
-    );
-}
-
-// ─── Code block ──────────────────────────────────────────────────────────────
-
-function highlight(line: string, lang: Language): ReactNode[] {
-    const kw =
-        lang === "python"
-            ? "def|return|if|elif|else|while|for|in|not|and|or|None|True|False|int|list"
-            : "function|return|if|else|while|const|let|var|for|true|false|null";
-    const re = new RegExp(
-        `(#.*|//.*)|("[^"]*"|'[^']*')|\\b(${kw})\\b|\\b(\\d+)\\b`,
-        "g",
-    );
-    const out: ReactNode[] = [];
-    let last = 0;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(line)) !== null) {
-        if (m.index > last) out.push(line.slice(last, m.index));
-        const cls = m[1]
-            ? "text-zinc-500 italic"
-            : m[2]
-              ? "text-emerald-300"
-              : m[3]
-                ? "text-sky-300"
-                : "text-amber-300";
-        out.push(
-            <span key={m.index} className={cls}>
-                {m[0]}
-            </span>,
-        );
-        last = m.index + m[0].length;
-    }
-    if (last < line.length) out.push(line.slice(last));
-    return out;
-}
-
-function CodeBlock({ code, language }: { code: string; language: Language }) {
-    const [copied, setCopied] = useState(false);
-    const lines = code.split("\n");
-
-    const copy = async () => {
-        try {
-            await navigator.clipboard.writeText(code);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1600);
-        } catch {
-            /* clipboard unavailable */
-        }
-    };
-
-    return (
-        <div className="overflow-hidden rounded-lg border border-white/8">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
-                <div className="flex items-center gap-2 font-mono text-[11px]">
-                    <span className="text-zinc-300">
-                        optimized.{language === "python" ? "py" : "js"}
-                    </span>
-                    <span className="rounded border border-white/8 px-1.5 text-[10px] text-zinc-500">
-                        {lines.length} lines
-                    </span>
-                </div>
-                <button
-                    onClick={copy}
-                    className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 font-mono text-[11px] text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
-                >
-                    <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                            key={copied ? "ok" : "copy"}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -4 }}
-                            transition={{ duration: 0.15 }}
-                            className="flex items-center gap-1.5"
-                        >
-                            {copied ? (
-                                <>
-                                    <Check className="h-3 w-3 text-emerald-400" />
-                                    Copied
-                                </>
-                            ) : (
-                                <>
-                                    <Copy className="h-3 w-3" />
-                                    Copy
-                                </>
-                            )}
-                        </motion.span>
-                    </AnimatePresence>
-                </button>
-            </div>
-            <pre className="overflow-x-auto py-3 font-mono text-[12.5px] leading-6">
-                <code className="grid">
-                    {lines.map((line, i) => (
-                        <span
-                            key={i}
-                            className="flex transition-colors hover:bg-white/3"
-                        >
-                            <span className="w-11 shrink-0 select-none pr-4 text-right text-zinc-600 tabular-nums">
-                                {i + 1}
-                            </span>
-                            <span className="whitespace-pre pr-4 text-zinc-300">
-                                {highlight(line, language)}
-                                {line === "" && " "}
-                            </span>
-                        </span>
-                    ))}
-                </code>
-            </pre>
-        </div>
-    );
-}
-
-// ─── Idle screen ─────────────────────────────────────────────────────────────
-
-function IdleScreen({ onStart }: { onStart: () => void }) {
-    return (
-        <div className="relative flex h-full w-full items-center justify-center overflow-hidden p-8">
-            <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{
-                    backgroundImage:
-                        "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
-                    backgroundSize: "24px 24px",
-                    maskImage:
-                        "radial-gradient(ellipse 60% 55% at 50% 50%, #000 20%, transparent 75%)",
-                    WebkitMaskImage:
-                        "radial-gradient(ellipse 60% 55% at 50% 50%, #000 20%, transparent 75%)",
-                }}
-            />
-            <motion.div
-                variants={stagger}
-                initial="hidden"
-                animate="show"
-                className="relative flex w-full max-w-md flex-col items-center gap-8 text-center"
-            >
-                <motion.div
-                    variants={fadeUp}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-zinc-900"
-                >
-                    <Zap className="h-5 w-5 text-zinc-50" strokeWidth={1.5} />
-                </motion.div>
-
-                <motion.div variants={fadeUp} className="flex flex-col gap-3">
-                    <h2 className="text-2xl font-semibold tracking-tight text-zinc-50">
-                        Forge Engine
-                    </h2>
-                    <SampleChip className="self-center" />
-                    <p className="text-sm leading-relaxed text-zinc-400">
-                        A preview of the analysis report. In this build the
-                        result is a fixed sample; it is not an analysis of your
-                        code.
-                    </p>
-                </motion.div>
-
-                <motion.ul
-                    variants={stagger}
-                    className="grid w-full grid-cols-2 gap-x-6 border-y border-white/8 py-4 text-left sm:grid-cols-3"
-                >
-                    {SECTIONS.map((s, i) => (
-                        <motion.li
-                            key={s.id}
-                            variants={fadeUp}
-                            className="flex items-baseline gap-2 py-1 font-mono text-[11px]"
-                        >
-                            <span className="text-zinc-600 tabular-nums">
-                                0{i + 1}
-                            </span>
-                            <span className="text-zinc-400">{s.label}</span>
-                        </motion.li>
-                    ))}
-                </motion.ul>
-
-                <motion.div variants={fadeUp}>
-                    <button
-                        onClick={onStart}
-                        className="group flex cursor-pointer items-center gap-3 rounded-lg bg-zinc-50 py-2 pl-4 pr-2.5 text-sm font-medium text-zinc-950 transition-all duration-200 hover:bg-white active:scale-[0.98]"
-                    >
-                        Show sample report
-                        <span className="flex items-center gap-1.5 rounded-md bg-primary-background/30 px-1.5 py-0.5 font-mono text-[11px] text-zinc-900">
-                            Enter
-                            <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
-                        </span>
-                    </button>
-                </motion.div>
-            </motion.div>
-        </div>
-    );
-}
-
-// ─── Analyzing screen ────────────────────────────────────────────────────────
-
-function useElapsed() {
-    const [ms, setMs] = useState(0);
-    useEffect(() => {
-        const t0 = performance.now();
-        const id = setInterval(() => setMs(performance.now() - t0), 100);
-        return () => clearInterval(id);
-    }, []);
-    return ms;
-}
-
-function AnalyzingScreen({ step }: { step: number }) {
-    const pct = ((step + 1) / ANALYSIS_STEPS.length) * 100;
-    const ms = useElapsed();
-
-    return (
-        <div className="flex h-full w-full items-center justify-center p-6">
-            <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: EASE }}
-                className="w-full max-w-md overflow-hidden rounded-xl border border-white/8 bg-zinc-900/40"
-            >
-                <div className="relative flex items-center justify-between border-b border-white/8 px-4 py-3">
-                    <span className="font-mono text-xs text-zinc-300">
-                        forge run <span className="text-zinc-500">· sample</span>
-                    </span>
-                    <span className="font-mono text-[11px] text-zinc-500 tabular-nums">
-                        {(ms / 1000).toFixed(1)}s
-                    </span>
-                    <motion.span
-                        className="absolute bottom-0 left-0 h-px bg-zinc-100"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.5, ease: EASE }}
-                    />
-                </div>
-
-                <ul className="flex flex-col py-2">
-                    {ANALYSIS_STEPS.map((s, i) => {
-                        const done = i < step;
-                        const active = i === step;
-                        const Icon = s.icon;
-                        return (
-                            <li
-                                key={s.label}
-                                className={`flex items-center gap-3 px-4 py-2.5 font-mono text-xs transition-colors duration-300 ${
-                                    done
-                                        ? "text-zinc-500"
-                                        : active
-                                          ? "text-zinc-50"
-                                          : "text-zinc-600"
-                                }`}
-                            >
-                                <span className="relative flex h-5 w-5 items-center justify-center">
-                                    {done ? (
-                                        <motion.span
-                                            initial={{ scale: 0.5, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            transition={{ duration: 0.25, ease: EASE }}
-                                        >
-                                            <Check
-                                                className="h-3.5 w-3.5 text-emerald-400"
-                                                strokeWidth={2}
-                                            />
-                                        </motion.span>
-                                    ) : (
-                                        <>
-                                            {active && (
-                                                <motion.span
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{
-                                                        duration: 1.1,
-                                                        repeat: Infinity,
-                                                        ease: "linear",
-                                                    }}
-                                                    className="absolute inset-0 rounded-full border border-white/10 border-t-zinc-100"
-                                                />
-                                            )}
-                                            <Icon
-                                                className="h-3 w-3"
-                                                strokeWidth={1.75}
-                                            />
-                                        </>
-                                    )}
-                                </span>
-                                <span className="flex-1">{s.label}</span>
-                                <span className="text-[11px]">
-                                    {done ? "ok" : active ? "…" : "—"}
-                                </span>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </motion.div>
-        </div>
-    );
-}
-
-// ─── Results screen ──────────────────────────────────────────────────────────
-
-interface ResultsProps {
-    language: Language;
-    onReset: () => void;
-}
-
-function ResultsScreen({ language, onReset }: ResultsProps) {
-    const result = codeAnalysis[language].result;
-    const { complexity } = result;
-    const chart = useMemo(() => generateChartData(complexity), [complexity]);
-
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const { scrollYProgress } = useScroll({ container: scrollRef });
-    const [active, setActive] = useState(SECTIONS[0].id);
-
-    const [tab, setTab] = useState<"time" | "space">("time");
-    const [hidden, setHidden] = useState<SeriesKey[]>([]);
-    const [focusStep, setFocusStep] = useState<number | null>(null);
-    const [openFix, setOpenFix] = useState<number | null>(0);
-    const [checked, setChecked] = useState<Set<string>>(new Set());
-
-    const onScroll = useCallback(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const base = el.getBoundingClientRect().top;
-        let cur = SECTIONS[0].id;
-        for (const s of SECTIONS) {
-            const node = el.querySelector<HTMLElement>(`#${s.id}`);
-            if (node && node.getBoundingClientRect().top - base <= 120)
-                cur = s.id;
-        }
-        setActive(cur);
-    }, []);
-
-    const goTo = (id: string) => {
-        const el = scrollRef.current;
-        const node = el?.querySelector<HTMLElement>(`#${id}`);
-        if (!el || !node) return;
-        el.scrollTo({
-            top:
-                el.scrollTop +
-                node.getBoundingClientRect().top -
-                el.getBoundingClientRect().top -
-                72,
-            behavior: "smooth",
-        });
-    };
-
-    const toggleSeries = (k: SeriesKey) =>
-        setHidden((h) => (h.includes(k) ? h.filter((x) => x !== k) : [...h, k]));
-
-    const toggleEdge = (e: string) =>
-        setChecked((prev) => {
-            const next = new Set(prev);
-            if (next.has(e)) next.delete(e);
-            else next.add(e);
-            return next;
-        });
-
-    return (
-        <div
-            ref={scrollRef}
-            onScroll={onScroll}
-            className="h-full overflow-y-auto overscroll-contain scroll-smooth [scrollbar-color:#27272a_transparent] [scrollbar-width:thin]"
-        >
-            {/* Header */}
-            <header className="sticky top-0 z-20 border-b border-white/8 bg-primary-background/80 backdrop-blur-md">
-                <div className="relative mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-                    <div className="flex items-center gap-2.5 font-mono text-xs">
-                        <Zap className="h-3.5 w-3.5 text-zinc-50" strokeWidth={1.5} />
-                        <span className="text-zinc-100">Forge</span>
-                        <span className="text-zinc-600">/</span>
-                        <span className="text-zinc-400">Analysis</span>
-                        <span className="text-zinc-600">/</span>
-                        <span className="text-zinc-400">
-                            {language === "python" ? "python" : "javascript"}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <SampleChip />
-                        <span className="hidden items-center gap-1.5 font-mono text-[11px] text-zinc-400 sm:flex">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Complete
-                        </span>
-                        <button
-                            onClick={onReset}
-                            className="flex h-7 cursor-pointer items-center gap-2 rounded-md border border-white/10 px-2.5 text-[11px] text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-50"
-                        >
-                            <RotateCcw className="h-3 w-3" />
-                            Re-run
-                            <Kbd>R</Kbd>
-                        </button>
-                    </div>
-                    <motion.span
-                        aria-hidden
-                        className="absolute bottom-0 left-0 h-px w-full origin-left bg-zinc-100/70"
-                        style={{ scaleX: scrollYProgress }}
-                    />
-                </div>
-            </header>
-
-            <div className="mx-auto grid max-w-6xl gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[140px_minmax(0,1fr)]">
-                {/* Side nav */}
-                <aside className="hidden lg:block">
-                    <nav className="sticky top-24 flex flex-col">
-                        {SECTIONS.map((s, i) => {
-                            const on = active === s.id;
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={() => goTo(s.id)}
-                                    className={`relative flex cursor-pointer items-baseline gap-2 py-1.5 pl-3 text-left text-xs transition-colors ${
-                                        on
-                                            ? "text-zinc-50"
-                                            : "text-zinc-500 hover:text-zinc-300"
-                                    }`}
-                                >
-                                    <span className="absolute left-0 top-0 h-full w-px bg-white/10" />
-                                    {on && (
-                                        <motion.span
-                                            layoutId="nav-indicator"
-                                            transition={{ duration: 0.3, ease: EASE }}
-                                            className="absolute left-0 top-0 h-full w-px bg-zinc-50"
-                                        />
-                                    )}
-                                    <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
-                                        0{i + 1}
-                                    </span>
-                                    {s.label}
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </aside>
-
-                <main className="min-w-0">
-                    {/* 01 Overview */}
-                    <Section id="overview" index="01" title="Overview">
-                        <div className="grid gap-10 lg:grid-cols-[1fr_260px]">
-                            <div className="flex flex-col gap-5">
-                                <div>
-                                    <Eyebrow>Average time</Eyebrow>
-                                    <motion.h2
-                                        initial={{ opacity: 0, y: 12 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.6, ease: EASE }}
-                                        className="mt-2 text-5xl font-semibold tracking-tight text-zinc-50 sm:text-6xl"
-                                    >
-                                        {complexity.time.average}
-                                    </motion.h2>
-                                    <p className="mt-2 font-mono text-xs text-zinc-500">
-                                        space {complexity.space}
-                                    </p>
-                                </div>
-                                <p className="max-w-prose text-[15px] leading-relaxed text-zinc-300">
-                                    {result.summary}
-                                </p>
-                                {result.tags && result.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-zinc-500">
-                                        {result.tags.map((t) => (
-                                            <span key={t}>#{t}</span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <Eyebrow>Readability</Eyebrow>
-                                {result.readabilityScore !== undefined ? (
-                                    <ReadabilityMeter score={result.readabilityScore} />
-                                ) : (
-                                    <p className="text-sm text-zinc-400">
-                                        No score available.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="mt-10">
-                            <ComplexityMatrix complexity={complexity} />
-                        </div>
-                    </Section>
-
-                    {/* 02 Growth */}
-                    <Section
-                        id="growth"
-                        index="02"
-                        title="Growth"
-                        aside={
-                            <Segmented
-                                id="growth-seg"
-                                value={tab}
-                                onChange={setTab}
-                                options={[
-                                    { value: "time", label: "Time" },
-                                    { value: "space", label: "Space" },
-                                ]}
-                            />
-                        }
-                    >
-                        {tab === "time" && (
-                            <div className="mb-5 flex flex-wrap gap-2">
-                                {plottedSeries(chart, TIME_SERIES).map((s) => (
-                                    <SeriesToggle
-                                        key={s.key}
-                                        def={s}
-                                        off={hidden.includes(s.key)}
-                                        onToggle={() => toggleSeries(s.key)}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                        <AnimatePresence mode="wait" initial={false}>
-                            <motion.div
-                                key={tab}
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <ComplexityChart
-                                    model={chart}
-                                    type={tab}
-                                    hidden={hidden}
-                                />
-                            </motion.div>
-                        </AnimatePresence>
-                    </Section>
-
-                    {/* 03 Breakdown */}
-                    <Section id="breakdown" index="03" title="Breakdown">
-                        <p className="mb-6 max-w-prose text-[13px] leading-relaxed text-zinc-400">
-                            {result.breakdown.approach}
-                        </p>
-                        <ol className="relative flex flex-col">
-                            <motion.span
-                                aria-hidden
-                                initial={{ scaleY: 0 }}
-                                whileInView={{ scaleY: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.9, ease: EASE }}
-                                className="absolute bottom-4 left-3.25 top-4 w-px origin-top bg-white/10"
-                            />
-                            {result.breakdown.steps.map((step, i) => {
-                                const dim = focusStep !== null && focusStep !== i;
-                                const on = focusStep === i;
-                                return (
-                                    <motion.li
-                                        key={i}
-                                        custom={i}
-                                        variants={rowIn}
-                                        initial="hidden"
-                                        whileInView="show"
-                                        viewport={{ once: true }}
-                                    >
-                                        <button
-                                            onMouseEnter={() => setFocusStep(i)}
-                                            onMouseLeave={() => setFocusStep(null)}
-                                            onFocus={() => setFocusStep(i)}
-                                            onBlur={() => setFocusStep(null)}
-                                            className={`relative flex w-full cursor-pointer items-start gap-4 rounded-md py-2.5 text-left transition-opacity duration-200 ${
-                                                dim ? "opacity-40" : "opacity-100"
-                                            }`}
-                                        >
-                                            <span
-                                                className={`z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] tabular-nums transition-colors duration-200 ${
-                                                    on
-                                                        ? "border-zinc-50 bg-zinc-50 text-zinc-950"
-                                                        : "border-white/12 bg-primary-background text-zinc-400"
-                                                }`}
-                                            >
-                                                {i + 1}
-                                            </span>
-                                            <span className="pt-1 text-[13px] leading-relaxed text-zinc-200">
-                                                {step}
-                                            </span>
-                                        </button>
-                                    </motion.li>
-                                );
-                            })}
-                        </ol>
-                    </Section>
-
-                    {/* 04 Risks */}
-                    <Section id="risks" index="04" title="Risks">
-                        <div className="grid gap-10 lg:grid-cols-2">
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center justify-between">
-                                    <Eyebrow>Bottlenecks</Eyebrow>
-                                    <span className="font-mono text-[11px] text-zinc-500">
-                                        {result.bottlenecks.length}
-                                    </span>
-                                </div>
-                                {result.bottlenecks.map((b, i) => (
-                                    <motion.div
-                                        key={i}
-                                        custom={i}
-                                        variants={rowIn}
-                                        initial="hidden"
-                                        whileInView="show"
-                                        viewport={{ once: true }}
-                                        className="relative rounded-lg border border-white/8 py-3.5 pl-5 pr-4 transition-colors hover:bg-white/2"
-                                    >
-                                        <span className="absolute bottom-3 left-0 top-3 w-0.5 rounded-full bg-red-400/70" />
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <span className="text-[13px] font-medium text-zinc-100">
-                                                {b.issue}
-                                            </span>
-                                            {b.location && (
-                                                <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-zinc-400">
-                                                    {b.location}
-                                                </code>
-                                            )}
-                                        </div>
-                                        <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-400">
-                                            {b.impact}
-                                        </p>
-                                    </motion.div>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-col gap-10">
-                                <div className="flex flex-col gap-3">
-                                    <Eyebrow>Anti-patterns</Eyebrow>
-                                    <ul className="flex flex-col">
-                                        {result.antiPatterns.map((ap, i) => (
-                                            <motion.li
-                                                key={i}
-                                                custom={i}
-                                                variants={rowIn}
-                                                initial="hidden"
-                                                whileInView="show"
-                                                viewport={{ once: true }}
-                                                className="flex items-start gap-3 border-b border-white/6 py-2.5 text-[13px] leading-relaxed text-zinc-300 last:border-b-0"
-                                            >
-                                                <span className="mt-px font-mono text-xs text-amber-400">
-                                                    ×
-                                                </span>
-                                                {ap}
-                                            </motion.li>
-                                        ))}
-                                    </ul>
-                                </div>
-
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex items-center justify-between">
-                                        <Eyebrow>Edge cases</Eyebrow>
-                                        <span className="font-mono text-[11px] text-zinc-500 tabular-nums">
-                                            {checked.size}/{result.edgeCases.length}{" "}
-                                            checked
-                                        </span>
-                                    </div>
-                                    <ul className="flex flex-col">
-                                        {result.edgeCases.map((ec) => {
-                                            const on = checked.has(ec);
-                                            return (
-                                                <li key={ec}>
-                                                    <button
-                                                        onClick={() => toggleEdge(ec)}
-                                                        className="group flex w-full cursor-pointer items-center gap-3 border-b border-white/6 py-2.5 text-left transition-colors hover:bg-white/2"
-                                                    >
-                                                        <span
-                                                            className={`flex h-4 w-4 items-center justify-center rounded border transition-colors duration-200 ${
-                                                                on
-                                                                    ? "border-zinc-50 bg-zinc-50"
-                                                                    : "border-white/20 group-hover:border-white/40"
-                                                            }`}
-                                                        >
-                                                            <AnimatePresence>
-                                                                {on && (
-                                                                    <motion.span
-                                                                        initial={{ scale: 0 }}
-                                                                        animate={{ scale: 1 }}
-                                                                        exit={{ scale: 0 }}
-                                                                        transition={{ duration: 0.15 }}
-                                                                    >
-                                                                        <Check
-                                                                            className="h-3 w-3 text-zinc-950"
-                                                                            strokeWidth={3}
-                                                                        />
-                                                                    </motion.span>
-                                                                )}
-                                                            </AnimatePresence>
-                                                        </span>
-                                                        <span
-                                                            className={`text-[13px] transition-colors duration-200 ${
-                                                                on
-                                                                    ? "text-zinc-500 line-through"
-                                                                    : "text-zinc-300"
-                                                            }`}
-                                                        >
-                                                            {ec}
-                                                        </span>
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </Section>
-
-                    {/* 05 Fixes */}
-                    <Section id="fixes" index="05" title="Fixes">
-                        <ul className="overflow-hidden rounded-lg border border-white/8">
-                            {result.improvements.map((imp, i) => {
-                                const open = openFix === i;
-                                return (
-                                    <li
-                                        key={i}
-                                        className="border-b border-white/8 last:border-b-0"
-                                    >
-                                        <button
-                                            onClick={() => setOpenFix(open ? null : i)}
-                                            aria-expanded={open}
-                                            className="flex w-full cursor-pointer items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-white/2"
-                                        >
-                                            <span className="font-mono text-[11px] text-zinc-500 tabular-nums">
-                                                0{i + 1}
-                                            </span>
-                                            <span className="flex-1 text-[13px] text-zinc-100">
-                                                {imp.suggestion}
-                                            </span>
-                                            <ChevronRight
-                                                className={`h-4 w-4 text-zinc-500 transition-transform duration-300 ${
-                                                    open ? "rotate-90" : ""
-                                                }`}
-                                            />
-                                        </button>
-                                        <AnimatePresence initial={false}>
-                                            {open && (
-                                                <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: "auto", opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.3, ease: EASE }}
-                                                    className="overflow-hidden"
-                                                >
-                                                    <p className="flex items-start gap-2 px-4 pb-4 pl-13 text-[12px] leading-relaxed text-emerald-300">
-                                                        <ArrowUpRight
-                                                            className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                                                            strokeWidth={1.75}
-                                                        />
-                                                        {imp.expectedImpact}
-                                                    </p>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </Section>
-
-                    {/* 06 Code */}
-                    <Section id="code" index="06" title="Code">
-                        <CodeBlock code={result.optimizedCode} language={language} />
-
-                        {result.comparison && (
-                            <div className="mt-4 grid divide-white/8 overflow-hidden rounded-lg border border-white/8 md:grid-cols-2 md:divide-x">
-                                <div className="p-4">
-                                    <Eyebrow>Original → Optimized</Eyebrow>
-                                    <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
-                                        {result.comparison.originalVsOptimized}
-                                    </p>
-                                </div>
-                                <div className="border-t border-white/8 p-4 md:border-t-0">
-                                    <Eyebrow>Net result</Eyebrow>
-                                    <p className="mt-2 text-[13px] leading-relaxed text-emerald-300">
-                                        {result.comparison.improvementSummary}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </Section>
-                </main>
-            </div>
-        </div>
-    );
-}
-
-// ─── Root component ──────────────────────────────────────────────────────────
-
-interface AnalysisPanelProps {
-    language: Language;
-    onComplete: () => void;
-}
-
-function SampleAnalysisPanel({
-    language,
-    onComplete, // eslint-disable-line @typescript-eslint/no-unused-vars
-}: AnalysisPanelProps) {
-    const [status, setStatus] = useState<State>("idle");
-    const [analysisStep, setAnalysisStep] = useState(0);
-
-    const abortRef = useRef<AbortController | null>(null);
-
-    // Leaving the panel (tab switch, unmount) cancels the run and clears its timer.
-    useEffect(() => () => abortRef.current?.abort(), []);
-
-    const handleStart = useCallback(async () => {
-        abortRef.current?.abort();
-        const ctrl = new AbortController();
-        abortRef.current = ctrl;
-        setStatus("analyzing");
-        for (let i = 0; i < ANALYSIS_STEPS.length; i++) {
-            setAnalysisStep(i);
-            if (!(await wait(620, ctrl.signal))) return; // cancelled
-        }
-        setStatus("completed");
-    }, []);
-
-    const handleReset = useCallback(() => {
-        abortRef.current?.abort();
-        setAnalysisStep(0);
-        setStatus("idle");
-    }, []);
-
-    // Keyboard: Enter starts, R re-runs.
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            const t = e.target as HTMLElement | null;
-            if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable))
-                return;
-            if (e.metaKey || e.ctrlKey || e.altKey) return;
-            if (e.key === "Enter" && status === "idle") {
-                e.preventDefault();
-                handleStart();
-            } else if ((e.key === "r" || e.key === "R") && status === "completed") {
-                handleReset();
-            }
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [status, handleStart, handleReset]);
-
-    return (
-        <MotionConfig reducedMotion="user">
-            <div
-                className="relative h-full min-h-0 w-full overflow-hidden bg-primary-background text-zinc-100 antialiased"
-                style={{
-                    fontFamily:
-                        "var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
-                }}
-            >
-                <AnimatePresence mode="wait">
-                    {status === "idle" && (
-                        <motion.div
-                            key="idle"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.25 }}
-                            className="h-full"
-                        >
-                            <IdleScreen onStart={handleStart} />
-                        </motion.div>
-                    )}
-
-                    {status === "analyzing" && (
-                        <motion.div
-                            key="analyzing"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.25 }}
-                            className="h-full"
-                        >
-                            <AnalyzingScreen step={analysisStep} />
-                        </motion.div>
-                    )}
-
-                    {status === "completed" && (
-                        <motion.div
-                            key="completed"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                            className="h-full"
-                        >
-                            <ResultsScreen language={language} onReset={handleReset} />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </MotionConfig>
-    );
-}
-
-function UnavailableScreen() {
-    return (
-        <div
-            role="status"
-            className="flex h-full items-center justify-center bg-primary-background p-8 text-center"
-        >
-            <div className="flex max-w-sm flex-col gap-2">
-                <h2 className="text-lg font-semibold tracking-tight text-zinc-100">
-                    Analysis isn&apos;t available yet
-                </h2>
-                <p className="text-sm leading-relaxed text-zinc-400">
-                    The analysis engine is not connected to this build. The
-                    Visualizer works today: pick it in the toolbar.
-                </p>
-            </div>
-        </div>
-    );
-}
-
-/** Real analysis does not exist yet. Outside development (and without the override) the panel says so instead of faking it. */
-export default function AnalysisPanel(props: AnalysisPanelProps) {
-    return MOCK_DATA_ENABLED ? <SampleAnalysisPanel {...props} /> : <UnavailableScreen />;
-}
-__ALGOFORGE_FILE_31ee051d12596c88__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/DashboardGate.tsx <<'__ALGOFORGE_FILE_293ff77d54bfa17c__'
-"use client";
-
-import { useCallback, useState, useSyncExternalStore, type ReactNode } from "react";
-import { readUserCookie, writeUserCookie } from "@/lib/auth-cookie";
-import { signInWithGoogle } from "@/lib/auth";
-import { isMobileDevice } from "@/lib/device";
-import { GoogleLoginModal } from "@/components/auth/GoogleLoginModal"; // adjust to your real path
-import { DesktopOnlyScreen } from "./DesktopOnlyScreen";
-
-type Status = "checking" | "mobile" | "login" | "ready";
-
-const noopSubscribe = () => () => {};
-
-export function DashboardGate({ children }: { children: ReactNode }) {
-    const [loggedIn, setLoggedIn] = useState(false);
-    // false on the server and during hydration, true on the client afterwards.
-    const mounted = useSyncExternalStore(
-        noopSubscribe,
-        () => true,
-        () => false,
-    );
-
-    const handleLogin = useCallback(async () => {
-        const user = await signInWithGoogle();
-        writeUserCookie(user);
-        setLoggedIn(true);
-    }, []);
-
-    // Lock 2 first (device), then lock 1 (auth)
-    const status: Status = !mounted
-        ? "checking"
-        : isMobileDevice()
-          ? "mobile"
-          : loggedIn || readUserCookie()
-            ? "ready"
-            : "login";
-
-    if (status === "checking") return <div className="min-h-dvh bg-black" />;
-    if (status === "mobile") return <DesktopOnlyScreen />;
-
-    if (status === "login") {
-        return (
-            <div className="min-h-dvh bg-black">
-                <GoogleLoginModal isOpen onGoogleLogin={handleLogin} onClose={() => {}}/>
-            </div>
-        );
-    }
-
-    return <>{children}</>;
-}
-
-__ALGOFORGE_FILE_293ff77d54bfa17c__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/FeaturePanel.tsx <<'__ALGOFORGE_FILE_3e065ec615285cde__'
-"use client";
-
-import dynamic from "next/dynamic";
-import AnalysisPanel from "./Analysis";
-import AnalysisHistory, { type AnalysisHistoryMeta } from "./analysis-history";
-import type { FeatureType } from "./DashBoard";
-import { SAMPLE_HISTORY, SAMPLE_META } from "@/data/samples/analysisHistory";
-import { MOCK_DATA_ENABLED } from "@/lib/featureFlags";
-
-// Loaded only when the Visualizer tab is opened: keeps Monaco, anime.js and the canvas out of the main bundle.
-const VisualizerPanel = dynamic(() => import("../visualizers/ui/VisualizerPanel").then((m) => m.VisualizerPanel), {
-    ssr: false,
-    loading: () => <div aria-busy aria-label="Loading visualizer" className="h-full animate-pulse rounded-xl bg-primary-foreground/5" />,
-});
-
-const EMPTY_META: AnalysisHistoryMeta = { nextCursor: null, hasMore: false };
-const noop = () => {};
-
-export default function FeaturePanel({ activeFeature }: { activeFeature: FeatureType }) {
-    return (
-        <div className="h-full w-full overflow-hidden rounded-xl bg-primary-background shadow-inner">
-            {activeFeature === "analysis" && <AnalysisPanel language="python" onComplete={noop} />}
-
-            {activeFeature === "visualizer" && <VisualizerPanel />}
-
-            {activeFeature === "history" && (
-                <AnalysisHistory
-                    items={MOCK_DATA_ENABLED ? SAMPLE_HISTORY : []}
-                    meta={MOCK_DATA_ENABLED ? SAMPLE_META : EMPTY_META}
-                    sample={MOCK_DATA_ENABLED}
-                    onLoadMore={noop}
-                />
-            )}
-        </div>
-    );
-}
-
-__ALGOFORGE_FILE_3e065ec615285cde__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/Setting.tsx <<'__ALGOFORGE_FILE_8c12c46fdb5f4a57__'
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-    CircleQuestionMark,
-    LogOut,
-    Settings,
-    SunMoon,
-    User,
-    type LucideIcon,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-
-type Item = {
-    icon: LucideIcon;
-    label: string;
-    isComming?: boolean;
-    danger?: boolean;
-    onSelect?: () => void;
-};
-export interface AccountUser {
-    name: string;
-    email: string;
-}
-export interface AccountMenuItem {
-    id: string;
-    label: string;
-    icon: LucideIcon;
-    href?: string;
-    onSelect?: () => void;
-}
-
-
-const groups: Item[][] = [
-    [
-        { icon: User, label: "Profile" },
-        { icon: Settings, label: "Settings" },
-        { icon: SunMoon, label: "Appearance", isComming: true },
-    ],
-    [{ icon: CircleQuestionMark, label: "Help" }],
-    [{ icon: LogOut, label: "Sign out", danger: true }],
-];
-
-const flat = groups.flat();
-
-export default function SettingsDropdown({
-    open,
-    onClose,
-}: {
-    open: boolean;
-    onClose: VoidFunction;
-}) {
-    const reduce = useReducedMotion();
-    const [hovered, setHovered] = useState<string | null>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
-
-    // Reset hover when the menu opens (adjusted during render, not in an effect).
-    const [prevOpen, setPrevOpen] = useState(open);
-    if (prevOpen !== open) {
-        setPrevOpen(open);
-        if (open) setHovered(null);
-    }
-
-    // Move focus into the menu when it opens.
-    useEffect(() => {
-        if (open) requestAnimationFrame(() => menuRef.current?.focus());
-    }, [open]);
-
-    const onKeyDown = (e: React.KeyboardEvent) => {
-        const buttons = Array.from(
-            menuRef.current?.querySelectorAll<HTMLButtonElement>(
-                "button:not(:disabled)",
-            ) ?? [],
-        );
-        if (!buttons.length) return;
-        const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
-
-        const move = (next: number) => {
-            e.preventDefault();
-            buttons[(next + buttons.length) % buttons.length].focus();
-        };
-
-        if (e.key === "ArrowDown") move(i + 1);
-        else if (e.key === "ArrowUp") move(i === -1 ? buttons.length - 1 : i - 1);
-        else if (e.key === "Home") move(0);
-        else if (e.key === "End") move(buttons.length - 1);
-        else if (e.key === "Tab") onClose();
-    };
-
-    return (
-        <AnimatePresence>
-            {open && (
-                <motion.div
-                    ref={menuRef}
-                    role="menu"
-                    aria-label="Account menu"
-                    tabIndex={-1}
-                    onKeyDown={onKeyDown}
-                    onMouseLeave={() => setHovered(null)}
-                    initial={
-                        reduce
-                            ? { opacity: 0 }
-                            : { opacity: 0, scale: 0.96, y: -4, filter: "blur(4px)" }
-                    }
-                    animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-                    exit={
-                        reduce
-                            ? { opacity: 0 }
-                            : { opacity: 0, scale: 0.97, y: -2, filter: "blur(2px)" }
-                    }
-                    transition={
-                        reduce
-                            ? { duration: 0 }
-                            : { type: "spring", stiffness: 520, damping: 34, mass: 0.7 }
-                    }
-                    style={{ transformOrigin: "top right" }}
-                    className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl border border-primary-foreground/20! bg-primary-background shadow-2xl shadow-black/40 outline-none"
-                >
-                    {/* Account header */}
-                    <div className="flex items-center gap-2.5 border-b border-primary-foreground/20! p-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary-foreground/20! bg-accent/30 text-xs font-semibold text-primary-foreground">
-                            R
-                        </div>
-                        <div className="min-w-0">
-                            <p className="truncate text-[13px] font-medium text-primary-foreground">
-                                Raunak Yadav
-                            </p>
-                            <p className="truncate text-[11px] text-primary-foreground/50">
-                                raunakyadav7888@gmail.com
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Items */}
-                    <div className="p-1.5">
-                        {groups.map((group, gi) => (
-                            <div key={gi}>
-                                {gi > 0 && (
-                                    <div className="-mx-1.5 my-1.5 h-px bg-primary-foreground/20" />
-                                )}
-                                {group.map((item) => {
-                                    const idx = flat.indexOf(item);
-                                    const disabled = !!item.isComming;
-                                    const active = hovered === item.label && !disabled;
-
-                                    return (
-                                        <motion.button
-                                            key={item.label}
-                                            role="menuitem"
-                                            type="button"
-                                            disabled={disabled}
-                                            onMouseEnter={() => setHovered(item.label)}
-                                            onFocus={() => setHovered(item.label)}
-                                            onClick={() => {
-                                                item.onSelect?.();
-                                                onClose();
-                                            }}
-                                            initial={reduce ? false : { opacity: 0, x: 6 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{
-                                                delay: reduce ? 0 : 0.03 + idx * 0.025,
-                                                duration: 0.18,
-                                                ease: "easeOut",
-                                            }}
-                                            className={`relative flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-[13px] outline-none transition-colors duration-100 ${
-                                                disabled
-                                                    ? "cursor-not-allowed text-primary-foreground/40"
-                                                    : item.danger
-                                                      ? "text-red-400/80 hover:text-red-400 focus-visible:text-red-400"
-                                                      : "text-primary-foreground/60 hover:text-primary-foreground focus-visible:text-primary-foreground"
-                                            }`}
-                                        >
-                                            {/* Sliding highlight shared between items */}
-                                            {active && (
-                                                <motion.span
-                                                    layoutId="settings-menu-highlight"
-                                                    className={`absolute inset-0 rounded-lg ${
-                                                        item.danger
-                                                            ? "bg-red-500/10"
-                                                            : "bg-primary-foreground/10"
-                                                    }`}
-                                                    transition={
-                                                        reduce
-                                                            ? { duration: 0 }
-                                                            : {
-                                                                  type: "spring",
-                                                                  stiffness: 600,
-                                                                  damping: 40,
-                                                              }
-                                                    }
-                                                />
-                                            )}
-
-                                            <span className="relative flex items-center gap-2.5">
-                                                <item.icon size={15} />
-                                                {item.label}
-                                            </span>
-
-                                            {item.isComming && (
-                                                <span className="relative rounded-full border border-primary-foreground/20! px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground/60">
-                                                    Soon
-                                                </span>
-                                            )}
-                                        </motion.button>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
-}
-__ALGOFORGE_FILE_8c12c46fdb5f4a57__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/ShareModal.tsx <<'__ALGOFORGE_FILE_91d106da75ba6892__'
-"use client";
-
-import { Dialog } from "@base-ui/react/dialog";
-import { motion, type Variants } from "framer-motion";
-import { Check, Copy, ExternalLink, Globe, Link2, Lock, Share2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-
-interface ShareModalProps {
-    isOpen: boolean;
-    onClose: VoidFunction;
-    /** Public URL of the shared item. Without one, sharing is shown as unavailable (no backend yet). */
-    link?: string | null;
-    title?: string;
-}
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-const list: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } } };
-const rise: Variants = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EASE } } };
-
-const noopSubscribe = () => () => {};
-
-async function copyText(text: string): Promise<boolean> {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch {
-        try {
-            const ta = document.createElement("textarea");
-            ta.value = text;
-            ta.setAttribute("readonly", "");
-            ta.style.position = "fixed";
-            ta.style.opacity = "0";
-            document.body.appendChild(ta);
-            ta.select();
-            const ok = document.execCommand("copy");
-            document.body.removeChild(ta);
-            return ok;
-        } catch {
-            return false;
-        }
-    }
-}
-
-const SECONDARY =
-    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-primary-foreground/10! bg-primary-foreground/3 py-2.5 text-[12px] font-medium text-primary-foreground/70 transition hover:bg-primary-foreground/8 hover:text-primary-foreground";
-
-const ShareModal = ({ isOpen, onClose, link = null, title = "Share analysis" }: ShareModalProps) => {
-    const canShare = !!link;
-    const [copied, setCopied] = useState(false);
-    const [failed, setFailed] = useState(false);
-    const [isPublic, setIsPublic] = useState(true);
-    const canNativeShare = useSyncExternalStore(
-        noopSubscribe,
-        () => typeof navigator !== "undefined" && !!navigator.share,
-        () => false,
-    );
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    useEffect(
-        () => () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        },
-        [],
-    );
-
-    const handleCopy = useCallback(async () => {
-        if (!link || !isPublic) return;
-        const ok = await copyText(link);
-        setCopied(ok);
-        setFailed(!ok);
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-            setCopied(false);
-            setFailed(false);
-        }, 2000);
-    }, [isPublic, link]);
-
-    const handleNativeShare = async () => {
-        if (!link || !isPublic) return;
-        try {
-            await navigator.share({ title, url: link });
-        } catch {
-            /* user cancelled */
-        }
-    };
-
-    return (
-        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" />
-                <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <Dialog.Popup className="pointer-events-auto relative w-full max-w-120 overflow-hidden rounded-2xl border border-primary-foreground/10! bg-primary-background shadow-2xl outline-none transition-[opacity,transform] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-                        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-b from-accent/10 to-transparent" />
-
-                        <motion.div variants={list} initial="hidden" animate="show" className="relative">
-                            <motion.div variants={rise} className="flex items-center justify-between px-5 pb-4 pt-5">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-foreground/10! bg-primary-foreground/5">
-                                        <Share2 size={16} className="text-primary-foreground/80" strokeWidth={1.75} aria-hidden />
-                                    </div>
-                                    <div className="flex flex-col leading-tight">
-                                        <Dialog.Title className="text-[15px] font-semibold tracking-tight text-primary-foreground">{title}</Dialog.Title>
-                                        <Dialog.Description className="text-[12px] text-primary-foreground/60">
-                                            {canShare ? "Send this report to anyone" : "Not available yet"}
-                                        </Dialog.Description>
-                                    </div>
-                                </div>
-                                <Dialog.Close aria-label="Close" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-primary-foreground/60 transition hover:bg-primary-foreground/8 hover:text-primary-foreground">
-                                    <X size={15} aria-hidden />
-                                </Dialog.Close>
-                            </motion.div>
-
-                            {!canShare ? (
-                                <motion.div variants={rise} className="px-5 pb-5">
-                                    <div role="status" className="rounded-xl border border-primary-foreground/8! bg-primary-foreground/3 p-4 text-[13px] leading-relaxed">
-                                        <p className="font-medium text-primary-foreground">Sharing isn&apos;t available yet</p>
-                                        <p className="mt-1 text-primary-foreground/60">
-                                            Links need saved visualizations, which need a backend. Until then there is nothing to share, so no link is shown.
-                                        </p>
-                                    </div>
-                                    <div className="mt-4 flex justify-end">
-                                        <Dialog.Close className="cursor-pointer rounded-lg border border-primary-foreground/10! px-3 py-1.5 text-[12px] text-primary-foreground/70 transition hover:bg-primary-foreground/8 hover:text-primary-foreground">
-                                            Got it
-                                        </Dialog.Close>
-                                    </div>
-                                </motion.div>
-                            ) : (
-                                <div className="space-y-4 px-5 pb-5">
-                                    <motion.div variants={rise} className="flex items-center justify-between gap-4 rounded-xl border border-primary-foreground/8! bg-primary-foreground/3 p-3.5">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${isPublic ? "bg-emerald-400/10 text-emerald-400" : "bg-primary-foreground/6 text-primary-foreground/60"}`}>
-                                                {isPublic ? <Globe size={16} strokeWidth={1.75} aria-hidden /> : <Lock size={16} strokeWidth={1.75} aria-hidden />}
-                                            </div>
-                                            <div>
-                                                <p className="text-[13px] font-medium text-primary-foreground">Public link</p>
-                                                <p className="mt-0.5 text-[12px] text-primary-foreground/60">{isPublic ? "Anyone with the link can view" : "Link sharing is turned off"}</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            role="switch"
-                                            aria-checked={isPublic}
-                                            aria-label="Public link"
-                                            onClick={() => setIsPublic((p) => !p)}
-                                            className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${isPublic ? "bg-emerald-400" : "bg-primary-foreground/25"}`}
-                                        >
-                                            <motion.span layout transition={{ type: "spring", stiffness: 500, damping: 32 }} className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow" style={{ left: isPublic ? "22px" : "2px" }} />
-                                        </button>
-                                    </motion.div>
-
-                                    <motion.div variants={rise} className="space-y-2">
-                                        <div className={`flex items-center gap-2 rounded-xl border border-primary-foreground/10! bg-primary-foreground/3 p-1.5 pl-3 transition focus-within:border-accent/50! ${!isPublic ? "pointer-events-none opacity-60" : ""}`}>
-                                            <Link2 size={14} className="shrink-0 text-primary-foreground/60" aria-hidden />
-                                            <input
-                                                readOnly
-                                                disabled={!isPublic}
-                                                value={link ?? ""}
-                                                onFocus={(e) => e.currentTarget.select()}
-                                                aria-label="Share link"
-                                                className="min-w-0 flex-1 truncate bg-transparent font-mono text-[12px] text-primary-foreground/80 outline-none"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={handleCopy}
-                                                disabled={!isPublic}
-                                                className={`flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition ${copied ? "bg-emerald-400/15 text-emerald-300" : failed ? "bg-red-400/15 text-red-300" : "bg-primary-foreground text-primary-background hover:opacity-90"}`}
-                                            >
-                                                {copied ? (
-                                                    <>
-                                                        <Check size={13} aria-hidden /> Copied
-                                                    </>
-                                                ) : failed ? (
-                                                    "Failed"
-                                                ) : (
-                                                    <>
-                                                        <Copy size={13} aria-hidden /> Copy
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                        <span role="status" className="sr-only">
-                                            {copied ? "Link copied" : failed ? "Copy failed" : ""}
-                                        </span>
-                                        {!isPublic && <p className="px-1 text-[11px] text-primary-foreground/60">Turn on the public link to copy or share it.</p>}
-                                    </motion.div>
-
-                                    <motion.div variants={rise} className="flex gap-2">
-                                        <a
-                                            href={isPublic ? (link ?? undefined) : undefined}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            aria-disabled={!isPublic}
-                                            tabIndex={isPublic ? 0 : -1}
-                                            className={`${SECONDARY} ${!isPublic ? "pointer-events-none opacity-60" : ""}`}
-                                        >
-                                            <ExternalLink size={13} aria-hidden />
-                                            Open
-                                        </a>
-                                        {canNativeShare && (
-                                            <button type="button" onClick={handleNativeShare} disabled={!isPublic} className={`${SECONDARY} disabled:cursor-not-allowed disabled:opacity-60`}>
-                                                <Share2 size={13} aria-hidden />
-                                                Share…
-                                            </button>
-                                        )}
-                                    </motion.div>
-                                </div>
-                            )}
-                        </motion.div>
-                    </Dialog.Popup>
-                </div>
-            </Dialog.Portal>
-        </Dialog.Root>
-    );
-};
-
-export default ShareModal;
-
-__ALGOFORGE_FILE_91d106da75ba6892__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/DashBoard/TitleBar.tsx <<'__ALGOFORGE_FILE_b0b49e293be9d202__'
-"use client";
-
-import { UserCircleFreeIcons } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUp, CornerDownLeft, Search, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-
-import type { AccountMenuItem, AccountUser } from "./Setting";
-import SettingsDropdown from "./Setting";
-
-import NotificationsPopover, {
-    type AppNotification,
-} from "./NotificationsPopover";
-
-import AlgoForgeLogo from "../Logo";
-
-/* -------------------------------------------------------------------------- */
-/* Keyboard Shortcut                                                          */
-/* -------------------------------------------------------------------------- */
-
-function Kbd({ children }: { children: React.ReactNode }) {
-    return (
-        <kbd
-            className="
-         inline-flex h-5 min-w-5 items-center justify-center
-         rounded border border-primary-foreground/20!
-         bg-primary-foreground/5 px-1
-         font-sans text-[10px] font-medium
-         text-primary-foreground/50
-     "
-        >
-            {children}
-        </kbd>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Search                                                                     */
-/* -------------------------------------------------------------------------- */
-
-export interface SearchResultItem {
-    id: string;
-    title: string;
-    category: "Algorithm" | "Data Structure" | "Guide" | "Utility";
-    href: string;
-    description: string;
-}
-
-export const searchData: SearchResultItem[] = [
-    {
-        id: "1",
-        title: "Dijkstra's Shortest Path",
-        category: "Algorithm",
-        href: "/algorithms/dijkstra",
-        description: "Find the shortest path between nodes in a graph.",
-    },
-    {
-        id: "2",
-        title: "A* Pathfinding Search",
-        category: "Algorithm",
-        href: "/algorithms/astar",
-        description: "Heuristic-based graph traversal and path planning.",
-    },
-    {
-        id: "3",
-        title: "Red-Black Tree Visualizer",
-        category: "Data Structure",
-        href: "/data-structures/red-black-tree",
-        description: "Self-balancing binary search tree operations.",
-    },
-    {
-        id: "4",
-        title: "Dynamic Programming Guide",
-        category: "Guide",
-        href: "/guides/dynamic-programming",
-        description: "Master overlapping subproblems and optimal substructure.",
-    },
-    {
-        id: "5",
-        title: "Asymptotic Complexity Analyzer",
-        category: "Utility",
-        href: "/tools/complexity-analyzer",
-        description: "Analyze Big-O time and space complexity automatically.",
-    },
-    {
-        id: "6",
-        title: "Breadth-First Search (BFS)",
-        category: "Algorithm",
-        href: "/algorithms/bfs",
-        description: "Level-order traversal for trees and graphs.",
-    },
-];
-
-const MAX_RESULTS = 6;
-
-const noopSubscribe = () => () => {};
-
-function escapeRegExp(s: string) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/** Bolds the matching part of a string. */
-function Highlight({ text, query }: { text: string; query: string }) {
-    const q = query.trim();
-    if (!q) return <>{text}</>;
-    const parts = text.split(new RegExp(`(${escapeRegExp(q)})`, "ig"));
-    return (
-        <>
-            {parts.map((part, i) =>
-                part.toLowerCase() === q.toLowerCase() ? (
-                    <span key={i} className="font-semibold text-primary-foreground">
-                        {part}
-                    </span>
-                ) : (
-                    <span key={i}>{part}</span>
-                ),
-            )}
-        </>
-    );
-}
-
-function SearchBox({
-    onSearch,
-    onSelect,
-    items = searchData,
-}: {
-    onSearch?: (query: string) => void;
-    onSelect?: (item: SearchResultItem) => void;
-    items?: SearchResultItem[];
-}) {
-    const reduce = useReducedMotion();
-    const router = useRouter();
-    const listId = useId();
-    const inputRef = useRef<HTMLInputElement>(null);
-    const listRef = useRef<HTMLUListElement>(null);
-
-    const [focused, setFocused] = useState(false);
-    const [value, setValue] = useState("");
-    const [active, setActive] = useState(-1);
-    const isMac = useSyncExternalStore(
-        noopSubscribe,
-        () => /mac|iphone|ipad/i.test(navigator.platform),
-        () => false,
-    );
-
-    const query = value.trim();
-
-    /* Filter by title, description, or category. Empty query shows suggestions. */
-    const results = useMemo(() => {
-        if (!query) return items.slice(0, MAX_RESULTS);
-        const q = query.toLowerCase();
-        return items
-            .filter(
-                (i) =>
-                    i.title.toLowerCase().includes(q) ||
-                    i.description.toLowerCase().includes(q) ||
-                    i.category.toLowerCase().includes(q),
-            )
-            .sort((a, b) => {
-                // Title matches first
-                const at = a.title.toLowerCase().includes(q) ? 0 : 1;
-                const bt = b.title.toLowerCase().includes(q) ? 0 : 1;
-                return at - bt;
-            })
-            .slice(0, MAX_RESULTS);
-    }, [items, query]);
-
-    const open = focused;
-
-    /* Reset the highlighted row when the results change */
-    const activeKey = `${query}|${results.length}`;
-    const [prevActiveKey, setPrevActiveKey] = useState(activeKey);
-    if (prevActiveKey !== activeKey) {
-        setPrevActiveKey(activeKey);
-        setActive(query && results.length ? 0 : -1);
-    }
-
-    /* Keep the active row in view */
-    useEffect(() => {
-        if (active < 0) return;
-        listRef.current
-            ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
-            ?.scrollIntoView({ block: "nearest" });
-    }, [active]);
-
-    useEffect(() => {
-        const handleShortcut = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-
-            const isTyping =
-                target.tagName === "INPUT" ||
-                target.tagName === "TEXTAREA" ||
-                target.isContentEditable;
-
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-                e.preventDefault();
-                inputRef.current?.focus();
-            }
-
-            if (e.key === "/" && !isTyping) {
-                e.preventDefault();
-                inputRef.current?.focus();
-            }
-        };
-
-        window.addEventListener("keydown", handleShortcut);
-        return () => window.removeEventListener("keydown", handleShortcut);
-    }, []);
-
-    const choose = (item: SearchResultItem) => {
-        setValue("");
-        inputRef.current?.blur();
-        onSelect?.(item);
-        router.push(item.href);
-    };
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (active >= 0 && results[active]) return choose(results[active]);
-        if (query) onSearch?.(query);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Escape") {
-            if (value) setValue("");
-            else inputRef.current?.blur();
-            return;
-        }
-        if (!results.length) return;
-        if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setActive((i) => (i + 1) % results.length);
-        } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setActive((i) => (i <= 0 ? results.length - 1 : i - 1));
-        }
-    };
-
-    return (
-        <motion.form
-            role="search"
-            onSubmit={handleSubmit}
-            animate={{ width: focused ? 340 : 240 }}
-            transition={
-                reduce
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 420, damping: 34 }
-            }
-            className="
-            group relative hidden h-8 items-center
-            rounded-lg border border-primary-foreground/20!
-            bg-primary-background text-primary-foreground
-            transition-[border-color] duration-200
-            hover:border-primary-foreground/40!
-            focus-within:border-primary-foreground/60!
-            sm:flex
-        "
-        >
-            <Search
-                size={14}
-                className={`
-                pointer-events-none absolute left-2.5
-                transition-colors duration-200
-                ${focused ? "text-accent" : "text-primary-foreground/40"}
-            `}
-            />
-
-            <input
-                ref={inputRef}
-                type="text"
-                role="combobox"
-                aria-expanded={open}
-                aria-controls={listId}
-                aria-autocomplete="list"
-                aria-activedescendant={
-                    active >= 0 ? `${listId}-${active}` : undefined
-                }
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search algorithms..."
-                aria-label="Search algorithms"
-                autoComplete="off"
-                spellCheck={false}
-                className="
-                h-full w-full bg-transparent
-                pl-8 pr-16 text-[13px]
-                outline-none
-                placeholder:text-primary-foreground/40
-            "
-            />
-
-            <div className="absolute right-1.5 flex items-center gap-1">
-                {value ? (
-                    <>
-                        <button
-                            type="button"
-                            aria-label="Clear search"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                                setValue("");
-                                inputRef.current?.focus();
-                            }}
-                            className="
-                            flex h-5 w-5 items-center justify-center
-                            rounded text-primary-foreground/40
-                            transition-colors
-                            hover:bg-primary-foreground/10
-                            hover:text-primary-foreground
-                        "
-                        >
-                            <X size={12} />
-                        </button>
-
-                        <Kbd>
-                            <CornerDownLeft size={10} />
-                        </Kbd>
-                    </>
-                ) : (
-                    !focused && (
-                        <>
-                            <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
-                            <Kbd>K</Kbd>
-                        </>
-                    )
-                )}
-            </div>
-
-            {/* Results */}
-
-            <AnimatePresence>
-                {open && (
-                    <motion.div
-                        key="results"
-                        initial={reduce ? false : { opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={reduce ? undefined : { opacity: 0, y: -4 }}
-                        transition={{ duration: 0.14, ease: "easeOut" }}
-                        onMouseDown={(e) => e.preventDefault()} /* keep input focused */
-                        className="
-                        absolute left-0 top-full z-40 mt-1.5 w-full
-                        overflow-hidden rounded-lg scrollbar-thin
-                        border border-primary-foreground/20!
-                        bg-primary-background shadow-lg
-                    "
-                    >
-                        {results.length > 0 ? (
-                            <>
-                                {!query && (
-                                    <p className="px-3 pb-1 pt-2 text-[11px] text-primary-foreground/40">
-                                        Suggested
-                                    </p>
-                                )}
-                                <ul
-                                    ref={listRef}
-                                    id={listId}
-                                    role="listbox"
-                                    className="max-h-72 overflow-y-auto p-1"
-                                >
-                                    {results.map((item, i) => (
-                                        <li
-                                            key={item.id}
-                                            id={`${listId}-${i}`}
-                                            data-index={i}
-                                            role="option"
-                                            aria-selected={i === active}
-                                            onMouseEnter={() => setActive(i)}
-                                            onClick={() => choose(item)}
-                                            className={`
-                                            flex cursor-pointer items-start justify-between gap-3
-                                            rounded-md px-2.5 py-2
-                                            transition-colors duration-100
-                                            ${i === active ? "bg-primary-foreground/10" : ""}
-                                        `}
-                                        >
-                                            <span className="min-w-0">
-                                                <span className="block truncate text-[13px] text-primary-foreground/90">
-                                                    <Highlight text={item.title} query={query} />
-                                                </span>
-                                                <span className="block truncate text-[11px] text-primary-foreground/45">
-                                                    <Highlight
-                                                        text={item.description}
-                                                        query={query}
-                                                    />
-                                                </span>
-                                            </span>
-                                            <span className="mt-0.5 shrink-0 text-[11px] text-primary-foreground/40">
-                                                {item.category}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </>
-                        ) : (
-                            <div className="px-3 py-6 text-center">
-                                <p className="text-[13px] text-primary-foreground/80">
-                                    No results for “{query}”
-                                </p>
-                                <p className="mt-0.5 text-[11px] text-primary-foreground/40">
-                                    Try an algorithm, data structure, or guide name.
-                                </p>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-3 border-t border-primary-foreground/15 px-3 py-1.5 text-[11px] text-primary-foreground/40">
-                            <span className="flex items-center gap-1">
-                                <Kbd><ArrowUp size={10} /></Kbd>
-                                <Kbd><ArrowDown size={10} /></Kbd>
-                                navigate
-                            </span>
-                            <span className="flex items-center gap-1">
-                                <Kbd><CornerDownLeft size={10} /></Kbd>
-                                open
-                            </span>
-                            <span className="ml-auto flex items-center gap-1">
-                                <Kbd>Esc</Kbd>
-                                close
-                            </span>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.form>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Top Navigation                                                             */
-/* -------------------------------------------------------------------------- */
-
-export interface TopNavProps {
-    user?: AccountUser | null;
-    menuItems?: AccountMenuItem[];
-    notifications?: AppNotification[];
-    onSearch?: (query: string) => void;
-    /** Called when a result is opened. Navigation to its href happens automatically. */
-    onSelectResult?: (item: SearchResultItem) => void;
-    /** Override the searchable items. Defaults to the built-in list. */
-    searchItems?: SearchResultItem[];
-}
-
-export default function TopNav({
-    notifications = [],
-    onSearch,
-    onSelectResult,
-    searchItems,
-}: TopNavProps) {
-    const reduce = useReducedMotion();
-
-    const [settingsOpen, setSettingsOpen] = useState(false);
-
-    const menuRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-
-    /* Close dropdown on outside click or Escape */
-
-    useEffect(() => {
-        if (!settingsOpen) return;
-
-        const handlePointerDown = (e: PointerEvent) => {
-            if (!menuRef.current?.contains(e.target as Node)) {
-                setSettingsOpen(false);
-            }
-        };
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                setSettingsOpen(false);
-                triggerRef.current?.focus();
-            }
-        };
-
-        document.addEventListener("pointerdown", handlePointerDown);
-        document.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            document.removeEventListener("pointerdown", handlePointerDown);
-            document.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [settingsOpen]);
-
-    return (
-        <header
-            className="
-        relative z-30 flex h-12 shrink-0
-        items-center justify-between
-        rounded-b-2xl
-        border-b border-primary-foreground/20!
-        bg-primary-background/80
-        px-4 backdrop-blur-md
-        supports-backdrop-filter:bg-primary-background/70
-    "
-        >
-            {/* Brand */}
-
-            <motion.a
-                href="/"
-                whileTap={reduce ? undefined : { scale: 0.97 }}
-                aria-label="AlgoForge home"
-                className="
-                flex items-center rounded-md
-                outline-none
-                focus-visible:ring-2
-                focus-visible:ring-accent/60
-            "
-            >
-                <AlgoForgeLogo size={19} />
-
-                <span
-                    className="
-                font-chango text-lg
-                tracking-tight text-primary-foreground
-            "
-                >
-                    lgo<span className="text-accent">Forge</span>
-                </span>
-            </motion.a>
-
-            {/* Right Actions */}
-
-            <div className="flex items-center gap-2">
-                {/* Search */}
-
-                <SearchBox
-                    onSearch={onSearch}
-                    onSelect={onSelectResult}
-                    items={searchItems}
-                />
-
-                {/* Notifications */}
-
-                <motion.div
-                    whileTap={reduce ? undefined : { scale: 0.92 }}
-                    className="
-                    flex h-8 w-8 items-center
-                    justify-center rounded-full
-                    text-primary-foreground
-                    transition-colors duration-150
-                    hover:bg-accent/20
-                "
-                >
-                    <NotificationsPopover notifications={notifications} />
-                </motion.div>
-
-                {/* Divider */}
-
-                <div
-                    aria-hidden="true"
-                    className="h-5 w-px bg-primary-foreground/15"
-                />
-
-                {/* Account & Settings */}
-
-                <div ref={menuRef} className="relative">
-                    <motion.button
-                        ref={triggerRef}
-                        type="button"
-                        onClick={() => setSettingsOpen((open) => !open)}
-                        whileTap={reduce ? undefined : { scale: 0.94 }}
-                        aria-label="Account and settings"
-                        aria-haspopup="menu"
-                        aria-expanded={settingsOpen}
-                        className={`
-                        flex h-8 w-8 items-center justify-center
-                        rounded-full border
-                        text-primary-foreground outline-none
-                        transition-all duration-200
-                        focus-visible:ring-2
-                        focus-visible:ring-accent/60
-                        ${
-                            settingsOpen
-                                ? "border-primary-foreground/50! bg-accent/30"
-                                : "border-primary-foreground/20! hover:border-primary-foreground/40! hover:bg-accent/20"
-                        }
-                    `}
-                    >
-                        <HugeiconsIcon icon={UserCircleFreeIcons} size={25} />
-                    </motion.button>
-
-                    <SettingsDropdown
-                        open={settingsOpen}
-                        onClose={() => {
-                            setSettingsOpen(false);
-                            triggerRef.current?.focus();
-                        }}
-                    />
-                </div>
-            </div>
-        </header>
-    );
-}
-__ALGOFORGE_FILE_b0b49e293be9d202__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage/FinalCTA.tsx <<'__ALGOFORGE_FILE_681358f3340a9a39__'
-"use client";
-
-import { useRef } from "react";
-import { motion } from "framer-motion";
-import gsap from "gsap";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon } from "@hugeicons/core-free-icons";
-import AnimatedButton from "../ui/ButtonAnimated";
-import { DASHBOARD_HREF } from "@/lib/site";
-import { PRODUCT_FACTS } from "@/lib/productFacts";
-import { prefersReducedMotion } from "@/lib/reducedMotion";
-import { Buddy, Eyebrow, LandingStyles } from "./shared";
-import ParticleField from "./ParticleField";
-
-const TRUST_ITEMS = ["No account needed", "Runs in your browser"];
-const BARS = [40, 72, 55, 90, 35, 80, 62, 48, 85, 58];
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-export default function FinalCTA() {
-    const magnet = useRef<HTMLDivElement>(null);
-
-    const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (prefersReducedMotion() || !magnet.current) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        gsap.to(magnet.current, {
-            x: (e.clientX - (r.left + r.width / 2)) * 0.22,
-            y: (e.clientY - (r.top + r.height / 2)) * 0.22,
-            duration: 0.4,
-            ease: "power3.out",
-        });
-    };
-    const onLeave = () => {
-        if (magnet.current) gsap.to(magnet.current, { x: 0, y: 0, duration: 0.8, ease: "elastic.out(1,0.4)" });
-    };
-
-    return (
-        <section className="relative overflow-x-clip px-4 py-16 md:px-8 md:py-24">
-            <LandingStyles />
-            <style>{`
-@keyframes af-bar{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
-.af-bar{transform-origin:bottom;animation:af-bar 2.8s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){.af-bar{animation:none}}
-`}</style>
-
-            <motion.div
-                initial={{ opacity: 0, y: 32, scale: 0.98 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.8, ease: EASE }}
-                className="relative mx-auto grid max-w-6xl items-center gap-10 overflow-hidden rounded-3xl border border-foreground/15 bg-foreground/[.03] p-6 sm:rounded-[2.5rem] sm:p-8 md:grid-cols-[1.15fr_1fr] md:gap-14 md:p-14"
-            >
-                <ParticleField density={0.6} className="absolute inset-0 text-foreground [mask-image:radial-gradient(ellipse_at_80%_50%,#000_20%,transparent_75%)]" />
-
-                {/* Left: copy */}
-                <div className="relative flex flex-col items-start gap-6">
-                    <Eyebrow>Try it in your browser</Eyebrow>
-                    <h2 className="text-3xl font-black leading-[1.02] tracking-tight sm:text-4xl md:text-6xl">
-                        Stop guessing.
-                        <br />
-                        Start <span className="text-accent">visualizing.</span>
-                    </h2>
-                    <p className="max-w-md text-base leading-relaxed text-foreground/60">
-                        Write a short script, press play, and watch each operation run. Pause, step back and replay until the structure makes sense.
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div onMouseMove={onMove} onMouseLeave={onLeave} className="-m-3 p-3">
-                            <div ref={magnet}>
-                                <AnimatedButton text="Open the visualizer" href={DASHBOARD_HREF} />
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            {TRUST_ITEMS.map((t) => (
-                                <span key={t} className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground/60">
-                                    <HugeiconsIcon icon={Tick02Icon} size={12} color="currentColor" strokeWidth={2} className="text-accent" />
-                                    {t}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right: mini live panel */}
-                <div className="relative">
-                    <div className="rounded-3xl border border-foreground/10 bg-background/80 p-5 backdrop-blur-sm">
-                        <div className="mb-4 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-                            <span className="h-2.5 w-2.5 rounded-full bg-foreground/25" />
-                            <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
-                            <span className="ml-auto font-mono text-[11px] uppercase tracking-widest text-foreground/50">running</span>
-                        </div>
-
-                        <div className="flex h-36 items-end gap-2">
-                            {BARS.map((h, i) => (
-                                <div
-                                    key={i}
-                                    className={`af-bar flex-1 rounded-t-xl ${i % 3 === 1 ? "bg-accent" : "bg-foreground/75"}`}
-                                    style={{ height: `${h}%`, animationDelay: `${i * 0.18}s` }}
-                                />
-                            ))}
-                        </div>
-
-                        <div className="mt-5 grid grid-cols-2 gap-2">
-                            {[
-                                { v: String(PRODUCT_FACTS.structures), l: "Structures" },
-                                { v: PRODUCT_FACTS.speedRange, l: "Speed" },
-                            ].map((s) => (
-                                <div key={s.l} className="rounded-2xl border border-foreground/10 bg-foreground/[.03] px-4 py-3 text-center">
-                                    <div className="text-lg font-black tracking-tight sm:text-xl">{s.v}</div>
-                                    <div className="font-mono text-[10px] uppercase tracking-widest text-foreground/55">{s.l}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="absolute right-1 -top-6 md:-right-5 md:-top-10">
-                        <Buddy size={68} />
-                    </div>
-                </div>
-            </motion.div>
-        </section>
-    );
-}
-
-__ALGOFORGE_FILE_681358f3340a9a39__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage/Hero.tsx <<'__ALGOFORGE_FILE_22e16575847df948__'
-"use client";
-
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useState } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CodeIcon, PlayIcon, ZapIcon, Target, Tick02Icon } from "@hugeicons/core-free-icons";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { DASHBOARD_HREF } from "@/lib/site";
-import { PRODUCT_FACTS } from "@/lib/productFacts";
-import { SmartNavbar } from "./Navbar";
-import { CodeEditor } from "../CodeEditor";
-import { Language } from "@/components/CodeEditor/types";
-import { CometCard } from "../ui/comet-card";
-import { Buddy, Eyebrow, LandingStyles, ScrollProgress } from "./shared";
-import ParticleField from "./ParticleField";
-
-export const defaultCodeBinarySearch: Record<Language, string> = {
-    python: `def binary_search(arr, target):
-    left, right = 0, len(arr) - 1
-    while left <= right:
-        mid = left + (right - left) // 2
-        if arr[mid] == target:
-            return mid
-        elif arr[mid] < target:
-            left = mid + 1
-        else:
-            right = mid - 1
-    return -1`,
-
-    javascript: `function binarySearch(arr, target) {
-    let left = 0, right = arr.length - 1;
-    while (left <= right) {
-        const mid = left + Math.floor((right - left) / 2);
-        if (arr[mid] === target) {
-            return mid;
-        } else if (arr[mid] < target) {
-            left = mid + 1;
-        } else {
-            right = mid - 1;
-        }
-    }
-    return -1;
-}`,
-};
-
-const CHIPS = [
-    { label: "Array", icon: CodeIcon, pos: "-left-6 top-10", delay: "0s" },
-    { label: "Hash map", icon: Target, pos: "-right-4 top-28", delay: "-1.2s" },
-    { label: "Step back", icon: PlayIcon, pos: "left-8 -bottom-3", delay: "-2.4s" },
-    { label: "0.25× – 4×", icon: ZapIcon, pos: "right-12 -bottom-5", delay: "-3.3s" },
-];
-
-const HEADLINE = [
-    ["See", "Your", "Code"],
-    ["Actually", "Work"],
-];
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-export default function Hero() {
-    const [value, setValue] = useState<string | undefined>(undefined);
-    let wordIndex = 0;
-
-    return (
-        <>
-            <LandingStyles />
-            <ScrollProgress />
-            <SmartNavbar />
-
-            <section id="home" className="relative min-h-svh overflow-x-clip pt-20">
-                {/* dotted grid + a quiet graph of drifting nodes, no glow */}
-                <div className="pointer-events-none absolute inset-0">
-                    <div
-                        className="absolute inset-0 opacity-[0.06]"
-                        style={{
-                            backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
-                            backgroundSize: "28px 28px",
-                            maskImage: "radial-gradient(ellipse at center, #000 30%, transparent 75%)",
-                        }}
-                    />
-                    <ParticleField className="absolute inset-0 text-foreground [mask-image:radial-gradient(ellipse_at_center,#000_35%,transparent_80%)]" />
-                    <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-foreground/15 to-transparent" />
-                </div>
-
-                <div className="relative z-10 mx-auto grid min-h-[calc(100svh-5rem)] max-w-7xl grid-cols-1 items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:py-0">
-                    <div className="relative max-w-xl">
-                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                            <Eyebrow>Built for learning data structures</Eyebrow>
-                        </motion.div>
-
-                        <h1 className="mb-6 mt-6 text-4xl font-bold leading-[0.95] tracking-tight text-foreground min-[400px]:text-5xl md:text-6xl lg:text-7xl">
-                            {HEADLINE.map((line, li) => (
-                                <span key={li} className={cn("block", li === 1 && "text-accent")}>
-                                    {line.map((w) => {
-                                        const i = wordIndex++;
-                                        return (
-                                            <span key={w + i} className="mr-[0.22em] inline-block overflow-hidden pb-[0.08em] align-bottom">
-                                                <motion.span
-                                                    className="inline-block"
-                                                    initial={{ y: "115%", rotate: 4 }}
-                                                    animate={{ y: 0, rotate: 0 }}
-                                                    transition={{ duration: 0.8, delay: 0.1 + i * 0.08, ease: EASE }}
-                                                >
-                                                    {w}
-                                                </motion.span>
-                                            </span>
-                                        );
-                                    })}
-                                </span>
-                            ))}
-                        </h1>
-
-                        <motion.p
-                            className="mb-8 text-base leading-relaxed text-foreground/60 sm:text-lg md:text-xl"
-                            initial={{ opacity: 0, y: 14 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.55 }}
-                        >
-                            Visualize data structures step by step and see exactly what each operation does, with clarity, not guesswork.
-                        </motion.p>
-
-                        <motion.div className="flex flex-wrap gap-4" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.7 }}>
-                            <Link
-                                href={DASHBOARD_HREF}
-                                className={cn(
-                                    buttonVariants(),
-                                    "group h-12 w-full justify-center rounded-full bg-accent px-6 font-semibold text-black transition-all hover:-translate-y-0.5 hover:bg-accent/90 active:translate-y-0 active:scale-[0.98] sm:w-auto sm:px-8",
-                                )}
-                            >
-                                Start Visualizing
-                                <span className="ml-1 inline-block transition-transform group-hover:translate-x-1">→</span>
-                            </Link>
-                            <Link
-                                href="#watch"
-                                className={cn(
-                                    buttonVariants(),
-                                    "h-12 w-full justify-center rounded-full border border-foreground/15 bg-foreground/5 px-6 text-foreground transition-all hover:-translate-y-0.5 hover:border-foreground/40 hover:bg-foreground hover:text-background active:scale-[0.98] sm:w-auto sm:px-8",
-                                )}
-                            >
-                                Watch the tour
-                            </Link>
-                        </motion.div>
-
-                        <motion.div className="mt-8 flex flex-wrap gap-x-5 gap-y-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 1 }}>
-                            {["No account needed", "Runs in your browser", `${PRODUCT_FACTS.structures} data structures`].map((t) => (
-                                <span key={t} className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground/55">
-                                    <HugeiconsIcon icon={Tick02Icon} size={12} color="currentColor" strokeWidth={2} className="text-accent" />
-                                    {t}
-                                </span>
-                            ))}
-                        </motion.div>
-
-                        <div className="absolute -bottom-20 left-0 hidden xl:block">
-                            <Buddy size={56} />
-                        </div>
-                    </div>
-
-                    {/* RIGHT: same code editor, same props */}
-                    <motion.div
-                        className="relative hidden h-full w-full items-center justify-center lg:flex"
-                        initial={{ opacity: 0, x: 40 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.9, delay: 0.3, ease: EASE }}
-                    >
-                        <CometCard className="hidden lg:flex items-center w-full h-full justify-center" translateDepth={5} rotateDepth={5}>
-                            <CodeEditor
-                                language={"python"}
-                                readOnly={true}
-                                height="440px"
-                                className="w-full max-w-150"
-                                defaultValue={defaultCodeBinarySearch}
-                                onChange={(v) => {
-                                    if (value !== undefined) setValue(v);
-                                }}
-                                {...(value !== undefined ? { value } : {})}
-                            />
-                        </CometCard>
-
-                        {CHIPS.map((c) => (
-                            <div key={c.label} className={`af-float pointer-events-none absolute z-20 ${c.pos}`} style={{ animationDelay: c.delay }}>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-background/90 px-3.5 py-1.5 font-mono text-xs text-foreground/80">
-                                    <HugeiconsIcon icon={c.icon} size={14} color="currentColor" strokeWidth={1.8} className="text-accent" />
-                                    {c.label}
-                                </span>
-                            </div>
-                        ))}
-                    </motion.div>
-                </div>
-
-                <a href="#watch" aria-label="Scroll down" className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 lg:block">
-                    <div className="flex h-9 w-5 justify-center rounded-full border border-foreground/25 pt-2">
-                        <span className="af-scroll-dot h-1.5 w-1 rounded-full bg-accent" />
-                    </div>
-                </a>
-            </section>
-        </>
-    );
-}
-
-__ALGOFORGE_FILE_22e16575847df948__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage/HorizontalFeatureScroll.tsx <<'__ALGOFORGE_FILE_7181cd8be84addc1__'
-"use client";
-
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon } from "@hugeicons/core-free-icons";
-import { StatusChip } from "@/components/ui/StatusChip";
-import type { FeatureStatus } from "@/lib/featureStatus";
-import { usePrefersReducedMotion } from "@/lib/reducedMotion";
-import DemoVideo from "./DemoVideo";
-import { Eyebrow, Reveal, SpotCard } from "./shared";
-
-gsap.registerPlugin(ScrollTrigger);
-
-type Feature = {
-    id: string;
-    tag: string;
-    index: string;
-    status: FeatureStatus;
-    title: string;
-    description: string;
-    points: string[];
-};
-
-const features: Feature[] = [
-    {
-        id: "visualizer", tag: "Interactive", index: "01", status: "available", title: "Algorithm Visualizer",
-        description: "Watch operations run step by step on arrays, stacks, queues, linked lists, trees, hash maps and graphs.",
-        points: [
-            "Play, pause, step back, scrub and replay",
-            "Several structures animate together on one canvas",
-            "Narration you write into the script, shown with each step",
-            "Speed from 0.25× to 4×",
-            "Scriptable with JSON, with errors that point at the line",
-        ],
-    },
-    {
-        id: "ai-analysis", tag: "Analysis", index: "02", status: "preview", title: "AI Code Analysis",
-        description: "Complexity and bottleneck analysis. The report screen is built; the engine is not connected, so it currently shows a fixed sample.",
-        points: ["Time and space complexity", "Bottlenecks and edge cases", "Needs an account. Today it shows a sample report, not based on your code"],
-    },
-    {
-        id: "ai-explainer", tag: "Learning", index: "03", status: "planned", title: "AI Explainer",
-        description: "Plain-language explanations of an algorithm or snippet.",
-        points: ["Explain an algorithm in plain English", "Answer follow-up questions", "Needs an account"],
-    },
-    {
-        id: "dashboard", tag: "Productivity", index: "04", status: "planned", title: "Saved Work",
-        description: "Keep and revisit your past work in one place.",
-        points: ["History of saved visualizations", "Needs accounts and storage, not built yet"],
-    },
-    {
-        id: "share", tag: "Collaboration", index: "05", status: "planned", title: "Shareable Links",
-        description: "A link to a visualization that anyone can open.",
-        points: ["One link per saved visualization", "Needs a backend, not built yet"],
-    },
-];
-
-// The video frame grows and untilts as you scroll
-function VideoBlock() {
-    const wrap = useRef<HTMLDivElement>(null);
-    const reduced = usePrefersReducedMotion();
-
-    useEffect(() => {
-        const el = wrap.current;
-        if (!el || reduced) return;
-        const ctx = gsap.context(() => {
-            gsap.fromTo(
-                el,
-                { scale: 0.86, y: 70, rotateX: 12, transformPerspective: 900 },
-                {
-                    scale: 1, y: 0, rotateX: 0, ease: "none",
-                    scrollTrigger: { trigger: el, start: "top 95%", end: "top 35%", scrub: true },
-                },
-            );
-        });
-        return () => ctx.revert();
-    }, [reduced]);
-
-    return (
-        <section id="watch" className="relative overflow-x-clip px-4 py-16 sm:px-6 md:py-28">
-            <div className="relative mx-auto max-w-5xl">
-                <Reveal className="mb-12 text-center">
-                    <Eyebrow>Product tour</Eyebrow>
-                    <h2 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
-                        See it in <span className="text-accent">action.</span>
-                    </h2>
-                    <p className="mx-auto mt-4 max-w-md text-foreground/60">
-                        A short recording of writing a script, pressing play and stepping through it.
-                    </p>
-                </Reveal>
-                <div ref={wrap}>
-                    <DemoVideo />
-                </div>
-            </div>
-        </section>
-    );
-}
-
-export default function HorizontalFeatureScroll() {
-    return (
-        <>
-            <VideoBlock />
-
-            <section id="features" className="relative overflow-x-clip px-4 py-16 sm:px-6 md:py-28">
-                <div className="mx-auto max-w-6xl">
-                    <Reveal className="mb-14 text-center">
-                        <Eyebrow>Platform features</Eyebrow>
-                        <h2 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
-                            Everything in <span className="text-accent">one place.</span>
-                        </h2>
-                    </Reveal>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {features.map((f, i) => (
-                            <Reveal key={f.id} delay={i * 0.08} className={i === 0 ? "md:col-span-2" : ""}>
-                                <SpotCard className="h-full">
-                                    <div className="flex h-full flex-col gap-4 p-5 sm:p-7">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-mono text-xs font-bold tracking-widest text-foreground/50 transition-colors group-hover:text-accent">
-                                                    {f.index}
-                                                </span>
-                                                <StatusChip status={f.status} />
-                                            </div>
-                                            <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/50">{f.tag}</span>
-                                        </div>
-                                        <h3 className="text-2xl font-bold tracking-tight">{f.title}</h3>
-                                        <p className="text-sm leading-relaxed text-foreground/60">{f.description}</p>
-                                        <ul className="mt-auto space-y-2 pt-2">
-                                            {f.points.map((p, pi) => (
-                                                <li
-                                                    key={p}
-                                                    className="flex items-start gap-2.5 text-sm text-foreground/75 transition-transform duration-300 group-hover:translate-x-1"
-                                                    style={{ transitionDelay: `${pi * 35}ms` }}
-                                                >
-                                                    <HugeiconsIcon icon={Tick02Icon} size={14} color="currentColor" strokeWidth={2} className="mt-1 shrink-0 text-accent" />
-                                                    {p}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </SpotCard>
-                            </Reveal>
-                        ))}
-                    </div>
-                </div>
-            </section>
-        </>
-    );
-}
-
-__ALGOFORGE_FILE_7181cd8be84addc1__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage/MobileTabletLandingPage.tsx <<'__ALGOFORGE_FILE_84dc63d54167707a__'
-"use client";
-
-import {
-    useEffect,
-    useRef,
-    useState,
-    type CSSProperties,
-    type MouseEvent,
-    type PointerEvent as RPointerEvent,
-    type ReactNode,
-} from "react";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon, ZapIcon, Fire, LineChart, Target } from "@hugeicons/core-free-icons";
-import { StatusChip } from "@/components/ui/StatusChip";
-import type { FeatureStatus } from "@/lib/featureStatus";
-import { DASHBOARD_HREF, SITE } from "@/lib/site";
-import { PRODUCT_FACTS } from "@/lib/productFacts";
-import { Buddy, LandingStyles } from "./shared";
-
-const DemoVideo = dynamic(() => import("./DemoVideo"), { ssr: false });
-
-/** true = full motion even if the OS has "reduce motion" on (for testing). */
-const FORCE_MOTION = false;
-
-const reduced = () =>
-    !FORCE_MOTION && typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-const vib = (ms = 8) => {
-    try {
-        navigator.vibrate?.(ms);
-    } catch {
-        /* unsupported (iOS) */
-    }
-};
-
-const cv = (o: Record<string, string | number>) => o as CSSProperties;
-const clamp = (n: number, a = 0, b = 1) => Math.min(b, Math.max(a, n));
-
-/* -------------------------------------------------------------------------- */
-/*  Styles                                                                     */
-/* -------------------------------------------------------------------------- */
-function MobileStyles() {
-    return (
-        <style>{`
-:root{--ease:cubic-bezier(.16,1,.3,1)}
-html{scroll-behavior:smooth}
-.m-root{-webkit-tap-highlight-color:transparent}
-
-/* ---------- arrival (fill-mode backwards so :active transforms still work) ---------- */
-@keyframes m-fade{from{opacity:0}to{opacity:1}}
-@keyframes m-rise{from{opacity:0;transform:translate3d(0,18px,0)}to{opacity:1;transform:none}}
-@keyframes m-word{from{transform:translate3d(0,110%,0) rotate(3deg)}to{transform:none}}
-@keyframes m-drop{from{opacity:0;transform:translate3d(0,-100%,0)}to{opacity:1;transform:none}}
-@keyframes m-pop{from{opacity:0;transform:scale(.6) rotate(-8deg)}to{opacity:1;transform:none}}
-.m-rise{animation:m-rise .8s var(--ease) backwards;animation-delay:calc(var(--i,0)*90ms + 250ms)}
-.m-word{display:block;animation:m-word .9s var(--ease) backwards;animation-delay:calc(var(--i,0)*80ms + 120ms)}
-.m-drop{animation:m-drop .6s var(--ease) backwards}
-.m-pop{animation:m-pop .7s var(--ease) .1s backwards}
-
-/* ---------- word cycler: 5 words + 1 duplicate = 6 rows ---------- */
-.m-cyc{display:block;height:1.12em;overflow:hidden}
-.m-cyc-col{display:block;animation:m-cyc 10s cubic-bezier(.7,0,.3,1) infinite;will-change:transform}
-.m-cyc-col>span{display:block;height:1.12em;line-height:1.12}
-@keyframes m-cyc{
-  0%,16%{transform:translate3d(0,0,0)}
-  20%,36%{transform:translate3d(0,-16.667%,0)}
-  40%,56%{transform:translate3d(0,-33.333%,0)}
-  60%,76%{transform:translate3d(0,-50%,0)}
-  80%,96%{transform:translate3d(0,-66.667%,0)}
-  100%{transform:translate3d(0,-83.333%,0)}
-}
-
-/* ---------- scroll reveal + exit ---------- */
-.m-armed [data-rv]{opacity:0;transform:translate3d(0,16px,0);
-  transition:opacity .6s var(--ease),transform .6s var(--ease)}
-.m-armed [data-rv="left"]{transform:translate3d(-18px,0,0)}
-.m-armed [data-rv="zoom"]{transform:translate3d(0,26px,0) scale(.95)}
-.m-armed [data-rv].m-in{opacity:1;transform:none;transition-delay:var(--d,0ms)}
-.m-armed [data-rv].m-in.m-past{opacity:.5;transform:translate3d(0,-8px,0) scale(.985);transition-delay:0ms}
-
-.m-draw{transform:scaleX(0);transform-origin:left;transition:transform .8s var(--ease) .2s}
-.m-in .m-draw{transform:scaleX(1)}
-
-/* ---------- touch / click ---------- */
-.m-press{transition:transform .18s var(--ease),border-color .25s ease,background-color .25s ease}
-.m-press:active{transform:scale(.97)}
-.m-press .m-ico{transition:transform .25s var(--ease)}
-.m-press:active .m-ico{transform:rotate(-8deg) scale(1.12)}
-.m-press .m-arrow{transition:transform .25s var(--ease)}
-.m-press:active .m-arrow{transform:translate3d(6px,0,0)}
-@keyframes m-rp{to{transform:scale(1);opacity:0}}
-.m-ripple{position:absolute;border-radius:9999px;background:currentColor;opacity:.2;
-  transform:scale(0);animation:m-rp .6s ease-out forwards;pointer-events:none}
-.m-tilt{transition:transform .35s var(--ease);will-change:transform}
-.m-spot{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s ease;
-  background:radial-gradient(220px circle at var(--sx,50%) var(--sy,30%),color-mix(in srgb,var(--accent) 16%,transparent),transparent 70%)}
-
-/* ---------- ambient: only while on screen ---------- */
-@keyframes m-mq{to{transform:translate3d(-50%,0,0)}}
-.m-marquee{animation:m-mq 30s linear infinite;animation-play-state:paused}
-.m-marquee-r{animation-direction:reverse;animation-duration:38s}
-.m-live .m-marquee{animation-play-state:running}
-@keyframes m-ring{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.1,1.5);opacity:0}}
-.m-ring{animation:m-ring 2.4s ease-out infinite;animation-play-state:paused}
-.m-live .m-ring{animation-play-state:running}
-@keyframes m-nudge{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(8px,0,0)}}
-.m-nudge{animation:m-nudge 1.6s ease-in-out infinite}
-
-/* ---------- chrome ---------- */
-.m-nav{border-color:transparent;transition:border-color .3s ease}
-.m-nav.m-nav-on{border-color:rgba(255,255,255,.1)}
-.m-bar{transform:translateY(110%);transition:transform .35s var(--ease)}
-.m-bar-on{transform:none}
-.m-scroller{scrollbar-width:none}
-.m-scroller::-webkit-scrollbar{display:none}
-
-/* burger -> X */
-.m-burger i{position:absolute;left:11px;right:11px;height:2px;border-radius:2px;background:#fff;
-  transition:transform .35s var(--ease)}
-.m-burger i:nth-child(1){top:17px;transform:translateY(-3.5px)}
-.m-burger i:nth-child(2){top:17px;transform:translateY(3.5px)}
-.m-burger.m-x i:nth-child(1){transform:rotate(45deg)}
-.m-burger.m-x i:nth-child(2){transform:rotate(-45deg)}
-
-/* menu sheet (exit animation = same transition reversed) */
-.m-menu{opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s linear .3s}
-.m-menu.m-menu-on{opacity:1;visibility:visible;transition:opacity .3s ease}
-.m-menu li{opacity:0;transform:translate3d(0,18px,0);transition:opacity .35s var(--ease),transform .35s var(--ease)}
-.m-menu-on li{opacity:1;transform:none;transition-delay:calc(var(--i,0)*60ms + 90ms)}
-
-/* ---------- page exit on navigation ---------- */
-.m-page{transition:opacity .2s ease,transform .2s ease}
-html.m-leaving .m-page{opacity:0;transform:scale(.985) translate3d(0,-6px,0)}
-html.m-leaving .m-bar{transform:translateY(110%)}
-
-/* ---------- reduced motion: keep soft fades, drop movement ---------- */
-@media (prefers-reduced-motion: reduce){
-  html{scroll-behavior:auto}
-  .m-root:not(.m-force) :is(.m-rise,.m-word,.m-drop,.m-pop){animation-name:m-fade;animation-duration:.5s}
-  .m-root:not(.m-force) :is(.m-marquee,.m-ring,.m-cyc-col,.m-ripple,.m-nudge){animation:none}
-  .m-root.m-armed:not(.m-force) [data-rv]{transform:none!important}
-  .m-root:not(.m-force) .m-draw{transform:none;transition:none}
-  .m-root:not(.m-force) .m-page{transition:none}
-  .m-root:not(.m-force) .m-menu li{transform:none}
-  html.m-leaving .m-page{transform:none}
-}
-`}</style>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Building blocks                                                            */
-/* -------------------------------------------------------------------------- */
-function R({ children, d = 0, v = "", className = "" }: { children: ReactNode; d?: number; v?: "" | "left" | "zoom"; className?: string }) {
-    return (
-        <div data-rv={v} style={cv({ "--d": `${Math.min(d, 150)}ms` })} className={className}>
-            {children}
-        </div>
-    );
-}
-
-function Head({ label, title }: { label: string; title?: ReactNode }) {
-    return (
-        <R className="mb-7">
-            <p className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-white/50">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                {label}
-            </p>
-            {title && <h2 className="text-[1.75rem] font-extrabold leading-[1.1] tracking-tight">{title}</h2>}
-            <span className="m-draw mt-4 block h-[2px] w-12 rounded-full bg-accent" />
-        </R>
-    );
-}
-
-function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
-    return (
-        <div
-            aria-hidden={!open}
-            className="grid transition-[grid-template-rows,opacity] duration-300 ease-out"
-            style={{ gridTemplateRows: open ? "1fr" : "0fr", opacity: open ? 1 : 0 }}
-        >
-            <div className="overflow-hidden">{children}</div>
-        </div>
-    );
-}
-
-/** Tilts toward the finger / pointer. Resets on release. */
-function Tilt({ children, className = "", max = 7 }: { children: ReactNode; className?: string; max?: number }) {
-    const ref = useRef<HTMLDivElement>(null);
-    const move = (e: RPointerEvent<HTMLDivElement>) => {
-        const el = ref.current;
-        if (!el || reduced()) return;
-        const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        el.style.transform = `perspective(700px) rotateX(${(-y * max).toFixed(2)}deg) rotateY(${(x * max).toFixed(2)}deg)`;
-    };
-    const reset = () => {
-        if (ref.current) ref.current.style.transform = "";
-    };
-    return (
-        <div ref={ref} onPointerMove={move} onPointerLeave={reset} onPointerUp={reset} onPointerCancel={reset} className={`m-tilt ${className}`}>
-            {children}
-        </div>
-    );
-}
-
-type Variant = "primary" | "ghost" | "small" | "dark" | "darkGhost";
-
-function Cta({ href, children, variant = "primary", id, tabIndex }: { href: string; children: ReactNode; variant?: Variant; id?: string; tabIndex?: number }) {
-    const router = useRouter();
-    const isHash = href.startsWith("#");
-
-    const look: Record<Variant, string> = {
-        primary: "min-h-[50px] w-full bg-accent px-6 text-sm font-bold text-black",
-        ghost: "min-h-[50px] w-full border border-white/20 px-6 text-sm text-white/80",
-        small: "min-h-[40px] border border-white/20 px-4 font-mono text-xs text-white/80",
-        dark: "min-h-[52px] w-full bg-black px-6 text-sm font-bold text-white",
-        darkGhost: "min-h-[50px] w-full border border-black/30 px-6 text-sm font-semibold text-black",
-    };
-
-    const ripple = (e: RPointerEvent<HTMLElement>) => {
-        const el = e.currentTarget;
-        const r = el.getBoundingClientRect();
-        const size = Math.max(r.width, r.height) * 1.2;
-        const s = document.createElement("span");
-        s.className = "m-ripple";
-        s.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
-        s.addEventListener("animationend", () => s.remove(), { once: true });
-        el.appendChild(s);
-    };
-
-    const click = (e: MouseEvent<HTMLAnchorElement>) => {
-        vib(8);
-        if (isHash || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-        e.preventDefault();
-        document.documentElement.classList.add("m-leaving");
-        window.setTimeout(() => router.push(href), 200);
-    };
-
-    const props = {
-        "data-cta": id,
-        className: `m-press relative inline-flex select-none items-center justify-center overflow-hidden rounded-full text-center font-semibold ${look[variant]}`,
-        onPointerDown: ripple,
-        onClick: click,
-        tabIndex,
-    };
-
-    return isHash ? (
-        <a href={href} {...props}>{children}</a>
-    ) : (
-        <Link href={href} {...props}>{children}</Link>
-    );
-}
-
-/** Counts up once when visible (writes to the DOM, no re-renders). */
-function Stat({ value, label, i }: { value: string | number; label: string; i: number }) {
-    const box = useRef<HTMLDivElement>(null);
-    const num = useRef<HTMLSpanElement>(null);
-
-    useEffect(() => {
-        const el = num.current;
-        const wrap = box.current;
-        if (typeof value !== "number" || !el || !wrap || reduced()) return;
-        el.textContent = "0";
-        let raf = 0;
-        const io = new IntersectionObserver(([e]) => {
-            if (!e.isIntersecting) return;
-            io.disconnect();
-            const t0 = performance.now();
-            const tick = (now: number) => {
-                const p = Math.min((now - t0) / 1000, 1);
-                el.textContent = String(Math.round(value * (1 - Math.pow(1 - p, 3))));
-                if (p < 1) raf = requestAnimationFrame(tick);
-            };
-            raf = requestAnimationFrame(tick);
-        });
-        io.observe(wrap);
-        return () => {
-            io.disconnect();
-            cancelAnimationFrame(raf);
-        };
-    }, [value]);
-
-    return (
-        <div ref={box} className="m-rise m-press rounded-2xl border border-white/10 bg-white/[.03] px-2 py-3.5 text-center" style={cv({ "--i": 5 + i })}>
-            <div className="text-lg font-extrabold tracking-tight">
-                <span ref={num}>{value}</span>
-            </div>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-white/50">{label}</div>
-        </div>
-    );
-}
-
-function LazyDemo() {
-    const ref = useRef<HTMLDivElement>(null);
-    const [mount, setMount] = useState(false);
-    const [saver, setSaver] = useState(false);
-
-    useEffect(() => {
-        const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-        if (conn?.saveData) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setSaver(true);
-            return;
-        }
-        const el = ref.current;
-        if (!el) return;
-        const io = new IntersectionObserver(
-            ([e]) => {
-                if (e.isIntersecting) {
-                    setMount(true);
-                    io.disconnect();
-                }
-            },
-            { rootMargin: "300px 0px" },
-        );
-        io.observe(el);
-        return () => io.disconnect();
-    }, []);
-
-    if (mount) return <DemoVideo lite />;
-
-    return (
-        <div ref={ref} className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-white/[.03]">
-            {saver && (
-                <button
-                    type="button"
-                    onClick={() => {
-                        setSaver(false);
-                        setMount(true);
-                    }}
-                    className="absolute inset-0 grid place-items-center font-mono text-xs text-white/70 active:bg-white/5"
-                >
-                    Tap to load the tour
-                </button>
-            )}
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Content                                                                    */
-/* -------------------------------------------------------------------------- */
-const WORDS = ["array", "tree", "graph", "hash map", "stack"];
-const STRUCTS = ["Array", "Stack", "Queue", "Linked list", "Binary tree", "Hash map", "Graph", "Step back", "0.25×–4× speed"];
-const OPS = ["insert()", "push()", "enqueue()", "delete()", "rotate()", "hash()", "bfs()", "swap()"];
-
-const NAV = [
-    { label: "Product tour", href: "#tour" },
-    { label: "Features", href: "#features" },
-    { label: "How it works", href: "#how-it-works" },
-    { label: "Who it's for", href: "#who" },
-    { label: "FAQ", href: "#faq" },
-];
-
-const FEATURES: { tag: string; status: FeatureStatus; headline: string; points: string[] }[] = [
-    { tag: "Algorithm Visualizer", status: "available", headline: "See operations run.", points: ["Step-by-step execution", "Arrays, stacks, queues, lists, trees, hash maps, graphs", "Play, pause, step back and replay", "Narration you write into the script"] },
-    { tag: "AI Code Analysis", status: "preview", headline: "Complexity and bottlenecks.", points: ["Time and space complexity", "Bottlenecks and edge cases", "Needs an account. Today it shows a fixed sample, not based on your code"] },
-    { tag: "AI Explainer", status: "planned", headline: "Ask what a step means.", points: ["Plain-language explanations", "Follow-up questions", "Needs an account"] },
-    { tag: "Shareable Links", status: "planned", headline: "Send a visualization.", points: ["One link per saved visualization", "Needs a backend, not built yet"] },
-];
-
-const STEPS = [
-    { title: "Write a script", desc: "Or pick an example. It is plain JSON." },
-    { title: "Press play", desc: "Every operation animates, one step at a time." },
-    { title: "Step, scrub, replay", desc: "Go back, jump ahead, change the speed." },
-    { title: "Edit and run again", desc: "Errors point at the line and suggest a fix." },
-];
-
-const PERKS = [
-    { icon: ZapIcon, label: "Playback speed", desc: "From 0.25× to 4×, so you can slow a tricky step right down." },
-    { icon: LineChart, label: "Narrated steps", desc: "Each step can explain itself." },
-    { icon: Fire, label: "Step back", desc: "Rewind one step and rewatch." },
-    { icon: Target, label: "Keyboard control", desc: "Space, arrows and R." },
-];
-
-const USE_CASES = [
-    { who: "Students", line: "Learn data structures", desc: "Watch arrays, trees, graphs and hash tables change one operation at a time. Pause, step back and replay until it makes sense." },
-    { who: "Developers", line: "Check a structure before you build on it", desc: "Insert, delete and swap, and see exactly which pointers and buckets change. Rejected operations are shown, not hidden." },
-    { who: "Interview candidates", line: "Rehearse the walkthrough", desc: "Practise explaining how a hash map handles a collision or how a BST deletes a node, with the steps on screen as you talk." },
-    { who: "Educators", line: "Narrate once, replay in class", desc: "Each step can carry a message. Write the walkthrough once and replay it at any speed, as often as you need." },
-];
-
-const FAQ = [
-    { q: "Do I need an account?", a: "Not to visualize. The editor and the visualizer run in your browser without one. Signing in with Google is for the features that belong to you: analysis, the AI assistant, history and sharing." },
-    { q: "Is the AI analysis real?", a: "Not yet. The report screen is built, but it shows a fixed sample that is not based on your code." },
-    { q: "Which structures can I visualize?", a: "Arrays, stacks, queues, linked lists, trees, hash maps and graphs." },
-    { q: "Can I go backwards?", a: "Yes. Step back one operation, scrub the timeline, or replay from the start." },
-];
-
-/* -------------------------------------------------------------------------- */
-/*  Sections with state                                                        */
-/* -------------------------------------------------------------------------- */
-function FeatureCarousel() {
-    const track = useRef<HTMLDivElement>(null);
-    const [idx, setIdx] = useState(0);
-
-    useEffect(() => {
-        const el = track.current;
-        if (!el) return;
-        let raf = 0;
-        const on = () => {
-            cancelAnimationFrame(raf);
-            raf = requestAnimationFrame(() => {
-                const card = el.firstElementChild as HTMLElement | null;
-                if (!card) return;
-                const i = Math.round(el.scrollLeft / (card.offsetWidth + 12));
-                const n = Math.max(0, Math.min(i, FEATURES.length - 1));
-                setIdx((p) => (p === n ? p : n));
-            });
-        };
-        el.addEventListener("scroll", on, { passive: true });
-        return () => {
-            el.removeEventListener("scroll", on);
-            cancelAnimationFrame(raf);
-        };
-    }, []);
-
-    const go = (i: number) => {
-        const el = track.current;
-        const card = el?.firstElementChild as HTMLElement | null;
-        if (!el || !card) return;
-        vib(6);
-        el.scrollTo({ left: i * (card.offsetWidth + 12), behavior: "smooth" });
-    };
-
-    return (
-        <R>
-            <div ref={track} className="m-scroller -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-[9%] pb-2">
-                {FEATURES.map((f, i) => (
-                    <div key={f.tag} className="w-[82%] shrink-0 snap-center">
-                        <div
-                            className={`h-full rounded-3xl border p-5 transition-[transform,opacity,border-color,background-color] duration-300 active:scale-[.98] ${
-                                i === idx ? "scale-100 border-accent/30 bg-white/[.05] opacity-100" : "scale-[.95] border-white/10 bg-white/[.03] opacity-60"
-                            }`}
-                        >
-                            <div className="mb-4 flex items-start justify-between gap-3">
-                                <span className="text-5xl font-black leading-none text-transparent" style={{ WebkitTextStroke: "1px var(--accent)" }}>
-                                    {String(i + 1).padStart(2, "0")}
-                                </span>
-                                <StatusChip status={f.status} />
-                            </div>
-                            <p className="mb-1 font-mono text-[11px] uppercase tracking-widest text-white/50">{f.tag}</p>
-                            <h3 className="mb-3 text-lg font-bold">{f.headline}</h3>
-                            <ul className="space-y-2">
-                                {f.points.map((p) => (
-                                    <li key={p} className="flex items-start gap-2.5 text-sm leading-snug text-white/65">
-                                        <HugeiconsIcon icon={Tick02Icon} size={13} color="currentColor" strokeWidth={2} className="mt-0.5 shrink-0 text-accent" />
-                                        {p}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="mt-4 flex items-center justify-between">
-                <div className="flex gap-1.5">
-                    {FEATURES.map((f, i) => (
-                        <button key={f.tag} type="button" aria-label={`Show ${f.tag}`} onClick={() => go(i)} className="flex h-6 items-center">
-                            <span className={`block h-1.5 rounded-full transition-all duration-300 ${i === idx ? "w-6 bg-accent" : "w-1.5 bg-white/25"}`} />
-                        </button>
-                    ))}
-                </div>
-                <span className={`font-mono text-[11px] uppercase tracking-widest text-white/40 transition-opacity duration-300 ${idx === 0 ? "opacity-100" : "opacity-0"}`}>
-                    Swipe <span className="m-nudge inline-block">→</span>
-                </span>
-            </div>
-        </R>
-    );
-}
-
-function UseCases() {
-    const [open, setOpen] = useState<number | null>(0);
-    return (
-        <div>
-            {USE_CASES.map((u, i) => {
-                const on = open === i;
-                return (
-                    <R key={u.who} d={i * 40} v="left">
-                        <div className="border-b border-white/10 first:border-t">
-                            <button
-                                type="button"
-                                aria-expanded={on}
-                                onClick={() => {
-                                    vib(6);
-                                    setOpen(on ? null : i);
-                                }}
-                                className="m-press flex min-h-[64px] w-full items-center gap-4 py-4 text-left"
-                            >
-                                <span className="w-7 font-mono text-xs text-accent">{String(i + 1).padStart(2, "0")}</span>
-                                <span className="flex-1">
-                                    <span className="block font-mono text-[10px] uppercase tracking-widest text-accent">For {u.who}</span>
-                                    <span className="mt-1 block text-[15px] font-semibold leading-snug text-white/90">{u.line}</span>
-                                </span>
-                                <span className={`font-mono text-xl leading-none text-accent transition-transform duration-300 ${on ? "rotate-45" : ""}`}>+</span>
-                            </button>
-                            <Collapse open={on}>
-                                <p className="pb-5 pl-11 pr-2 text-sm leading-relaxed text-white/60">{u.desc}</p>
-                            </Collapse>
-                        </div>
-                    </R>
-                );
-            })}
-        </div>
-    );
-}
-
-function Faq() {
-    const [open, setOpen] = useState<number | null>(null);
-    return (
-        <div className="space-y-2">
-            {FAQ.map((f, i) => {
-                const on = open === i;
-                return (
-                    <R key={f.q} d={i * 50}>
-                        <div className={`rounded-2xl border transition-colors duration-300 ${on ? "border-accent/30 bg-white/[.05]" : "border-white/10 bg-white/[.03]"}`}>
-                            <button
-                                type="button"
-                                aria-expanded={on}
-                                onClick={() => {
-                                    vib(6);
-                                    setOpen(on ? null : i);
-                                }}
-                                className="m-press flex min-h-[54px] w-full items-center justify-between gap-4 rounded-2xl px-4 text-left text-sm font-semibold"
-                            >
-                                {f.q}
-                                <span className={`font-mono text-xl leading-none text-accent transition-transform duration-300 ${on ? "rotate-45" : ""}`}>+</span>
-                            </button>
-                            <Collapse open={on}>
-                                <p className="px-4 pb-4 text-sm leading-relaxed text-white/60">{f.a}</p>
-                            </Collapse>
-                        </div>
-                    </R>
-                );
-            })}
-        </div>
-    );
-}
-
-function Marquee({ items, reverse = false }: { items: string[]; reverse?: boolean }) {
-    return (
-        <div data-live className="overflow-hidden py-1.5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
-            <div className={`m-marquee ${reverse ? "m-marquee-r" : ""} flex w-max gap-2.5`}>
-                {[...items, ...items].map((c, i) => (
-                    <span
-                        key={i}
-                        aria-hidden={i >= items.length}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.03] px-4 py-1.5 font-mono text-xs text-white/65"
-                    >
-                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                        {c}
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Page                                                                       */
-/* -------------------------------------------------------------------------- */
-export default function AlgoForgeLanding() {
-    const root = useRef<HTMLDivElement>(null);
-    const nav = useRef<HTMLElement>(null);
-    const progress = useRef<HTMLDivElement>(null);
-    const heroSec = useRef<HTMLElement>(null);
-    const heroIn = useRef<HTMLDivElement>(null);
-    const spot = useRef<HTMLDivElement>(null);
-    const heroEnd = useRef<HTMLDivElement>(null);
-    const tourWrap = useRef<HTMLDivElement>(null);
-    const tourIn = useRef<HTMLDivElement>(null);
-    const finalCta = useRef<HTMLElement>(null);
-    const scroller = useRef<HTMLElement | null>(null); // null = window
-    const [bar, setBar] = useState(false);
-    const [menu, setMenu] = useState(false);
-
-    /* Observers + one rAF-throttled scroll handler */
-    useEffect(() => {
-        const el = root.current;
-        if (!el) return;
-        const rm = reduced();
-
-        const hasIO = "IntersectionObserver" in window;
-        if (hasIO) el.classList.add("m-armed");
-
-        const rv = new IntersectionObserver(
-            (entries) => {
-                for (const e of entries) {
-                    const t = e.target;
-                    if (e.isIntersecting) {
-                        t.classList.add("m-in");
-                        t.classList.remove("m-past");
-                    } else if (t.classList.contains("m-in") && e.boundingClientRect.top < 0) {
-                        t.classList.add("m-past");
-                    }
-                }
-            },
-            { rootMargin: "-4% 0px -8% 0px" },
-        );
-        const live = new IntersectionObserver((entries) => {
-            for (const e of entries) e.target.classList.toggle("m-live", e.isIntersecting);
-        });
-        el.querySelectorAll("[data-rv]").forEach((n) => rv.observe(n));
-        el.querySelectorAll("[data-live]").forEach((n) => live.observe(n));
-
-        let ticking = false;
-        const frame = () => {
-            ticking = false;
-            const s = scroller.current;
-            const y = s ? s.scrollTop : window.scrollY;
-            const vh = s ? s.clientHeight : window.innerHeight;
-            const max = (s ? s.scrollHeight : document.documentElement.scrollHeight) - vh;
-
-            if (progress.current) progress.current.style.transform = `scaleX(${max > 0 ? clamp(y / max) : 0})`;
-            nav.current?.classList.toggle("m-nav-on", y > 8);
-
-            if (heroSec.current && heroIn.current) {
-                const r = heroSec.current.getBoundingClientRect();
-                const k = clamp(-r.top / (r.height * 0.8));
-                heroIn.current.style.opacity = String(1 - k * 0.7);
-                if (!rm) heroIn.current.style.transform = `translate3d(0,${(k * 36).toFixed(1)}px,0)`;
-            }
-            if (tourWrap.current && tourIn.current && !rm) {
-                const r = tourWrap.current.getBoundingClientRect();
-                const p = clamp((vh - r.top) / (vh * 0.75));
-                tourIn.current.style.transform = `translate3d(0,${((1 - p) * 28).toFixed(1)}px,0) scale(${(0.92 + 0.08 * p).toFixed(3)})`;
-            }
-        };
-        const onScroll = (e: Event) => {
-            const t = e.target;
-            if (t === document) scroller.current = null;
-            else if (t instanceof HTMLElement && t.contains(el)) scroller.current = t;
-            else return; // ignore the horizontal carousel
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(frame);
-        };
-        frame();
-        window.addEventListener("scroll", onScroll, { passive: true, capture: true });
-
-        const reset = () => document.documentElement.classList.remove("m-leaving");
-        window.addEventListener("pageshow", reset);
-
-        return () => {
-            rv.disconnect();
-            live.disconnect();
-            window.removeEventListener("scroll", onScroll, true);
-            window.removeEventListener("pageshow", reset);
-        };
-    }, []);
-
-    /* Sticky CTA: after the hero, hidden at the final CTA */
-    useEffect(() => {
-        const a = heroEnd.current;
-        const b = finalCta.current;
-        if (!a || !b) return;
-        let heroGone = false;
-        let finalSeen = false;
-        const io = new IntersectionObserver((entries) => {
-            for (const e of entries) {
-                if (e.target === a) heroGone = !e.isIntersecting;
-                if (e.target === b) finalSeen = e.isIntersecting;
-            }
-            setBar(heroGone && !finalSeen);
-        });
-        io.observe(a);
-        io.observe(b);
-        return () => io.disconnect();
-    }, []);
-
-    /* Menu: lock body scroll, close on Escape */
-    useEffect(() => {
-        const html = document.documentElement;
-        html.style.overflow = menu ? "hidden" : "";
-        const key = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
-        window.addEventListener("keydown", key);
-        return () => {
-            html.style.overflow = "";
-            window.removeEventListener("keydown", key);
-        };
-    }, [menu]);
-
-    /* Hero spotlight follows the finger */
-    const spotRaf = useRef(0);
-    const spotMove = (e: RPointerEvent<HTMLElement>) => {
-        const sp = spot.current;
-        const sec = heroSec.current;
-        if (!sp || !sec || reduced()) return;
-        const x = e.clientX;
-        const y = e.clientY;
-        cancelAnimationFrame(spotRaf.current);
-        spotRaf.current = requestAnimationFrame(() => {
-            const r = sec.getBoundingClientRect();
-            sp.style.setProperty("--sx", `${x - r.left}px`);
-            sp.style.setProperty("--sy", `${y - r.top}px`);
-            sp.style.opacity = "1";
-        });
-    };
-    const spotOff = () => {
-        cancelAnimationFrame(spotRaf.current);
-        if (spot.current) spot.current.style.opacity = "0";
-    };
-
-    const toTop = () => {
-        vib(8);
-        const s = scroller.current;
-        if (s) s.scrollTo({ top: 0, behavior: "smooth" });
-        else window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
-    const closeMenuForLink = () => {
-        vib(6);
-        document.documentElement.style.overflow = "";
-        setMenu(false);
-    };
-
-    const sc = Number(PRODUCT_FACTS.structures);
-
-    return (
-        <div ref={root} className={`m-root min-h-dvh w-full overflow-x-clip bg-black text-white ${FORCE_MOTION ? "m-force" : ""}`}>
-            <LandingStyles />
-            <MobileStyles />
-
-            <div ref={progress} aria-hidden className="fixed inset-x-0 top-0 z-[70] h-[2px] origin-left bg-accent" style={{ transform: "scaleX(0)" }} />
-
-            {/* Nav */}
-            <nav
-                ref={nav}
-                className="m-nav m-drop sticky top-0 z-[60] flex items-center justify-between border-b bg-black/95 px-5 pb-3 sm:px-8"
-                style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
-            >
-                <span className="text-sm font-bold tracking-tight">
-                    Algo<span className="text-accent">Forge</span>
-                </span>
-                <div className="flex items-center gap-2">
-                    <Cta href={DASHBOARD_HREF} variant="small" id="nav">Open app</Cta>
-                    <button
-                        type="button"
-                        aria-label={menu ? "Close menu" : "Open menu"}
-                        aria-expanded={menu}
-                        onClick={() => {
-                            vib(8);
-                            setMenu((m) => !m);
-                        }}
-                        className={`m-burger relative h-10 w-10 rounded-full border border-white/20 active:bg-white/10 ${menu ? "m-x" : ""}`}
-                    >
-                        <i />
-                        <i />
-                    </button>
-                </div>
-            </nav>
-
-            {/* Menu sheet */}
-            <div
-                aria-hidden={!menu}
-                className={`m-menu fixed inset-0 z-[55] flex flex-col bg-black px-6 pb-8 ${menu ? "m-menu-on" : "pointer-events-none"}`}
-                style={{ paddingTop: "calc(env(safe-area-inset-top) + 5.5rem)" }}
-            >
-                <ul className="mx-auto w-full max-w-2xl flex-1">
-                    {NAV.map((n, i) => (
-                        <li key={n.href} style={cv({ "--i": i })}>
-                            <a
-                                href={n.href}
-                                tabIndex={menu ? 0 : -1}
-                                onClick={closeMenuForLink}
-                                className="flex items-baseline gap-4 border-b border-white/10 py-5 active:bg-white/[.04]"
-                            >
-                                <span className="font-mono text-xs text-accent">{String(i + 1).padStart(2, "0")}</span>
-                                <span className="text-3xl font-extrabold tracking-tight">{n.label}</span>
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-                <div style={cv({ "--i": NAV.length })} className="m-menu-cta">
-                    <Cta href={DASHBOARD_HREF} id="menu" tabIndex={menu ? 0 : -1}>Open the visualizer</Cta>
-                </div>
-            </div>
-
-            <div className="m-page mx-auto w-full max-w-2xl">
-                {/* Hero */}
-                <section
-                    ref={heroSec}
-                    onPointerMove={spotMove}
-                    onPointerDown={spotMove}
-                    onPointerUp={spotOff}
-                    onPointerLeave={spotOff}
-                    onPointerCancel={spotOff}
-                    className="relative overflow-hidden px-5 pb-10 pt-12"
-                >
-                    <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 opacity-[0.07]"
-                        style={{
-                            backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)",
-                            backgroundSize: "24px 24px",
-                            maskImage: "radial-gradient(ellipse at 50% 30%, #000 20%, transparent 70%)",
-                            WebkitMaskImage: "radial-gradient(ellipse at 50% 30%, #000 20%, transparent 70%)",
-                        }}
-                    />
-                    <div ref={spot} aria-hidden className="m-spot" />
-
-                    <div ref={heroIn} className="relative will-change-transform">
-                        <div className="mb-7 flex items-center gap-3">
-                            <div className="m-pop">
-                                <Buddy size={52} track={false} />
-                            </div>
-                            <span
-                                className="m-rise inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-white/60"
-                                style={cv({ "--i": 0 })}
-                            >
-                                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                                Step-by-step
-                            </span>
-                        </div>
-
-                        <h1 className="mb-5 text-[clamp(2.25rem,11.5vw,3.5rem)] font-extrabold leading-[1.02] tracking-tight">
-                            <span className="block overflow-hidden pb-[.06em]">
-                                <span className="m-word" style={cv({ "--i": 0 })}>See your</span>
-                            </span>
-                            <span className="m-rise block text-accent" style={cv({ "--i": 1 })}>
-                                <span className="m-cyc">
-                                    <span className="m-cyc-col">
-                                        {[...WORDS, WORDS[0]].map((w, i) => (
-                                            <span key={i} aria-hidden={i > 0}>{w}</span>
-                                        ))}
-                                    </span>
-                                </span>
-                            </span>
-                            <span className="block overflow-hidden pb-[.06em]">
-                                <span className="m-word" style={cv({ "--i": 2 })}>actually work.</span>
-                            </span>
-                        </h1>
-
-                        <p className="m-rise mb-8 text-[15px] leading-relaxed text-white/60" style={cv({ "--i": 3 })}>
-                            Write a short script, press play, and step through arrays, trees, graphs and hash maps. AI
-                            code analysis is still a preview.
-                        </p>
-
-                        <div className="m-rise flex flex-col gap-3" style={cv({ "--i": 4 })}>
-                            <Cta href={DASHBOARD_HREF} id="hero">Open the visualizer</Cta>
-                            <Cta href="#tour" variant="ghost" id="hero-tour">Watch the tour</Cta>
-                        </div>
-
-                        <div className="mt-8 grid grid-cols-3 gap-2">
-                            <Stat value={Number.isFinite(sc) ? sc : String(PRODUCT_FACTS.structures)} label="Structures" i={0} />
-                            <Stat value={String(PRODUCT_FACTS.speedRange)} label="Speed" i={1} />
-                            <Stat value="Browser" label="No install" i={2} />
-                        </div>
-                    </div>
-
-                    <div ref={heroEnd} aria-hidden className="h-px" />
-                </section>
-
-                {/* Two opposite marquees */}
-                <div className="border-y border-white/10 py-2">
-                    <Marquee items={STRUCTS} />
-                    <Marquee items={OPS} reverse />
-                </div>
-
-                {/* Tour */}
-                <section id="tour" ref={tourWrap} className="scroll-mt-16 px-5 py-14">
-                    <Head label="Product tour" title={<>See it in <span className="text-accent">action.</span></>} />
-                    <div ref={tourIn} className="will-change-transform">
-                        <LazyDemo />
-                    </div>
-                    <p className="mt-3 text-center font-mono text-[11px] uppercase tracking-widest text-white/40">Tap the video to pause</p>
-                </section>
-
-                {/* Features */}
-                <section id="features" className="scroll-mt-16 border-t border-white/10 px-5 py-14">
-                    <Head label="Core features" title={<>Swipe through <span className="text-accent">what&apos;s inside.</span></>} />
-                    <FeatureCarousel />
-                </section>
-
-                {/* How it works: sticky stacked cards (ancestors must not use overflow hidden/auto) */}
-                <section id="how-it-works" className="scroll-mt-16 border-t border-white/10 px-5 py-14">
-                    <Head label="How it works" title={<>Four steps. <span className="text-accent">That&apos;s it.</span></>} />
-                    <div className="pb-6">
-                        {STEPS.map((s, i) => (
-                            <div key={s.title} className="sticky mb-5" style={{ top: `calc(4.75rem + ${i * 14}px)` }}>
-                                <div data-rv="zoom" className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-6">
-                                    <div className="mb-8 flex items-start justify-between">
-                                        <span className="text-6xl font-black leading-none text-transparent" style={{ WebkitTextStroke: "1px var(--accent)" }}>
-                                            {String(i + 1).padStart(2, "0")}
-                                        </span>
-                                        <span className="font-mono text-[11px] uppercase tracking-widest text-white/40">
-                                            Step {i + 1} / {STEPS.length}
-                                        </span>
-                                    </div>
-                                    <h3 className="mb-1.5 text-xl font-bold">{s.title}</h3>
-                                    <p className="text-sm leading-relaxed text-white/60">{s.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Perks: bento with tilt */}
-                <section className="border-t border-white/10 px-5 py-14">
-                    <Head label="Little details" title={<>Built for <span className="text-accent">poking at.</span></>} />
-                    <div className="grid grid-cols-2 gap-3">
-                        {PERKS.map((p, i) => (
-                            <R key={p.label} d={i * 40} v="zoom" className={i === 0 ? "col-span-2" : ""}>
-                                <Tilt className="h-full">
-                                    <div
-                                        className={`m-press h-full rounded-3xl border border-white/10 bg-white/[.03] p-4 active:border-accent/40 ${
-                                            i === 0 ? "flex items-center gap-4" : ""
-                                        }`}
-                                    >
-                                        <span
-                                            className={`m-ico flex shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent ${
-                                                i === 0 ? "h-14 w-14" : "mb-3 h-9 w-9"
-                                            }`}
-                                        >
-                                            <HugeiconsIcon icon={p.icon} size={i === 0 ? 26 : 18} color="currentColor" strokeWidth={1.6} />
-                                        </span>
-                                        <div>
-                                            <p className={`mb-1 font-bold ${i === 0 ? "text-sm" : "text-xs"}`}>{p.label}</p>
-                                            <p className="text-[11px] leading-relaxed text-white/55">{p.desc}</p>
-                                        </div>
-                                    </div>
-                                </Tilt>
-                            </R>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Use cases: accordion */}
-                <section id="who" className="scroll-mt-16 border-t border-white/10 px-5 py-14">
-                    <Head label="Who it's for" title={<>Made for <span className="text-accent">learners.</span></>} />
-                    <UseCases />
-                </section>
-
-                {/* FAQ */}
-                <section id="faq" className="scroll-mt-16 border-t border-white/10 px-5 py-14">
-                    <Head label="Quick answers" />
-                    <Faq />
-                </section>
-
-                {/* Final CTA */}
-                <section ref={finalCta} data-live className="px-5 pb-12 pt-6">
-                    <R>
-                        <div className="mb-3 flex justify-end pr-4">
-                            <Buddy size={56} track={false} />
-                        </div>
-                        <div className="rounded-[2rem] bg-accent p-7 text-black">
-                            <p className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-black/60">Try it now</p>
-                            <h2 className="mb-3 text-[2.1rem] font-black leading-[1.05] tracking-tight">Stop guessing. Start visualizing.</h2>
-                            <p className="mb-7 text-sm font-medium text-black/65">No account to visualize. Nothing to install.</p>
-                            <div className="flex flex-col gap-3">
-                                <div className="relative">
-                                    <span aria-hidden className="m-ring pointer-events-none absolute inset-0 rounded-full border-2 border-black" />
-                                    <Cta href={DASHBOARD_HREF} variant="dark" id="final">Open the visualizer</Cta>
-                                </div>
-                                <Cta href="#how-it-works" variant="darkGhost" id="final-how">How it works</Cta>
-                            </div>
-                        </div>
-                    </R>
-                </section>
-
-                {/* Footer */}
-                <footer className="border-t border-white/10 pt-6" style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}>
-                    <div className="flex items-center justify-between px-5">
-                        <span className="font-mono text-xs text-white/50">AlgoForge © {SITE.year}</span>
-                        <button
-                            type="button"
-                            onClick={toTop}
-                            className="m-press rounded-full border border-white/15 px-4 py-1.5 font-mono text-[11px] uppercase tracking-widest text-white/70"
-                        >
-                            Back to top ↑
-                        </button>
-                    </div>
-                    <R>
-                        <div
-                            aria-hidden
-                            className="mt-6 select-none overflow-hidden text-center font-black leading-[.8] tracking-tighter text-transparent"
-                            style={{ fontSize: "min(16vw, 6.5rem)", WebkitTextStroke: "1px rgba(255,255,255,.16)" }}
-                        >
-                            AlgoForge
-                        </div>
-                    </R>
-                </footer>
-            </div>
-
-            {/* Sticky CTA (solid background, no backdrop blur: blur is costly on mobile GPUs) */}
-            <div
-                aria-hidden={!bar}
-                className={`m-bar fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/95 px-5 pt-3 ${bar && !menu ? "m-bar-on" : "pointer-events-none"}`}
-                style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
-            >
-                <div className="mx-auto max-w-2xl"><Cta href={DASHBOARD_HREF} id="sticky" tabIndex={bar ? 0 : -1}>Open the visualizer</Cta></div>
-            </div>
-        </div>
-    );
-}
-__ALGOFORGE_FILE_84dc63d54167707a__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage
-cat > ./.phase4-backup/20261104-182108/apps/web/src/components/LandingPage/WhatYouGet.tsx <<'__ALGOFORGE_FILE_9906e26b5696697d__'
-"use client";
-
-import { AiBrain01Icon, MessageMultiple01Icon, PlayIcon, TrendingUp } from "@hugeicons/core-free-icons";
-import { IconSvgObject } from "@/lib/types";
-import { StatusChip } from "@/components/ui/StatusChip";
-import type { FeatureStatus } from "@/lib/featureStatus";
-import { Eyebrow, IconBubble, LandingStyles, Reveal, SpotCard } from "./shared";
-
-type Feature = {
-    id: string;
-    icon: IconSvgObject;
-    title: string;
-    short: string;
-    description: string;
-    tag: string;
-    index: string;
-    status: FeatureStatus;
-};
-
-const features: Feature[] = [
-    {
-        id: "visualizer", icon: PlayIcon, title: "Algorithm Visualizer", short: "See every step", tag: "Visual", index: "01", status: "available",
-        description: "Step through array, stack, queue, linked list, tree, hash and graph operations with frame-by-frame animation. Pause, scrub, replay and change the speed.",
-    },
-    {
-        id: "ai-analysis", icon: AiBrain01Icon, title: "AI Analysis", short: "Complexity and bottlenecks", tag: "Core", index: "02", status: "preview",
-        description: "A report with complexity, bottlenecks and edge cases. The report screen is built; the analysis engine is not connected yet, so it shows a fixed sample.",
-    },
-    {
-        id: "explainer", icon: MessageMultiple01Icon, title: "AI Explainer", short: "Plain-English breakdowns", tag: "Learn", index: "03", status: "planned",
-        description: "Plain-language walkthroughs of an algorithm. Not built yet.",
-    },
-    {
-        id: "optimization", icon: TrendingUp, title: "Optimization Hints", short: "Suggested rewrites", tag: "Optimize", index: "04", status: "planned",
-        description: "Ranked rewrite suggestions with the expected change in Big-O. Not built yet.",
-    },
-];
-
-const availableCount = features.filter((f) => f.status === "available").length;
-
-const STRUCTURES = ["Array", "Stack", "Queue", "Linked list", "Binary tree", "Hash map", "Graph"];
-const OPS = ["insert()", "push()", "enqueue()", "delete()", "rotate()", "hash()", "bfs()", "swap()"];
-
-// Big animation #4: two counter-moving marquee rows (CSS only, pause on hover)
-function MarqueeRow({ items, reverse = false }: { items: string[]; reverse?: boolean }) {
-    const half = [...items, ...items, ...items];
-    const full = [...half, ...half];
-    return (
-        <div className="overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
-            <div className={`af-marquee-track flex w-max gap-3 ${reverse ? "af-marquee-rev" : "af-marquee"}`}>
-                {full.map((t, i) => (
-                    <span
-                        key={i}
-                        className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[.03] px-4 py-1.5 font-mono text-xs text-foreground/70 sm:px-5 sm:py-2 sm:text-sm"
-                    >
-                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                        {t}
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-export default function WhatYouGet() {
-    return (
-        <section id="products" className="relative w-full overflow-x-clip px-4 py-16 md:py-28">
-            <LandingStyles />
-            <div className="relative z-10 mx-auto max-w-6xl">
-                <Reveal className="mb-14 text-center">
-                    <Eyebrow>Platform capabilities</Eyebrow>
-                    <h2 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                        What you <span className="text-accent">get</span>
-                    </h2>
-                    <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-foreground/60">
-                        What the visualizer does today, and what is still on the way.
-                    </p>
-                </Reveal>
-
-                <div className="mb-14 space-y-3">
-                    <MarqueeRow items={STRUCTURES} />
-                    <MarqueeRow items={OPS} reverse />
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {features.map((f, i) => (
-                        <Reveal key={f.id} delay={i * 0.07}>
-                            <SpotCard className="h-full">
-                                <div className="flex h-full flex-col gap-5 p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold tracking-widest text-foreground/50 transition-colors group-hover:text-accent">
-                                                {f.index}
-                                            </span>
-                                            <StatusChip status={f.status} />
-                                        </div>
-                                        <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-foreground/50">
-                                            {f.tag}
-                                        </span>
-                                    </div>
-                                    <IconBubble icon={f.icon} />
-                                    <div className="flex flex-1 flex-col gap-2">
-                                        <h3 className="text-sm font-bold tracking-tight">{f.title}</h3>
-                                        <p className="text-xs font-medium text-accent">{f.short}</p>
-                                        <p className="mt-1 text-xs leading-relaxed text-foreground/60">{f.description}</p>
-                                    </div>
-                                </div>
-                            </SpotCard>
-                        </Reveal>
-                    ))}
-                </div>
-
-                <div className="mt-8 flex flex-wrap items-center justify-between gap-2 px-1">
-                    <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/60">
-                        {availableCount} available · {features.length - availableCount} not yet
-                    </span>
-                    <span className="font-mono text-[11px] uppercase tracking-widest text-accent">Preview</span>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-__ALGOFORGE_FILE_9906e26b5696697d__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib/api
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/api/client.ts <<'__ALGOFORGE_FILE_97a96bf94ff28149__'
-import { z } from "zod";
-import { CSRF_HEADER_NAME, ERROR_CODES, ErrorResponseSchema, REQUEST_ID_HEADER, RETRY_AFTER_HEADER, type ErrorCode } from "@algoforge/contracts";
-import { API_BASE_URL } from "./config";
-import { getCsrfToken } from "./csrf";
-import { ApiError, NetworkError, ResponseValidationError } from "./errors";
-
-export type QueryParams = Readonly<Record<string, string | number | boolean | null | undefined>>;
-
-export interface ApiClientOptions {
-  baseUrl?: string;
-  fetchImpl?: typeof fetch;
-  getCsrfToken?: () => string | null;
-  /** Called when a 401 could not be fixed by refreshing the session (Phase 4 uses it to show sign-in). */
-  onSessionExpired?: () => void;
-  /** A GET that gets a 429 with a Retry-After at most this long is retried once automatically. */
-  maxAutoRetryWaitSeconds?: number;
-  sleep?: (ms: number) => Promise<void>;
-}
-
-export interface RequestOptions {
-  query?: QueryParams;
-  signal?: AbortSignal;
-}
-
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
-const REFRESH_PATH = "/api/auth/refresh";
-const NO_REFRESH_PREFIXES = [REFRESH_PATH, "/api/auth/google/"];
-const MUTATING: ReadonlySet<Method> = new Set<Method>(["POST", "PATCH", "DELETE"]);
-
-const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-const CODE_FOR_STATUS: Readonly<Record<number, ErrorCode>> = {
-  400: "BAD_REQUEST", 401: "UNAUTHORIZED", 403: "FORBIDDEN", 404: "NOT_FOUND", 409: "CONFLICT",
-  413: "PAYLOAD_TOO_LARGE", 429: "TOO_MANY_REQUESTS", 502: "BAD_GATEWAY",
-};
-const isErrorCode = (value: string): value is ErrorCode => (ERROR_CODES as readonly string[]).includes(value);
-
-/** Retry-After is either a number of seconds or an HTTP date. */
-export function parseRetryAfter(value: string | null, now: number = Date.now()): number | null {
-  if (!value) return null;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
-  const at = Date.parse(value);
-  return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
-}
-
-function buildQuery(query: QueryParams | undefined): string {
-  if (!query) return "";
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
-  }
-  const text = params.toString();
-  return text ? `?${text}` : "";
-}
-
-async function toApiError(res: Response): Promise<ApiError> {
-  const requestId = res.headers.get(REQUEST_ID_HEADER);
-  const retryAfterSeconds = parseRetryAfter(res.headers.get(RETRY_AFTER_HEADER));
-  let payload: unknown = null;
-  try {
-    payload = await res.json();
-  } catch {
-    payload = null;
-  }
-  const parsed = ErrorResponseSchema.safeParse(payload);
-  if (parsed.success) {
-    const { code, message, details } = parsed.data.error;
-    return new ApiError({ status: res.status, code, message, details, requestId, retryAfterSeconds });
-  }
-  const code = CODE_FOR_STATUS[res.status] ?? "INTERNAL_ERROR";
-  return new ApiError({ status: res.status, code: isErrorCode(code) ? code : "INTERNAL_ERROR", message: res.statusText || "Request failed.", requestId, retryAfterSeconds });
-}
-
-export function createApiClient(options: ApiClientOptions = {}) {
-  const baseUrl = (options.baseUrl ?? API_BASE_URL).replace(/\/+$/, "");
-  const doFetch = options.fetchImpl ?? ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
-  const csrfToken = options.getCsrfToken ?? getCsrfToken;
-  const sleep = options.sleep ?? defaultSleep;
-  const maxAutoRetryWait = options.maxAutoRetryWaitSeconds ?? 5;
-
-  async function transport(method: Method, path: string, body: unknown, query: QueryParams | undefined, signal: AbortSignal | undefined): Promise<Response> {
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    if (MUTATING.has(method)) {
-      const token = csrfToken(); // read per attempt: a refresh rotates the cookie
-      if (token) headers[CSRF_HEADER_NAME] = token;
-    }
-    try {
-      return await doFetch(`${baseUrl}${path}${buildQuery(query)}`, {
-        method,
-        headers,
-        credentials: "include",
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-        ...(signal ? { signal } : {}),
-      });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-      throw new NetworkError(undefined, { cause: error });
-    }
-  }
-
-  // Single-flight: concurrent 401s share one refresh request.
-  let refreshing: Promise<boolean> | null = null;
-  function refreshSession(): Promise<boolean> {
-    refreshing ??= (async () => {
-      try {
-        const res = await transport("POST", REFRESH_PATH, undefined, undefined, undefined);
-        return res.ok;
-      } catch {
-        return false;
-      } finally {
-        refreshing = null;
-      }
-    })();
-    return refreshing;
-  }
-
-  async function execute(method: Method, path: string, body: unknown, opts: RequestOptions): Promise<Response> {
-    let res = await transport(method, path, body, opts.query, opts.signal);
-
-    if (res.status === 401 && !NO_REFRESH_PREFIXES.some((p) => path.startsWith(p))) {
-      if (await refreshSession()) res = await transport(method, path, body, opts.query, opts.signal); // exactly one retry
-      if (res.status === 401) options.onSessionExpired?.();
-    }
-
-    if (res.status === 429 && method === "GET") {
-      const wait = parseRetryAfter(res.headers.get(RETRY_AFTER_HEADER));
-      if (wait !== null && wait <= maxAutoRetryWait) {
-        await sleep(wait * 1000);
-        res = await transport(method, path, body, opts.query, opts.signal);
-      }
-    }
-
-    if (!res.ok) throw await toApiError(res);
-    return res;
-  }
-
-  async function parseBody<S extends z.ZodType>(res: Response, path: string, schema: S): Promise<z.output<S>> {
-    let json: unknown;
-    try {
-      json = await res.json();
-    } catch {
-      throw new ResponseValidationError(path, [{ path: "", message: "The response body was not valid JSON." }]);
-    }
-    const parsed = schema.safeParse(json);
-    if (!parsed.success) {
-      throw new ResponseValidationError(path, parsed.error.issues.map((i) => ({ path: i.path.map(String).join("."), message: i.message })));
-    }
-    return parsed.data;
-  }
-
-  return {
-    get: async <S extends z.ZodType>(path: string, schema: S, opts: RequestOptions = {}): Promise<z.output<S>> =>
-      parseBody(await execute("GET", path, undefined, opts), path, schema),
-    post: async <S extends z.ZodType>(path: string, schema: S, body?: unknown, opts: RequestOptions = {}): Promise<z.output<S>> =>
-      parseBody(await execute("POST", path, body, opts), path, schema),
-    patch: async <S extends z.ZodType>(path: string, schema: S, body?: unknown, opts: RequestOptions = {}): Promise<z.output<S>> =>
-      parseBody(await execute("PATCH", path, body, opts), path, schema),
-    /** For endpoints that answer 204 with no body. */
-    postEmpty: async (path: string, body?: unknown, opts: RequestOptions = {}): Promise<void> => {
-      await execute("POST", path, body, opts);
-    },
-    delete: async (path: string, opts: RequestOptions = {}): Promise<void> => {
-      await execute("DELETE", path, undefined, opts);
-    },
-    refreshSession,
-  };
-}
-
-export type ApiClient = ReturnType<typeof createApiClient>;
-
-/** The app-wide client. Phase 4 passes onSessionExpired when the auth provider exists. */
-export const apiClient: ApiClient = createApiClient();
-
-__ALGOFORGE_FILE_97a96bf94ff28149__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib/api
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/api/endpoints.ts <<'__ALGOFORGE_FILE_4ae2eb97082acd0d__'
-import {
-  AlgorithmListResponseSchema,
-  AnalysisHistoryResponseSchema,
-  CategoryListResponseSchema,
-  ExplainSessionListResponseSchema,
-  type AlgorithmListQuery,
-  type AlgorithmListResponse,
-  type AnalysisHistoryResponse,
-  type CategoryListResponse,
-  type ExplainSessionListResponse,
-} from "@algoforge/contracts";
-import { apiClient, type ApiClient } from "./client";
-
-export interface PageParams {
-  limit?: number;
-  cursor?: string;
-}
-
-/** Typed endpoint functions. Every response is validated against the shared schema. */
-export function createEndpoints(client: ApiClient) {
-  return {
-    analysisHistory: (params: PageParams = {}, signal?: AbortSignal): Promise<AnalysisHistoryResponse> =>
-      client.get("/api/analysis", AnalysisHistoryResponseSchema, { query: { ...params }, ...(signal ? { signal } : {}) }),
-    algorithms: (params: AlgorithmListQuery = {}, signal?: AbortSignal): Promise<AlgorithmListResponse> =>
-      client.get("/api/algorithms", AlgorithmListResponseSchema, { query: { ...params }, ...(signal ? { signal } : {}) }),
-    categories: (signal?: AbortSignal): Promise<CategoryListResponse> =>
-      client.get("/api/categories", CategoryListResponseSchema, signal ? { signal } : {}),
-    explainSessions: (params: PageParams = {}, signal?: AbortSignal): Promise<ExplainSessionListResponse> =>
-      client.get("/api/explain-sessions", ExplainSessionListResponseSchema, { query: { ...params }, ...(signal ? { signal } : {}) }),
-  };
-}
-
-export const endpoints = createEndpoints(apiClient);
-
-__ALGOFORGE_FILE_4ae2eb97082acd0d__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/auth.ts <<'__ALGOFORGE_FILE_cb39b2578fc13f5a__'
-import type { AuthUser } from "./auth-cookie";
-
-export async function signInWithGoogle(): Promise<AuthUser> {
-    // TODO: call your real Google sign-in (Firebase / NextAuth / GIS) and map the result.
-    // Example shape with Firebase:
-    //   const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
-    //   return {
-    //       id: user.uid,
-    //       name: user.displayName ?? "",
-    //       email: user.email ?? "",
-    //       picture: user.photoURL ?? undefined,
-    //   };
-    throw new Error("signInWithGoogle not implemented");
-}
-__ALGOFORGE_FILE_cb39b2578fc13f5a__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/auth-cookie.ts <<'__ALGOFORGE_FILE_1942b2a6b728e568__'
-export const AUTH_COOKIE = "af_user";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
-
-export interface AuthUser {
-    id: string;
-    name: string;
-    email: string;
-    picture?: string;
-}
-
-export function readUserCookie(): AuthUser | null {
-    if (typeof document === "undefined") return null;
-
-    const entry = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith(`${AUTH_COOKIE}=`));
-    if (!entry) return null;
-
-    try {
-        const parsed = JSON.parse(
-            decodeURIComponent(entry.slice(AUTH_COOKIE.length + 1)),
-        );
-        if (
-            parsed &&
-            typeof parsed.id === "string" &&
-            typeof parsed.email === "string"
-        ) {
-            return parsed as AuthUser;
-        }
-        return null;
-    } catch {
-        return null; // malformed JSON counts as logged out
-    }
-}
-
-export function writeUserCookie(user: AuthUser): void {
-    const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie =
-        `${AUTH_COOKIE}=${encodeURIComponent(JSON.stringify(user))}` +
-        `; Path=/; Max-Age=${MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
-}
-
-export function clearUserCookie(): void {
-    document.cookie = `${AUTH_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-}
-__ALGOFORGE_FILE_1942b2a6b728e568__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/featureFlags.ts <<'__ALGOFORGE_FILE_b51a55ff20a8218c__'
-/** Pure so it can be tested; the app reads the constant below. */
-export function resolveMockFlag(nodeEnv: string | undefined, override: string | undefined): boolean {
-    return override === "1" || nodeEnv !== "production";
-}
-
-// Literal process.env accesses so Next can inline them in client code.
-export const MOCK_DATA_ENABLED = resolveMockFlag(process.env.NODE_ENV, process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA);
-
-__ALGOFORGE_FILE_b51a55ff20a8218c__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib/query
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/query/hooks.ts <<'__ALGOFORGE_FILE_60bdd83ff7029916__'
-"use client";
-
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { LIMITS, type AlgorithmListQuery } from "@algoforge/contracts";
-import { endpoints } from "../api/endpoints";
-import { queryKeys } from "./keys";
-
-/** History pages follow meta.nextCursor until meta.hasMore is false. */
-export function useAnalysisHistory(options: { enabled?: boolean; pageSize?: number } = {}) {
-  const pageSize = options.pageSize ?? LIMITS.pagination.analysisHistory.defaultSize;
-  return useInfiniteQuery({
-    queryKey: [...queryKeys.analysisHistory(), pageSize],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam, signal }) => endpoints.analysisHistory({ limit: pageSize, ...(pageParam ? { cursor: pageParam } : {}) }, signal),
-    getNextPageParam: (last) => (last.meta.hasMore ? (last.meta.nextCursor ?? undefined) : undefined),
-    enabled: options.enabled ?? true,
-  });
-}
-
-export function useAlgorithms(params: AlgorithmListQuery = {}) {
-  return useQuery({ queryKey: queryKeys.algorithms(params), queryFn: ({ signal }) => endpoints.algorithms(params, signal) });
-}
-
-export function useCategories() {
-  return useQuery({ queryKey: queryKeys.categories(), queryFn: ({ signal }) => endpoints.categories(signal) });
-}
-
-export function useExplainSessions(options: { enabled?: boolean } = {}) {
-  return useQuery({ queryKey: queryKeys.explainSessions(), queryFn: ({ signal }) => endpoints.explainSessions({}, signal), enabled: options.enabled ?? true });
-}
-
-__ALGOFORGE_FILE_60bdd83ff7029916__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib/query
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/query/index.ts <<'__ALGOFORGE_FILE_e86d202dca82e5eb__'
-export { QueryProvider } from "./QueryProvider";
-export { QueryBoundary } from "./QueryBoundary";
-export type { QueryStateLike } from "./QueryBoundary";
-export { createQueryClient, retryDelayMs, shouldRetry } from "./queryClient";
-export { queryKeys } from "./keys";
-export { useAlgorithms, useAnalysisHistory, useCategories, useExplainSessions } from "./hooks";
-
-__ALGOFORGE_FILE_e86d202dca82e5eb__
-
-mkdir -p ./.phase4-backup/20261104-182108/apps/web/src/lib/query
-cat > ./.phase4-backup/20261104-182108/apps/web/src/lib/query/keys.ts <<'__ALGOFORGE_FILE_24de8b820a130580__'
-import type { AlgorithmListQuery } from "@algoforge/contracts";
-
-/** One place for every cache key, so invalidation stays predictable. */
-export const queryKeys = {
-  analysisHistory: () => ["analysis", "history"] as const,
-  algorithms: (params: AlgorithmListQuery = {}) => ["algorithms", "list", params] as const,
-  categories: () => ["categories", "list"] as const,
-  explainSessions: () => ["explain", "sessions"] as const,
-};
-
-__ALGOFORGE_FILE_24de8b820a130580__
-
-mkdir -p ./.phase4-backup/20261104-182108/packages/contracts/src
-cat > ./.phase4-backup/20261104-182108/packages/contracts/src/auth.ts <<'__ALGOFORGE_FILE_0adcbd40190b85fd__'
-import { z } from "zod";
-
-export const UserRoleSchema = z.enum(["USER", "ADMIN"]);
-export type UserRole = z.infer<typeof UserRoleSchema>;
-
-export const AuthUserSchema = z.object({
-  id: z.string(),
-  email: z.string().nullable(),
-  username: z.string().nullable(),
-  name: z.string().nullable(),
-  image: z.string().nullable(),
-  role: UserRoleSchema,
-});
-export type AuthUser = z.infer<typeof AuthUserSchema>;
-
-export const MeResponseSchema = z.object({ user: AuthUserSchema });
-export type MeResponse = z.infer<typeof MeResponseSchema>;
-/** POST /auth/refresh returns the same shape as GET /auth/me. */
-export const RefreshResponseSchema = MeResponseSchema;
-export type RefreshResponse = MeResponse;
-
-__ALGOFORGE_FILE_0adcbd40190b85fd__
-
-mkdir -p ./.phase4-backup/20261104-182108/packages/contracts/src
-cat > ./.phase4-backup/20261104-182108/packages/contracts/src/index.ts <<'__ALGOFORGE_FILE_8a233ac1696f3bb7__'
-export * from "./limits";
-export * from "./common";
-export * from "./errors";
-export * from "./users";
-export * from "./auth";
-export * from "./categories";
-export * from "./algorithms";
-export * from "./analysis";
-export * from "./stored-results";
-export * from "./explain";
-export * from "./visualizations";
-export * from "./shares";
-export * from "./capabilities";
-export * from "./admin";
-export * from "./health";
-export * from "./registry";
-export * from "./routes";
-export * from "./openapi";
-
-__ALGOFORGE_FILE_8a233ac1696f3bb7__
-
-mkdir -p ./.phase4-backup/20261104-182108/packages/contracts/src
-cat > ./.phase4-backup/20261104-182108/packages/contracts/src/registry.ts <<'__ALGOFORGE_FILE_06356b007479fef5__'
-import type { z } from "zod";
-import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListResponseSchema, AdminUserSchema } from "./admin";
-import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmListResponseSchema, AlgorithmSummarySchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
-import { AnalysisHistoryItemSchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, AnalysisResultSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
-import { AuthUserSchema, MeResponseSchema } from "./auth";
-import { CapabilitiesResponseSchema } from "./capabilities";
-import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
-import { PageMetaSchema } from "./common";
-import { ErrorResponseSchema } from "./errors";
-import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainResponseSchema, ExplainSessionDetailSchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SessionMessageSchema, SharedExplainSessionResponseSchema } from "./explain";
-import { HealthResponseSchema, ReadyResponseSchema } from "./health";
-import { CreateShareRequestSchema, PublicShareResponseSchema, ShareSchema } from "./shares";
-import { DeviceSessionSchema, SafeUserSchema, UpdateProfileRequestSchema } from "./users";
-import { CreateVisualizationRequestSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationSchema } from "./visualizations";
-
-/** Named schemas published under components.schemas. A name ending in "Request" is documented by its input shape. */
-export const SCHEMA_REGISTRY = {
-  ErrorResponse: ErrorResponseSchema,
-  PageMeta: PageMetaSchema,
-  AuthUser: AuthUserSchema,
-  MeResponse: MeResponseSchema,
-  SafeUser: SafeUserSchema,
-  UpdateProfileRequest: UpdateProfileRequestSchema,
-  DeviceSession: DeviceSessionSchema,
-  AlgorithmSummary: AlgorithmSummarySchema,
-  AlgorithmDetailResponse: AlgorithmDetailResponseSchema,
-  AlgorithmListResponse: AlgorithmListResponseSchema,
-  AlgorithmExecutionResponse: AlgorithmExecutionResponseSchema,
-  CreateAlgorithmRequest: CreateAlgorithmRequestSchema,
-  UpdateAlgorithmRequest: UpdateAlgorithmRequestSchema,
-  Category: CategorySchema,
-  CategoryListResponse: CategoryListResponseSchema,
-  CreateCategoryRequest: CreateCategoryRequestSchema,
-  UpdateCategoryRequest: UpdateCategoryRequestSchema,
-  AnalysisResult: AnalysisResultSchema,
-  CreateAnalysisRequest: CreateAnalysisRequestSchema,
-  AnalysisRecordResponse: AnalysisRecordResponseSchema,
-  AnalysisHistoryItem: AnalysisHistoryItemSchema,
-  AnalysisHistoryResponse: AnalysisHistoryResponseSchema,
-  SharedAnalysisResponse: SharedAnalysisResponseSchema,
-  ShareUrlResponse: ShareUrlResponseSchema,
-  SessionMessage: SessionMessageSchema,
-  ExplainSessionSummary: ExplainSessionSummarySchema,
-  ExplainSessionDetail: ExplainSessionDetailSchema,
-  ExplainSessionListResponse: ExplainSessionListResponseSchema,
-  CreateExplainSessionRequest: CreateExplainSessionRequestSchema,
-  SendMessageRequest: SendMessageRequestSchema,
-  SendMessageResponse: SendMessageResponseSchema,
-  SharedExplainSessionResponse: SharedExplainSessionResponseSchema,
-  ExplainRequest: ExplainRequestSchema,
-  ExplainResponse: ExplainResponseSchema,
-  Visualization: VisualizationSchema,
-  CreateVisualizationRequest: CreateVisualizationRequestSchema,
-  UpdateVisualizationRequest: UpdateVisualizationRequestSchema,
-  ValidateScriptRequest: ValidateScriptRequestSchema,
-  ValidateScriptResponse: ValidateScriptResponseSchema,
-  Share: ShareSchema,
-  CreateShareRequest: CreateShareRequestSchema,
-  PublicShareResponse: PublicShareResponseSchema,
-  CapabilitiesResponse: CapabilitiesResponseSchema,
-  AdminUser: AdminUserSchema,
-  AdminUserListResponse: AdminUserListResponseSchema,
-  AdminRoleChangeRequest: AdminRoleChangeRequestSchema,
-  AdminRoleChangeResponse: AdminRoleChangeResponseSchema,
-  HealthResponse: HealthResponseSchema,
-  ReadyResponse: ReadyResponseSchema,
-} as const satisfies Record<string, z.ZodType>;
-
-__ALGOFORGE_FILE_06356b007479fef5__
-
-mkdir -p ./.phase4-backup/20261104-182108/packages/contracts/src
-cat > ./.phase4-backup/20261104-182108/packages/contracts/src/routes.ts <<'__ALGOFORGE_FILE_daf5019e18b46c48__'
-import type { z } from "zod";
-import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListQuerySchema, AdminUserListResponseSchema } from "./admin";
-import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmLangQuerySchema, AlgorithmListQuerySchema, AlgorithmListResponseSchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
-import { AnalysisHistoryQuerySchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
-import { MeResponseSchema, RefreshResponseSchema } from "./auth";
-import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
-import { IdParamsSchema, ShareIdParamsSchema, SlugParamsSchema } from "./common";
-import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainResponseSchema, ExplainSessionDetailSchema, ExplainSessionListQuerySchema, ExplainSessionListResponseSchema, SendMessageRequestSchema, SendMessageResponseSchema, SharedExplainSessionResponseSchema } from "./explain";
-import { HealthResponseSchema, ReadyResponseSchema } from "./health";
-
-export type HttpMethod = "get" | "post" | "patch" | "delete";
-export type AuthLevel = "none" | "optional" | "user" | "admin";
-/** "empty" = no JSON body (204 or a redirect). */
-export type RouteResponse = z.ZodType | "empty";
-
-export interface RouteDef {
-  readonly id: string;
-  readonly method: HttpMethod;
-  /** OpenAPI style: /api/analysis/{id} (Express: /api/analysis/:id). */
-  readonly path: string;
-  readonly summary: string;
-  readonly tag: string;
-  readonly auth: AuthLevel;
-  readonly csrf: boolean;
-  readonly rateLimit?: "general" | "ai";
-  readonly params?: z.ZodType;
-  readonly query?: z.ZodType;
-  readonly body?: z.ZodType;
-  readonly responses: Readonly<Record<number, RouteResponse>>;
-  readonly notes?: string;
-}
-
-/** Every endpoint the API serves today. A test fails when this table and the Express routers disagree. */
-export const routes: readonly RouteDef[] = [
-  { id: "health", method: "get", path: "/health", summary: "Liveness", tag: "Health", auth: "none", csrf: false, responses: { 200: HealthResponseSchema } },
-  { id: "ready", method: "get", path: "/ready", summary: "Readiness (database and Redis)", tag: "Health", auth: "none", csrf: false, responses: { 200: ReadyResponseSchema, 503: ReadyResponseSchema } },
-
-  { id: "authGoogleStart", method: "get", path: "/api/auth/google/start", summary: "Start Google sign-in (redirect)", tag: "Auth", auth: "none", csrf: false, responses: { 302: "empty" } },
-  { id: "authGoogleCallback", method: "get", path: "/api/auth/google/callback", summary: "Google OAuth callback (redirect to the web app)", tag: "Auth", auth: "none", csrf: false, responses: { 302: "empty" } },
-  { id: "authMe", method: "get", path: "/api/auth/me", summary: "Current user", tag: "Auth", auth: "user", csrf: false, responses: { 200: MeResponseSchema }, notes: "Known gap until Phase 4 (A-03): the implementation still returns the public user shape without email and role." },
-  { id: "authRefresh", method: "post", path: "/api/auth/refresh", summary: "Rotate the session cookies", tag: "Auth", auth: "none", csrf: false, responses: { 200: RefreshResponseSchema } },
-  { id: "authLogout", method: "post", path: "/api/auth/logout", summary: "Sign out this device", tag: "Auth", auth: "none", csrf: true, responses: { 204: "empty" } },
-  { id: "authLogoutAll", method: "post", path: "/api/auth/logout-all", summary: "Sign out every device", tag: "Auth", auth: "user", csrf: true, responses: { 204: "empty" } },
-
-  { id: "algorithmsList", method: "get", path: "/api/algorithms", summary: "List algorithms", tag: "Algorithms", auth: "optional", csrf: false, rateLimit: "general", query: AlgorithmListQuerySchema, responses: { 200: AlgorithmListResponseSchema } },
-  { id: "algorithmsBySlug", method: "get", path: "/api/algorithms/slug/{slug}", summary: "Algorithm by slug", tag: "Algorithms", auth: "optional", csrf: false, rateLimit: "general", params: SlugParamsSchema, query: AlgorithmLangQuerySchema, responses: { 200: AlgorithmDetailResponseSchema } },
-  { id: "algorithmsVisualize", method: "get", path: "/api/algorithms/id/{id}/visualize", summary: "Visualization config (legacy forge, replaced by a script in Phase 6)", tag: "Algorithms", auth: "optional", csrf: false, rateLimit: "general", params: IdParamsSchema, responses: { 200: AlgorithmExecutionResponseSchema } },
-  { id: "algorithmsById", method: "get", path: "/api/algorithms/id/{id}", summary: "Algorithm by id", tag: "Algorithms", auth: "optional", csrf: false, rateLimit: "general", params: IdParamsSchema, query: AlgorithmLangQuerySchema, responses: { 200: AlgorithmDetailResponseSchema } },
-  { id: "algorithmsCreate", method: "post", path: "/api/algorithms", summary: "Create an algorithm", tag: "Algorithms", auth: "admin", csrf: true, rateLimit: "general", body: CreateAlgorithmRequestSchema, responses: { 201: AlgorithmDetailResponseSchema } },
-  { id: "algorithmsUpdate", method: "patch", path: "/api/algorithms/id/{id}", summary: "Update an algorithm", tag: "Algorithms", auth: "admin", csrf: true, rateLimit: "general", params: IdParamsSchema, body: UpdateAlgorithmRequestSchema, responses: { 200: AlgorithmDetailResponseSchema } },
-  { id: "algorithmsDelete", method: "delete", path: "/api/algorithms/id/{id}", summary: "Delete an algorithm", tag: "Algorithms", auth: "admin", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 204: "empty" } },
-
-  { id: "categoriesList", method: "get", path: "/api/categories", summary: "List categories", tag: "Categories", auth: "none", csrf: false, responses: { 200: CategoryListResponseSchema } },
-  { id: "categoriesGet", method: "get", path: "/api/categories/{id}", summary: "Category by id", tag: "Categories", auth: "none", csrf: false, params: IdParamsSchema, responses: { 200: CategorySchema } },
-  { id: "categoriesCreate", method: "post", path: "/api/categories", summary: "Create a category", tag: "Categories", auth: "admin", csrf: true, body: CreateCategoryRequestSchema, responses: { 201: CategorySchema } },
-  { id: "categoriesUpdate", method: "patch", path: "/api/categories/{id}", summary: "Update a category", tag: "Categories", auth: "admin", csrf: true, params: IdParamsSchema, body: UpdateCategoryRequestSchema, responses: { 200: CategorySchema } },
-  { id: "categoriesDelete", method: "delete", path: "/api/categories/{id}", summary: "Delete a category", tag: "Categories", auth: "admin", csrf: true, params: IdParamsSchema, responses: { 204: "empty" } },
-
-  { id: "analysisList", method: "get", path: "/api/analysis", summary: "Analysis history (cursor pagination)", tag: "Analysis", auth: "user", csrf: false, rateLimit: "general", query: AnalysisHistoryQuerySchema, responses: { 200: AnalysisHistoryResponseSchema } },
-  { id: "analysisGet", method: "get", path: "/api/analysis/{id}", summary: "One analysis", tag: "Analysis", auth: "user", csrf: false, rateLimit: "general", params: IdParamsSchema, responses: { 200: AnalysisRecordResponseSchema } },
-  { id: "analysisCreate", method: "post", path: "/api/analysis", summary: "Analyze code", tag: "Analysis", auth: "user", csrf: true, rateLimit: "ai", body: CreateAnalysisRequestSchema, responses: { 201: AnalysisRecordResponseSchema } },
-  { id: "analysisShare", method: "post", path: "/api/analysis/{id}/share", summary: "Make an analysis public", tag: "Analysis", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 200: ShareUrlResponseSchema } },
-
-  { id: "explain", method: "post", path: "/api/explain", summary: "One-shot explanation", tag: "Explain", auth: "user", csrf: true, rateLimit: "ai", body: ExplainRequestSchema, responses: { 200: ExplainResponseSchema } },
-  { id: "explainSessionsList", method: "get", path: "/api/explain-sessions", summary: "List chat sessions (cursor pagination)", tag: "Explain", auth: "user", csrf: false, query: ExplainSessionListQuerySchema, responses: { 200: ExplainSessionListResponseSchema } },
-  { id: "explainSessionsCreate", method: "post", path: "/api/explain-sessions", summary: "Create a chat session", tag: "Explain", auth: "user", csrf: true, body: CreateExplainSessionRequestSchema, responses: { 201: ExplainSessionDetailSchema } },
-  { id: "explainSessionsGet", method: "get", path: "/api/explain-sessions/{id}", summary: "One chat session", tag: "Explain", auth: "user", csrf: false, params: IdParamsSchema, responses: { 200: ExplainSessionDetailSchema } },
-  { id: "explainSessionsDelete", method: "delete", path: "/api/explain-sessions/{id}", summary: "Delete a chat session", tag: "Explain", auth: "user", csrf: true, params: IdParamsSchema, responses: { 204: "empty" } },
-  { id: "explainSessionsMessage", method: "post", path: "/api/explain-sessions/{id}/messages", summary: "Send a message", tag: "Explain", auth: "user", csrf: true, rateLimit: "ai", params: IdParamsSchema, body: SendMessageRequestSchema, responses: { 201: SendMessageResponseSchema } },
-  { id: "explainSessionsShare", method: "post", path: "/api/explain-sessions/{id}/share", summary: "Make a chat session public", tag: "Explain", auth: "user", csrf: true, params: IdParamsSchema, responses: { 200: ShareUrlResponseSchema } },
-
-  { id: "shareAnalysis", method: "get", path: "/api/share/analysis/{shareId}", summary: "Public analysis", tag: "Share", auth: "none", csrf: false, params: ShareIdParamsSchema, responses: { 200: SharedAnalysisResponseSchema } },
-  { id: "shareExplain", method: "get", path: "/api/share/explain/{shareId}", summary: "Public chat session", tag: "Share", auth: "none", csrf: false, params: ShareIdParamsSchema, responses: { 200: SharedExplainSessionResponseSchema } },
-  { id: "shareLegacy", method: "get", path: "/api/share/{shareId}", summary: "Public analysis (legacy alias)", tag: "Share", auth: "none", csrf: false, params: ShareIdParamsSchema, responses: { 200: SharedAnalysisResponseSchema }, notes: "Legacy alias of /api/share/analysis/{shareId}; removed in Phase 9." },
-
-  { id: "adminUsers", method: "get", path: "/api/admin/users", summary: "List users (cursor pagination)", tag: "Admin", auth: "admin", csrf: false, query: AdminUserListQuerySchema, responses: { 200: AdminUserListResponseSchema } },
-  { id: "adminUpgrade", method: "post", path: "/api/admin/upgrade-user", summary: "Promote a user to ADMIN", tag: "Admin", auth: "admin", csrf: true, body: AdminRoleChangeRequestSchema, responses: { 200: AdminRoleChangeResponseSchema } },
-  { id: "adminDowngrade", method: "post", path: "/api/admin/downgrade-user", summary: "Demote a user to USER", tag: "Admin", auth: "admin", csrf: true, body: AdminRoleChangeRequestSchema, responses: { 200: AdminRoleChangeResponseSchema } },
-];
-
-export const toExpressPath = (path: string): string => path.replace(/\{(\w+)\}/g, ":$1");
-
-__ALGOFORGE_FILE_daf5019e18b46c48__
-
-mkdir -p ./.phase4-backup/20261104-182108/packages/db/prisma
-cat > ./.phase4-backup/20261104-182108/packages/db/prisma/schema.prisma <<'__ALGOFORGE_FILE_60a0c9087f7c518b__'
-// filename: packages/db/prisma/schema.prisma
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum Role {
-  USER
-  ADMIN
-}
-
-enum Difficulty {
-  beginner
-  intermediate
-  advanced
-}
-
-model User {
-  id        String     @id @default(cuid())
-  email     String?    @unique
-  username  String?    @unique
-  name      String?
-  image     String?
-  role      Role       @default(USER)
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-
-  accounts            Account[]
-  sessions            Session[]
-  analyses            Analysis[]
-  explanationSessions ExplanationSession[]
-
-  @@index([email])
-  @@index([username])
-  @@map("users")
-}
-
-model Account {
-  id                String @id @default(cuid())
-  userId            String @map("user_id")
-  provider          String
-  providerAccountId String @map("provider_account_id")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-  @@map("accounts")
-}
-
-model Session {
-  id            String    @id @default(cuid())
-  userId        String    @map("user_id")
-  tokenHash     String    @map("token_hash")
-  expiresAt     DateTime  @map("expires_at")
-  revokedAt     DateTime? @map("revoked_at")
-  lastUsedAt    DateTime  @map("last_used_at")
-  ipAddress     String?   @map("ip_address")
-  userAgent     String?   @map("user_agent")
-  rotatedFromId String?   @map("rotated_from_id")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tokenHash])
-  @@map("sessions")
-}
-
-model Analysis {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  code       String
-  language   String
-  complexity String?
-  suggestion String?
-  result     Json
-  shareId    String?  @unique @map("share_id")
-  isPublic   Boolean  @default(false) @map("is_public")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([shareId])
-  @@map("analyses")
-}
-
-model ExplanationSession {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  title     String?                      // Auto-set from first message if not provided
-  shareId   String?  @unique @map("share_id")
-  isPublic  Boolean  @default(false)     @map("is_public")
-  messages  Json     @default("[]")      // Array of SessionMessage objects
-  createdAt DateTime @default(now())     @map("created_at")
-  updatedAt DateTime @updatedAt          @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([shareId])
-  @@map("explanation_sessions")
-}
-
-model Category {
-  id          String      @id
-  label       String
-  description String?
-  iconName    String?     @map("icon_name")
-  sortOrder   Int         @default(0) @map("sort_order")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-
-  algorithms Algorithm[]
-
-  @@index([sortOrder])
-  @@map("categories")
-}
-
-model Algorithm {
-  id              String     @id @default(uuid())
-  slug            String     @unique
-  name            String
-  description     String
-  categoryId      String     @map("category_id")
-  difficulty      Difficulty @default(beginner)
-  isPublished     Boolean    @default(false) @map("is_published")
-  timeBest        String?    @map("time_best")
-  timeAverage     String?    @map("time_average")
-  timeWorst       String?    @map("time_worst")
-  spaceComplexity String?    @map("space_complexity")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-
-  category     Category       @relation(fields: [categoryId], references: [id])
-  displayCodes DisplayCode[]
-  forge        ForgeConfig?
-  tags         AlgorithmTag[]
-
-  @@index([categoryId])
-  @@index([slug])
-  @@index([difficulty])
-  @@index([isPublished])
-  @@map("algorithms")
-}
-
-model DisplayCode {
-  id          String @id @default(uuid())
-  algorithmId String @map("algorithm_id")
-  language    String
-  code        String
-
-  algorithm Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
-
-  @@unique([algorithmId, language])
-  @@index([algorithmId])
-  @@map("display_codes")
-}
-
-model ForgeConfig {
-  id          String @id @default(uuid())
-  algorithmId String @unique @map("algorithm_id")
-  forgeCode   Json   @map("forge_code")
-  inputSchema Json   @map("input_schema")
-  guardRanges Json   @map("guard_ranges")
-  version     Int    @default(1)
-
-  algorithm Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
-
-  @@map("forge_configs")
-}
-
-model Tag {
-  id         String         @id @default(uuid())
-  label      String         @unique
-  algorithms AlgorithmTag[]
-
-  @@map("tags")
-}
-
-model AlgorithmTag {
-  algorithmId String @map("algorithm_id")
-  tagId       String @map("tag_id")
-
-  algorithm Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
-  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([algorithmId, tagId])
-  @@map("algorithm_tags")
-}
-__ALGOFORGE_FILE_60a0c9087f7c518b__
-
 mkdir -p ./apps/api
 cat > ./apps/api/package.json <<'__ALGOFORGE_FILE_6816687afd5e8d87__'
 {
@@ -7979,6 +650,7 @@ import { Request, Response } from "express";
 import { LIMITS, type AdminRoleChangeResponse, type AdminUserListResponse } from "@algoforge/contracts";
 import { serializeAdminUser } from "../serializers/admin";
 import { adminService } from "../services/admin.service";
+import { AUDIT_ACTIONS, auditService } from "../services/audit.service";
 import { asyncHandler } from "../utils/async-handler";
 import { AppError } from "../utils/app-error";
 
@@ -8003,6 +675,7 @@ class AdminController {
   /** POST /api/admin/upgrade-user. The role is hard-coded server-side, never read from the body. */
   upgradeUser = asyncHandler(async (req: Request, res: Response) => {
     const result = await adminService.upgradeToAdmin(readUserId(req.body));
+    if (result.changed) await auditService.recordFromRequest(req, AUDIT_ACTIONS.USER_UPGRADE, { type: "user", id: result.user.id }, { newRole: "ADMIN" });
     const body: AdminRoleChangeResponse = {
       changed: result.changed,
       user: { id: result.user.id, email: result.user.email, role: result.user.role },
@@ -8013,6 +686,7 @@ class AdminController {
   /** POST /api/admin/downgrade-user */
   downgradeUser = asyncHandler(async (req: Request, res: Response) => {
     const result = await adminService.downgradeToUser(readUserId(req.body));
+    if (result.changed) await auditService.recordFromRequest(req, AUDIT_ACTIONS.USER_DOWNGRADE, { type: "user", id: result.user.id }, { newRole: "USER" });
     const body: AdminRoleChangeResponse = {
       changed: result.changed,
       user: { id: result.user.id, email: result.user.email, role: result.user.role },
@@ -8040,12 +714,13 @@ import { Request, Response } from "express";
 import { Role } from "@algoforge/db";
 import type { AlgorithmListResponse } from "@algoforge/contracts";
 import { algorithmService } from "../services/algorithm/index";
+import { AUDIT_ACTIONS, auditService } from "../services/audit.service";
 import type { AlgorithmVisibility } from "../types/algorithm.types";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
 import { parseCreateAlgorithm, parseUpdateAlgorithm, parseAlgorithmQuery } from "../validation/algorithm";
 
-const ADMIN_VIEW: AlgorithmVisibility = { isAdmin: true };
+// const ADMIN_VIEW: AlgorithmVisibility = { isAdmin: true };
 
 function visibilityOf(req: Request): AlgorithmVisibility {
   return { isAdmin: req.auth?.user.role === Role.ADMIN };
@@ -8081,7 +756,8 @@ class AlgorithmController {
 
   create = asyncHandler(async (req: Request, res: Response) => {
     const input = parseCreateAlgorithm(req.body);
-    const created = await algorithmService.createAlgorithm(input);
+    const created = await algorithmService.createAlgorithm(input, req.auth?.user.id);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.ALGORITHM_CREATE, { type: "algorithm", id: created.id }, { slug: input.slug });
     res.status(201).json(created);
   });
 
@@ -8089,12 +765,14 @@ class AlgorithmController {
     const id = ensureString(req.params.id, "Algorithm ID is required.");
     const input = parseUpdateAlgorithm(req.body);
     const updated = await algorithmService.updateAlgorithm(id, input);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.ALGORITHM_UPDATE, { type: "algorithm", id }, { fields: Object.keys(input) });
     res.status(200).json(updated);
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
     const id = ensureString(req.params.id, "Algorithm ID is required.");
     await algorithmService.deleteAlgorithm(id);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.ALGORITHM_DELETE, { type: "algorithm", id });
     res.status(204).send();
   });
 }
@@ -8310,6 +988,7 @@ cat > ./apps/api/src/controllers/category.controller.ts <<'__ALGOFORGE_FILE_7943
 import { Request, Response } from "express";
 import type { CategoryListResponse } from "@algoforge/contracts";
 import { categoryService } from "../services/category.service";
+import { AUDIT_ACTIONS, auditService } from "../services/audit.service";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
 import { parseCreateCategory, parseUpdateCategory } from "../validation/category";
@@ -8330,6 +1009,7 @@ class CategoryController {
   create = asyncHandler(async (req: Request, res: Response) => {
     const input = parseCreateCategory(req.body);
     const category = await categoryService.createCategory(input);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.CATEGORY_CREATE, { type: "category", id: category.id }, { label: input.label });
     res.status(201).json(category);
   });
 
@@ -8337,12 +1017,14 @@ class CategoryController {
     const id = ensureString(req.params.id, "Category ID is required.");
     const input = parseUpdateCategory(req.body);
     const category = await categoryService.updateCategory(id, input);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.CATEGORY_UPDATE, { type: "category", id }, { fields: Object.keys(input) });
     res.json(category);
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
     const id = ensureString(req.params.id, "Category ID is required.");
     await categoryService.deleteCategory(id);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.CATEGORY_DELETE, { type: "category", id });
     res.status(204).send();
   });
 }
@@ -8984,6 +1666,49 @@ Answer:`;
 __ALGOFORGE_FILE_567d0834deccdfc7__
 
 mkdir -p ./apps/api/src/repositories
+cat > ./apps/api/src/repositories/ai-usage.repository.ts <<'__ALGOFORGE_FILE_836df7fd2dcd3cc1__'
+import { prisma, type AiFeature } from "@algoforge/db";
+
+export interface UsageDelta {
+  requests: number;
+  tokensIn: number;
+  tokensOut: number;
+}
+
+export const aiUsageRepository = {
+  /** Atomic upsert-and-increment on the (user, feature, day) row. `day` must be a UTC midnight date. */
+  increment(userId: string, feature: AiFeature, day: Date, delta: UsageDelta) {
+    return prisma.aiUsage.upsert({
+      where: { userId_feature_day: { userId, feature, day } },
+      create: { userId, feature, day, requests: delta.requests, tokensIn: delta.tokensIn, tokensOut: delta.tokensOut },
+      update: {
+        requests: { increment: delta.requests },
+        tokensIn: { increment: delta.tokensIn },
+        tokensOut: { increment: delta.tokensOut },
+      },
+    });
+  },
+
+  findForDay(userId: string, feature: AiFeature, day: Date) {
+    return prisma.aiUsage.findUnique({ where: { userId_feature_day: { userId, feature, day } } });
+  },
+
+  async sumSince(userId: string, feature: AiFeature, sinceDay: Date) {
+    const agg = await prisma.aiUsage.aggregate({
+      where: { userId, feature, day: { gte: sinceDay } },
+      _sum: { requests: true, tokensIn: true, tokensOut: true },
+    });
+    return {
+      requests: agg._sum.requests ?? 0,
+      tokensIn: agg._sum.tokensIn ?? 0,
+      tokensOut: agg._sum.tokensOut ?? 0,
+    };
+  },
+};
+
+__ALGOFORGE_FILE_836df7fd2dcd3cc1__
+
+mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/algorithm.repository.ts <<'__ALGOFORGE_FILE_2e4efbd2124e9ef5__'
 //# filename: apps/api/src/repositories/algorithm.repository.ts
 
@@ -9072,6 +1797,8 @@ export const algorithmRepository = {
     categoryId: string;
     difficulty: Difficulty;
     isPublished: boolean;
+    publishedAt?: Date | null;
+    createdById?: string | null;
     timeBest: string | null;
     timeAverage: string | null;
     timeWorst: string | null;
@@ -9087,6 +1814,8 @@ export const algorithmRepository = {
     return prisma.algorithm.create({
       data: {
         slug: data.slug,
+        publishedAt: data.publishedAt ?? null,
+        createdById: data.createdById ?? null,
         name: data.name,
         description: data.description,
         categoryId: data.categoryId,
@@ -9177,7 +1906,12 @@ mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/analysis.repository.ts <<'__ALGOFORGE_FILE_d51610e2955fb9cf__'
 //# filename: apps/api/src/repositories/analysis.repository.ts
 
+import { createHash } from "crypto";
 import { prisma, Prisma } from "@algoforge/db";
+import { AppError } from "../utils/app-error";
+
+/** SHA-256 (hex) of the submitted code. Same formula as the Phase 5 backfill. */
+export const hashCode = (code: string): string => createHash("sha256").update(code, "utf8").digest("hex");
 
 export const analysisRepository = {
   create(data: {
@@ -9189,7 +1923,7 @@ export const analysisRepository = {
     result: Prisma.InputJsonValue;
   }) {
     return prisma.analysis.create({
-      data,
+      data: { ...data, codeHash: hashCode(data.code) },
       select: { id: true, language: true, result: true, createdAt: true },
     });
   },
@@ -9240,10 +1974,23 @@ export const analysisRepository = {
     return prisma.analysis.findFirst({ where: { id: analysisId, userId } });
   },
 
-  setPublic(analysisId: string, shareId: string) {
-    return prisma.analysis.update({
-      where: { id: analysisId },
-      data: { shareId, isPublic: true },
+  /**
+   * Marks the analysis public AND mirrors that into the shares table in one transaction.
+   * The legacy columns stay authoritative until Phase 9. The owner is part of the query.
+   */
+  setPublic(analysisId: string, userId: string, shareId: string) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.analysis.updateMany({
+        where: { id: analysisId, userId },
+        data: { shareId, isPublic: true },
+      });
+      if (updated.count === 0) throw AppError.notFound("Analysis not found.");
+      await tx.share.upsert({
+        where: { type_targetId: { type: "analysis", targetId: analysisId } },
+        create: { shareId, type: "analysis", targetId: analysisId, ownerId: userId },
+        update: { shareId, revokedAt: null },
+      });
+      return { id: analysisId, shareId };
     });
   },
 
@@ -9262,7 +2009,40 @@ export const analysisRepository = {
     });
   },
 };
+
 __ALGOFORGE_FILE_d51610e2955fb9cf__
+
+mkdir -p ./apps/api/src/repositories
+cat > ./apps/api/src/repositories/audit-log.repository.ts <<'__ALGOFORGE_FILE_d391de32a540588e__'
+import { prisma, Prisma } from "@algoforge/db";
+
+export const auditLogRepository = {
+  create(data: {
+    actorId: string | null;
+    action: string;
+    targetType: string | null;
+    targetId: string | null;
+    meta: Prisma.InputJsonValue;
+  }) {
+    return prisma.auditLog.create({ data, select: { id: true } });
+  },
+
+  /** Newest first. `take` should be limit + 1 to detect a next page. */
+  findPage(opts: { take: number; cursor?: string; actorId?: string; targetType?: string; targetId?: string }) {
+    return prisma.auditLog.findMany({
+      where: {
+        ...(opts.actorId ? { actorId: opts.actorId } : {}),
+        ...(opts.targetType ? { targetType: opts.targetType } : {}),
+        ...(opts.targetId ? { targetId: opts.targetId } : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: opts.take,
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+    });
+  },
+};
+
+__ALGOFORGE_FILE_d391de32a540588e__
 
 mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/category.repository.ts <<'__ALGOFORGE_FILE_b280365fe1c8ae03__'
@@ -9297,7 +2077,7 @@ export const categoryRepository = {
     iconName?: string;
     sortOrder: number;
   }) {
-    return prisma.category.create({ data });
+    return prisma.category.create({ data: { ...data, slug: data.id } });
   },
 
   update(
@@ -9324,9 +2104,71 @@ export const categoryRepository = {
 __ALGOFORGE_FILE_b280365fe1c8ae03__
 
 mkdir -p ./apps/api/src/repositories
+cat > ./apps/api/src/repositories/explanation-message.repository.ts <<'__ALGOFORGE_FILE_e0d6d7f11ae9290d__'
+import { createHash } from "crypto";
+import { prisma, type Prisma } from "@algoforge/db";
+
+/** Same formula as the Phase 5 backfill (md5 of "<sessionId>:<seq>"), so rewrites keep stable ids. */
+export const explanationMessageRowId = (sessionId: string, seq: number): string =>
+  createHash("md5").update(`${sessionId}:${seq}`).digest("hex");
+
+export interface MessageInput {
+  role: "user" | "assistant";
+  content: string;
+  intent?: string;
+  createdAt: string;
+}
+
+export const explanationMessageRepository = {
+  /** Messages of a session the user owns. Ownership is a relation filter in the query. */
+  listBySession(sessionId: string, userId: string, opts: { take: number; afterSeq?: number }) {
+    return prisma.explanationMessage.findMany({
+      where: {
+        sessionId,
+        session: { userId },
+        ...(opts.afterSeq !== undefined ? { seq: { gt: opts.afterSeq } } : {}),
+      },
+      orderBy: { seq: "asc" },
+      take: opts.take,
+    });
+  },
+
+  countBySession(sessionId: string, userId: string) {
+    return prisma.explanationMessage.count({ where: { sessionId, session: { userId } } });
+  },
+
+  /**
+   * Makes the table mirror the given messages (seq = position, starting at 1).
+   * Must run inside the same transaction that has already verified ownership of the session.
+   */
+  async replaceForSession(tx: Prisma.TransactionClient, sessionId: string, messages: readonly MessageInput[]): Promise<void> {
+    await tx.explanationMessage.deleteMany({ where: { sessionId } });
+    if (messages.length === 0) return;
+    await tx.explanationMessage.createMany({
+      data: messages.map((m, i) => {
+        const at = new Date(m.createdAt);
+        return {
+          id: explanationMessageRowId(sessionId, i + 1),
+          sessionId,
+          seq: i + 1,
+          role: m.role,
+          content: m.content,
+          intent: m.intent ?? null,
+          createdAt: Number.isNaN(at.getTime()) ? new Date() : at,
+        };
+      }),
+    });
+  },
+};
+
+__ALGOFORGE_FILE_e0d6d7f11ae9290d__
+
+mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/explanation-session.repository.ts <<'__ALGOFORGE_FILE_8f526095ebde3864__'
 import { prisma, Prisma } from "@algoforge/db";
 import type { SessionMessage } from "../services/explanation-session.service";
+import { AppError } from "../utils/app-error";
+import { explanationMessageRepository } from "./explanation-message.repository";
 
 export const explanationSessionRepository = {
   // ─── Create ────────────────────────────────────────────────────────────────
@@ -9378,32 +2220,51 @@ export const explanationSessionRepository = {
 
   // ─── Update ────────────────────────────────────────────────────────────────
 
-  /** Replace the messages array and optionally update the title. */
-  appendMessages(id: string, messages: SessionMessage[], title?: string) {
-    return prisma.explanationSession.update({
-      where: { id },
-      data:  {
-        messages: messages as unknown as Prisma.InputJsonValue,
-        ...(title ? { title } : {}),
-      },
+  /**
+   * Replaces the messages array (and optionally the title) of a session the user owns, and mirrors the
+   * messages into explanation_messages in the same transaction. The JSON column stays authoritative until Phase 8.
+   */
+  appendMessages(id: string, userId: string, messages: SessionMessage[], title?: string) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.explanationSession.updateMany({
+        where: { id, userId },
+        data: {
+          messages: messages as unknown as Prisma.InputJsonValue,
+          ...(title ? { title } : {}),
+        },
+      });
+      if (updated.count === 0) throw AppError.notFound("Session not found.");
+      await explanationMessageRepository.replaceForSession(tx, id, messages);
     });
   },
 
-  /** Make the session public and set its shareId. */
-  share(id: string, shareId: string) {
-    return prisma.explanationSession.update({
-      where: { id },
-      data:  { shareId, isPublic: true },
+  /** Make the session public and set its shareId (mirrored into the shares table). The owner is part of the query. */
+  share(id: string, userId: string, shareId: string) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.explanationSession.updateMany({
+        where: { id, userId },
+        data: { shareId, isPublic: true },
+      });
+      if (updated.count === 0) throw AppError.notFound("Session not found.");
+      await tx.share.upsert({
+        where: { type_targetId: { type: "explain", targetId: id } },
+        create: { shareId, type: "explain", targetId: id, ownerId: userId },
+        update: { shareId, revokedAt: null },
+      });
     });
   },
 
   // ─── Delete ────────────────────────────────────────────────────────────────
 
-  /** Hard-delete — returns count so callers can detect not-found. */
+  /** Hard-delete — returns count so callers can detect not-found. Also removes the session's share row (no orphans). */
   delete(id: string, userId: string) {
-    return prisma.explanationSession.deleteMany({ where: { id, userId } });
+    return prisma.$transaction(async (tx) => {
+      await tx.share.deleteMany({ where: { type: "explain", targetId: id, ownerId: userId } });
+      return tx.explanationSession.deleteMany({ where: { id, userId } });
+    });
   },
 };
+
 __ALGOFORGE_FILE_8f526095ebde3864__
 
 mkdir -p ./apps/api/src/repositories
@@ -9564,6 +2425,72 @@ export const sessionRepository = {
 __ALGOFORGE_FILE_35934ff686e7e85f__
 
 mkdir -p ./apps/api/src/repositories
+cat > ./apps/api/src/repositories/share.repository.ts <<'__ALGOFORGE_FILE_c83f7774389278bb__'
+import { prisma, Prisma, type ShareType } from "@algoforge/db";
+
+const activeWhere = (now: Date): Prisma.ShareWhereInput => ({
+  revokedAt: null,
+  OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+});
+
+async function ownsTarget(tx: Prisma.TransactionClient, ownerId: string, type: ShareType, targetId: string): Promise<boolean> {
+  switch (type) {
+    case "analysis":
+      return (await tx.analysis.count({ where: { id: targetId, userId: ownerId } })) > 0;
+    case "explain":
+      return (await tx.explanationSession.count({ where: { id: targetId, userId: ownerId } })) > 0;
+    case "visualization":
+      return (await tx.visualization.count({ where: { id: targetId, userId: ownerId } })) > 0;
+  }
+}
+
+export const shareRepository = {
+  /**
+   * Idempotent. Returns null when the owner does not own the target (the ownership check and the write
+   * happen in one transaction). An active share is returned unchanged; a revoked one is re-opened
+   * with the new shareId so an old, revoked link never comes back to life.
+   */
+  createForOwnedTarget(ownerId: string, type: ShareType, targetId: string, shareId: string) {
+    return prisma.$transaction(async (tx) => {
+      if (!(await ownsTarget(tx, ownerId, type, targetId))) return null;
+      const existing = await tx.share.findUnique({ where: { type_targetId: { type, targetId } } });
+      if (existing && existing.ownerId === ownerId && existing.revokedAt === null) return existing;
+      if (existing) {
+        return tx.share.update({
+          where: { id: existing.id },
+          data: { shareId, ownerId, revokedAt: null, expiresAt: null },
+        });
+      }
+      return tx.share.create({ data: { shareId, type, targetId, ownerId } });
+    });
+  },
+
+  /** Only the owner can revoke. Returns the number of shares revoked (0 = not found, not yours, or already revoked). */
+  revokeByOwner(shareId: string, ownerId: string) {
+    return prisma.share.updateMany({ where: { shareId, ownerId, revokedAt: null }, data: { revokedAt: new Date() } });
+  },
+
+  /** A share that is neither revoked nor expired. */
+  findActiveByShareId(shareId: string, now: Date = new Date()) {
+    return prisma.share.findFirst({ where: { shareId, ...activeWhere(now) } });
+  },
+
+  findActiveByTarget(type: ShareType, targetId: string, now: Date = new Date()) {
+    return prisma.share.findFirst({ where: { type, targetId, ...activeWhere(now) } });
+  },
+
+  findByOwnerAndTarget(ownerId: string, type: ShareType, targetId: string) {
+    return prisma.share.findFirst({ where: { ownerId, type, targetId } });
+  },
+
+  incrementViewCount(shareId: string, now: Date = new Date()) {
+    return prisma.share.updateMany({ where: { shareId, ...activeWhere(now) }, data: { viewCount: { increment: 1 } } });
+  },
+};
+
+__ALGOFORGE_FILE_c83f7774389278bb__
+
+mkdir -p ./apps/api/src/repositories
 cat > ./apps/api/src/repositories/user.repository.ts <<'__ALGOFORGE_FILE_bec8351d705c1d20__'
 //# filename: apps/api/src/repositories/user.repository.ts
 
@@ -9661,6 +2588,101 @@ export const userRepository = {
 };
 
 __ALGOFORGE_FILE_bec8351d705c1d20__
+
+mkdir -p ./apps/api/src/repositories
+cat > ./apps/api/src/repositories/visualization.repository.ts <<'__ALGOFORGE_FILE_c40fcc98815e12d4__'
+import { prisma, Prisma } from "@algoforge/db";
+
+const summarySelect = {
+  id: true,
+  title: true,
+  description: true,
+  language: true,
+  structures: true,
+  stepCount: true,
+  schemaVersion: true,
+  forkedFromId: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+export interface VisualizationWrite {
+  title: string;
+  description?: string | null;
+  script: string;
+  code?: string | null;
+  language?: string | null;
+  structures: Prisma.InputJsonValue;
+  stepCount: number;
+  schemaVersion?: number;
+  forkedFromId?: string | null;
+}
+
+/** Every read and write below is scoped by userId inside the query itself, so an IDOR cannot be reintroduced by a caller forgetting a check. */
+export const visualizationRepository = {
+  create(userId: string, data: VisualizationWrite) {
+    return prisma.visualization.create({
+      data: {
+        userId,
+        title: data.title,
+        description: data.description ?? null,
+        script: data.script,
+        code: data.code ?? null,
+        language: data.language ?? null,
+        structures: data.structures,
+        stepCount: data.stepCount,
+        schemaVersion: data.schemaVersion ?? 1,
+        forkedFromId: data.forkedFromId ?? null,
+      },
+    });
+  },
+
+  findOneByUser(id: string, userId: string) {
+    return prisma.visualization.findFirst({ where: { id, userId } });
+  },
+
+  async existsByUser(id: string, userId: string): Promise<boolean> {
+    return (await prisma.visualization.count({ where: { id, userId } })) > 0;
+  },
+
+  /** Newest first. `take` should be limit + 1 to detect a next page. */
+  findPageByUser(userId: string, opts: { take: number; cursor?: string }) {
+    return prisma.visualization.findMany({
+      where: { userId },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: opts.take,
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+      select: summarySelect,
+    });
+  },
+
+  updateByUser(id: string, userId: string, patch: Partial<VisualizationWrite>) {
+    const data: Prisma.VisualizationUncheckedUpdateManyInput = {};
+    if (patch.title !== undefined) data.title = patch.title;
+    if (patch.description !== undefined) data.description = patch.description;
+    if (patch.script !== undefined) data.script = patch.script;
+    if (patch.code !== undefined) data.code = patch.code;
+    if (patch.language !== undefined) data.language = patch.language;
+    if (patch.structures !== undefined) data.structures = patch.structures;
+    if (patch.stepCount !== undefined) data.stepCount = patch.stepCount;
+    if (patch.schemaVersion !== undefined) data.schemaVersion = patch.schemaVersion;
+    return prisma.visualization.updateMany({ where: { id, userId }, data });
+  },
+
+  deleteByUser(id: string, userId: string) {
+    return prisma.$transaction(async (tx) => {
+      const result = await tx.visualization.deleteMany({ where: { id, userId } });
+      if (result.count > 0) await tx.share.deleteMany({ where: { type: "visualization", targetId: id } });
+      return result;
+    });
+  },
+
+  countByUser(userId: string) {
+    return prisma.visualization.count({ where: { userId } });
+  },
+};
+
+__ALGOFORGE_FILE_c40fcc98815e12d4__
 
 mkdir -p ./apps/api/src/routes
 cat > ./apps/api/src/routes/admin.ts <<'__ALGOFORGE_FILE_3545272fa8f271f5__'
@@ -10112,42 +3134,6 @@ export function serializeSharedAnalysis(row: SharedAnalysisRow): SharedAnalysisR
 __ALGOFORGE_FILE_0115a96cc33f5967__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/auth.test.ts <<'__ALGOFORGE_FILE_116e3d0353f21381__'
-import { describe, expect, it } from "vitest";
-import { AuthUserSchema, DeviceSessionSchema } from "@algoforge/contracts";
-import { serializeAuthUser, serializeDeviceSession } from "./auth";
-
-describe("serializeAuthUser", () => {
-  const row = { id: "u1", email: "a@b.co", username: null, name: "Ada", image: null, role: "USER" as const };
-
-  it("returns exactly the six contract fields", () => {
-    const out = serializeAuthUser(row);
-    expect(Object.keys(out).sort()).toEqual(["email", "id", "image", "name", "role", "username"]);
-    expect(AuthUserSchema.safeParse(out).success).toBe(true);
-  });
-});
-
-describe("serializeDeviceSession", () => {
-  const row = {
-    id: "s1",
-    createdAt: new Date("2026-11-01T10:00:00.000Z"),
-    lastUsedAt: "2026-11-04T09:00:00.000Z",
-    ipAddress: null,
-    userAgent: "Mozilla/5.0",
-  };
-
-  it("marks the caller's own session", () => {
-    expect(serializeDeviceSession(row, "s1").current).toBe(true);
-    expect(serializeDeviceSession(row, "other").current).toBe(false);
-  });
-  it("matches the contract", () => {
-    expect(DeviceSessionSchema.safeParse(serializeDeviceSession(row, "s1")).success).toBe(true);
-  });
-});
-
-__ALGOFORGE_FILE_116e3d0353f21381__
-
-mkdir -p ./apps/api/src/serializers
 cat > ./apps/api/src/serializers/auth.ts <<'__ALGOFORGE_FILE_e2df45078b1dae30__'
 import type { AuthUser, DeviceSession, UserRole } from "@algoforge/contracts";
 import { toIso } from "./dates";
@@ -10468,6 +3454,50 @@ export const aiService = new AIService();
 __ALGOFORGE_FILE_ac4d1a3843085dcc__
 
 mkdir -p ./apps/api/src/services
+cat > ./apps/api/src/services/ai-usage.service.ts <<'__ALGOFORGE_FILE_d2e8e54b268e8162__'
+import { Prisma, type AiFeature } from "@algoforge/db";
+import { aiUsageRepository } from "../repositories/ai-usage.repository";
+
+const MAX_ATTEMPTS = 4;
+const INT32_MAX = 2_000_000_000;
+
+/** The calendar day (UTC midnight) used as the usage bucket. */
+export function utcDay(now: Date = new Date()): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+const clampCount = (n: number | undefined): number =>
+  n === undefined || !Number.isFinite(n) ? 0 : Math.max(0, Math.min(INT32_MAX, Math.floor(n)));
+
+const isUniqueViolation = (error: unknown): boolean =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+
+/** Accounting only. Quotas and limits that read this data arrive in Phase 7. */
+class AiUsageService {
+  /** Records one AI request. Two requests racing to create the day's row both end up counted. */
+  async record(userId: string, feature: AiFeature, tokens: { tokensIn?: number; tokensOut?: number } = {}, now: Date = new Date()) {
+    const day = utcDay(now);
+    const delta = { requests: 1, tokensIn: clampCount(tokens.tokensIn), tokensOut: clampCount(tokens.tokensOut) };
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await aiUsageRepository.increment(userId, feature, day, delta);
+      } catch (error) {
+        if (isUniqueViolation(error) && attempt < MAX_ATTEMPTS) continue;
+        throw error;
+      }
+    }
+  }
+
+  today(userId: string, feature: AiFeature, now: Date = new Date()) {
+    return aiUsageRepository.findForDay(userId, feature, utcDay(now));
+  }
+}
+
+export const aiUsageService = new AiUsageService();
+
+__ALGOFORGE_FILE_d2e8e54b268e8162__
+
+mkdir -p ./apps/api/src/services
 cat > ./apps/api/src/services/algorithm.service.ts <<'__ALGOFORGE_FILE_ea38e4d08da18fd5__'
 // Backward-compatible re-export.
 // Implementation has been split into services/algorithm/ sub-modules.
@@ -10662,10 +3692,14 @@ type ExistingForge = {
   version:     number;
 } | null;
 
-export async function createAlgorithm(input: CreateAlgorithm) {
+export async function createAlgorithm(input: CreateAlgorithm, actorId?: string) {
   if (input.forge) validateForge(input.forge);
   const category = await resolveCategory(input.categoryId);
-  const created = await algorithmRepository.create(toCreateData(input, category.id));
+  const created = await algorithmRepository.create({
+    ...toCreateData(input, category.id),
+    publishedAt: input.isPublished ? new Date() : null,
+    createdById: actorId ?? null,
+  });
   await bustCache();
   return created;
 }
@@ -10691,7 +3725,11 @@ export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
 
   const updated = await algorithmRepository.update(
     id,
-    toUpdateData(input, existing.forge ?? null, categoryId),
+    {
+      ...toUpdateData(input, existing.forge ?? null, categoryId),
+      // First publication time: set when a draft becomes published, never rewritten afterwards.
+      ...(input.isPublished === true && !existing.isPublished ? { publishedAt: new Date() } : {}),
+    },
   );
   await bustCache();
   return updated;
@@ -11027,7 +4065,7 @@ class AnalysisService {
     }
 
     const shareId = generateShareId();
-    await analysisRepository.setPublic(analysisId, shareId);
+    await analysisRepository.setPublic(analysisId, userId, shareId);
     return { shareUrl: `${env.webAppUrl}/share/analysis/${shareId}` };
   }
 
@@ -11041,6 +4079,107 @@ class AnalysisService {
 export const analysisService = new AnalysisService();
 
 __ALGOFORGE_FILE_b4d4e3cce0547dd2__
+
+mkdir -p ./apps/api/src/services
+cat > ./apps/api/src/services/audit.service.ts <<'__ALGOFORGE_FILE_22d7416f75b950e8__'
+import type { Request } from "express";
+import type { Prisma } from "@algoforge/db";
+import { auditLogRepository } from "../repositories/audit-log.repository";
+import { logger, serializeError } from "../utils/logger";
+import { paginate } from "../utils/pagination";
+
+/** Every admin mutation uses one of these names, so the log stays searchable. */
+export const AUDIT_ACTIONS = {
+  USER_UPGRADE: "admin.user.upgrade",
+  USER_DOWNGRADE: "admin.user.downgrade",
+  ALGORITHM_CREATE: "algorithm.create",
+  ALGORITHM_UPDATE: "algorithm.update",
+  ALGORITHM_DELETE: "algorithm.delete",
+  CATEGORY_CREATE: "category.create",
+  CATEGORY_UPDATE: "category.update",
+  CATEGORY_DELETE: "category.delete",
+} as const;
+export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
+
+export interface AuditTarget {
+  type: string;
+  id?: string | null;
+}
+export interface AuditEntry {
+  actorId: string | null;
+  action: string;
+  target?: AuditTarget;
+  meta?: Record<string, unknown>;
+}
+
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
+const MAX_DEPTH = 4;
+const MAX_STRING = 500;
+const MAX_ITEMS = 50;
+const SENSITIVE_KEY = /secret|token|password|passwd|authorization|cookie|api[-_]?key|credential/i;
+
+/** Makes arbitrary metadata safe to store: bounded size and depth, JSON-only values, secrets redacted by key name. */
+export function sanitizeMeta(value: unknown, depth = 0): Json {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…` : value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "function" || typeof value === "symbol") return null;
+  if (depth >= MAX_DEPTH) return "[truncated]";
+  if (Array.isArray(value)) return value.slice(0, MAX_ITEMS).map((v) => sanitizeMeta(v, depth + 1));
+  if (typeof value === "object") {
+    const out: { [key: string]: Json } = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>).slice(0, MAX_ITEMS)) {
+      if (k === "__proto__") continue;
+      out[k] = SENSITIVE_KEY.test(k) ? "[redacted]" : sanitizeMeta(v, depth + 1);
+    }
+    return out;
+  }
+  return String(value);
+}
+
+class AuditService {
+  /**
+   * Writes one audit row. NEVER throws: a failed audit write must not turn a mutation that already
+   * succeeded into an error response. Failures are logged at error level. Returns whether the row was written.
+   */
+  async record(entry: AuditEntry): Promise<boolean> {
+    try {
+      await auditLogRepository.create({
+        actorId: entry.actorId,
+        action: entry.action.slice(0, 100),
+        targetType: entry.target?.type ?? null,
+        targetId: entry.target?.id ?? null,
+        meta: sanitizeMeta(entry.meta ?? {}) as unknown as Prisma.InputJsonValue,
+      });
+      return true;
+    } catch (error) {
+      logger.error("audit log write failed", { action: entry.action, actorId: entry.actorId, ...serializeError(error) });
+      return false;
+    }
+  }
+
+  /** Convenience for controllers: the actor and request id come from the request. */
+  recordFromRequest(req: Request, action: string, target?: AuditTarget, meta: Record<string, unknown> = {}): Promise<boolean> {
+    return this.record({
+      actorId: req.auth?.user.id ?? null,
+      action,
+      target,
+      meta: { ...meta, requestId: req.requestId ?? null },
+    });
+  }
+
+  async list(query: { limit: number; cursor?: string; actorId?: string; targetType?: string; targetId?: string }) {
+    const rows = await auditLogRepository.findPage({ ...query, take: query.limit + 1 });
+    return paginate(rows, query.limit, (row) => row.id);
+  }
+}
+
+export const auditService = new AuditService();
+
+__ALGOFORGE_FILE_22d7416f75b950e8__
 
 mkdir -p ./apps/api/src/services
 cat > ./apps/api/src/services/auth.service.ts <<'__ALGOFORGE_FILE_b1c1512ce5c0c69e__'
@@ -11516,7 +4655,8 @@ cat > ./apps/api/src/services/explanation.service.ts <<'__ALGOFORGE_FILE_3ece156
 import { createHash } from "crypto";
 import { aiService } from "./ai.service";
 import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
-import { processQuery, type QueryScope } from "../ai/query-processor";
+import { processQuery } from "../ai/query-processor";
+// import {type QueryScope} from "../ai/query-processor";
 import { buildExplanationPrompt } from "../prompts/explanation.prompt";
 import { formatExplanationResponse, type ExplanationResponse } from "../ai/response-formatter";
 import { AppError } from "../utils/app-error";
@@ -11692,7 +4832,7 @@ class ExplanationSessionService {
     ];
 
     const title = session.title ?? input.query.slice(0, 80);
-    await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
+    await explanationSessionRepository.appendMessages(sessionId, userId, updatedMessages, title);
     await layeredCache.del(sessionCacheKey(userId, sessionId));
     if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
 
@@ -11720,7 +4860,7 @@ class ExplanationSessionService {
     }
 
     const shareId = newShareId();
-    await explanationSessionRepository.share(id, shareId);
+    await explanationSessionRepository.share(id, userId, shareId);
     await layeredCache.del(sessionCacheKey(userId, id));
 
     return { shareUrl: buildShareUrl(shareId) };
@@ -12045,11 +5185,11 @@ type OpenRouterCompletionResponse = {
   choices?: Array<{ message?: OpenRouterChoiceMessage }>;
 };
 
-type OpenRouterChatRequest = {
-  model: string;
-  messages: OpenRouterMessage[];
-  reasoning: { enabled: boolean };
-};
+// type OpenRouterChatRequest = {
+//   model: string;
+//   messages: OpenRouterMessage[];
+//   reasoning: { enabled: boolean };
+// };
 
 export class OpenRouterProvider implements AIProvider {
   readonly name = "openrouter";
@@ -12317,6 +5457,58 @@ export function startSessionCleanup(): () => void {
 __ALGOFORGE_FILE_3f4894c1eb9ef8bc__
 
 mkdir -p ./apps/api/src/services
+cat > ./apps/api/src/services/share.service.ts <<'__ALGOFORGE_FILE_5ac3b067acb12a4e__'
+import { randomBytes } from "crypto";
+import { Prisma, type ShareType } from "@algoforge/db";
+import { shareRepository } from "../repositories/share.repository";
+import { AppError } from "../utils/app-error";
+
+const MAX_ATTEMPTS = 5;
+
+/** 12 base64url characters, the format the unified share id uses (decision D7). */
+export const newShareId = (): string => randomBytes(9).toString("base64url");
+
+const isUniqueViolation = (error: unknown): boolean =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+
+/**
+ * Data access for the shares table. No HTTP routes and no cache purging yet (Phase 9).
+ * Callers always pass the acting user as `ownerId`; the repository checks ownership inside its transaction.
+ */
+class ShareService {
+  /** Idempotent. Retries when a freshly generated id collides with an existing one. */
+  async create(ownerId: string, type: ShareType, targetId: string) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const share = await shareRepository.createForOwnedTarget(ownerId, type, targetId, newShareId());
+        if (!share) throw AppError.notFound("Item not found.");
+        return share;
+      } catch (error) {
+        if (error instanceof AppError) throw error;
+        if (isUniqueViolation(error) && attempt < MAX_ATTEMPTS) continue;
+        throw error;
+      }
+    }
+  }
+
+  async revoke(ownerId: string, shareId: string): Promise<void> {
+    const result = await shareRepository.revokeByOwner(shareId, ownerId);
+    if (result.count === 0) throw AppError.notFound("Share not found.");
+  }
+
+  /** The active (not revoked, not expired) share, or 404. */
+  async resolve(shareId: string) {
+    const share = await shareRepository.findActiveByShareId(shareId);
+    if (!share) throw AppError.notFound("Share not found.");
+    return share;
+  }
+}
+
+export const shareService = new ShareService();
+
+__ALGOFORGE_FILE_5ac3b067acb12a4e__
+
+mkdir -p ./apps/api/src/services
 cat > ./apps/api/src/services/user.service.ts <<'__ALGOFORGE_FILE_048ab64b63c270c7__'
 //# filename: apps/api/src/services/user.service.ts
 
@@ -12413,6 +5605,48 @@ class UserService {
 export const userService = new UserService();
 
 __ALGOFORGE_FILE_048ab64b63c270c7__
+
+mkdir -p ./apps/api/src/services
+cat > ./apps/api/src/services/visualization.service.ts <<'__ALGOFORGE_FILE_e09020f85c4de5fb__'
+import { visualizationRepository, type VisualizationWrite } from "../repositories/visualization.repository";
+import { AppError } from "../utils/app-error";
+import { paginate } from "../utils/pagination";
+
+/**
+ * Ownership-safe data access for saved visualizations. No HTTP routes and no script compilation here:
+ * those arrive in Phase 6. Every method takes the acting user's id and passes it into the query.
+ */
+class VisualizationService {
+  create(userId: string, data: VisualizationWrite) {
+    return visualizationRepository.create(userId, data);
+  }
+
+  async get(userId: string, id: string) {
+    const row = await visualizationRepository.findOneByUser(id, userId);
+    if (!row) throw AppError.notFound("Visualization not found.");
+    return row;
+  }
+
+  async list(userId: string, query: { limit: number; cursor?: string }) {
+    const rows = await visualizationRepository.findPageByUser(userId, { take: query.limit + 1, cursor: query.cursor });
+    return paginate(rows, query.limit, (row) => row.id);
+  }
+
+  async update(userId: string, id: string, patch: Partial<VisualizationWrite>) {
+    const result = await visualizationRepository.updateByUser(id, userId, patch);
+    if (result.count === 0) throw AppError.notFound("Visualization not found.");
+    return this.get(userId, id);
+  }
+
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await visualizationRepository.deleteByUser(id, userId);
+    if (result.count === 0) throw AppError.notFound("Visualization not found.");
+  }
+}
+
+export const visualizationService = new VisualizationService();
+
+__ALGOFORGE_FILE_e09020f85c4de5fb__
 
 mkdir -p ./apps/api/src/types
 cat > ./apps/api/src/types/algorithm.types.ts <<'__ALGOFORGE_FILE_9507a77fa8db1e43__'
@@ -12534,35 +5768,6 @@ export function asyncHandler(handler: AsyncRouteHandler) {
   };
 }
 __ALGOFORGE_FILE_93237a48ee240ac7__
-
-mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/capabilities.test.ts <<'__ALGOFORGE_FILE_1dfb16193454bd84__'
-import { describe, expect, it } from "vitest";
-import { CAPABILITY_LIMITS } from "@algoforge/contracts";
-import { buildCapabilities } from "./capabilities";
-
-describe("buildCapabilities", () => {
-  it("turns AI features on when a provider is configured", () => {
-    const caps = buildCapabilities({ aiConfigured: true });
-    expect(caps.analysis).toBe(true);
-    expect(caps.assistant).toBe(true);
-    expect(caps.sharing).toBe(true);
-  });
-  it("turns them off when it is not", () => {
-    const caps = buildCapabilities({ aiConfigured: false });
-    expect(caps.analysis).toBe(false);
-    expect(caps.assistant).toBe(false);
-    expect(caps.sharing).toBe(false);
-  });
-  it("never reports saved work before it exists", () => {
-    expect(buildCapabilities({ aiConfigured: true }).savedWork).toBe(false);
-  });
-  it("reports the shared limits", () => {
-    expect(buildCapabilities({ aiConfigured: true }).limits).toEqual(CAPABILITY_LIMITS);
-  });
-});
-
-__ALGOFORGE_FILE_1dfb16193454bd84__
 
 mkdir -p ./apps/api/src/utils
 cat > ./apps/api/src/utils/capabilities.ts <<'__ALGOFORGE_FILE_f2a393ee6a3fb785__'
@@ -12776,28 +5981,6 @@ export function paginate<T>(rows: readonly T[], limit: number, cursorOf: (row: T
 }
 
 __ALGOFORGE_FILE_c8d43f1e44cad4d9__
-
-mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/session-activity.test.ts <<'__ALGOFORGE_FILE_9f1d0de6d050c82b__'
-import { describe, expect, it } from "vitest";
-import { shouldTouchSession } from "./session-activity";
-
-describe("shouldTouchSession", () => {
-  const now = new Date("2026-11-04T12:00:00.000Z");
-  const FIVE_MIN = 5 * 60_000;
-
-  it("does not write when the last write is recent", () => {
-    expect(shouldTouchSession(new Date(now.getTime() - 60_000), now, FIVE_MIN)).toBe(false);
-  });
-  it("writes exactly at the interval", () => {
-    expect(shouldTouchSession(new Date(now.getTime() - FIVE_MIN), now, FIVE_MIN)).toBe(true);
-  });
-  it("writes when the last write is old", () => {
-    expect(shouldTouchSession(new Date(now.getTime() - 3_600_000), now, FIVE_MIN)).toBe(true);
-  });
-});
-
-__ALGOFORGE_FILE_9f1d0de6d050c82b__
 
 mkdir -p ./apps/api/src/utils
 cat > ./apps/api/src/utils/session-activity.ts <<'__ALGOFORGE_FILE_c18d8257d3370645__'
@@ -13532,33 +6715,6 @@ export default function VisualizerPage() {
 }
 
 __ALGOFORGE_FILE_a18046cb71102805__
-
-mkdir -p ./apps/web/src/components/account
-cat > ./apps/web/src/components/account/deviceLabel.test.ts <<'__ALGOFORGE_FILE_2972d36e0b47e075__'
-import { describe, expect, it } from "vitest";
-import { describeDevice } from "./deviceLabel";
-
-describe("describeDevice", () => {
-    it("handles a missing user agent", () => {
-        expect(describeDevice(null)).toBe("Unknown device");
-        expect(describeDevice("")).toBe("Unknown device");
-    });
-    it("names common desktop browsers", () => {
-        expect(describeDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36")).toBe("Chrome on Windows");
-        expect(describeDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 Edg/124.0")).toBe("Edge on Windows");
-        expect(describeDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15")).toBe("Safari on macOS");
-        expect(describeDevice("Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0")).toBe("Firefox on Linux");
-    });
-    it("tells phones apart from desktops", () => {
-        expect(describeDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1")).toBe("Safari on iOS");
-        expect(describeDevice("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36")).toBe("Chrome on Android");
-    });
-    it("falls back gracefully", () => {
-        expect(describeDevice("curl/8.0")).toBe("Unknown device");
-    });
-});
-
-__ALGOFORGE_FILE_2972d36e0b47e075__
 
 mkdir -p ./apps/web/src/components/account
 cat > ./apps/web/src/components/account/deviceLabel.ts <<'__ALGOFORGE_FILE_a4145f59c31eace5__'
@@ -43117,66 +36273,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 __ALGOFORGE_FILE_27f89b9653a26ffc__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/featureState.test.ts <<'__ALGOFORGE_FILE_7286e9122cb591e8__'
-import { describe, expect, it } from "vitest";
-import type { CapabilitiesResponse } from "@algoforge/contracts";
-import { resolveFeatureState, type FeatureInputs } from "./featureState";
-
-const caps = (over: Partial<CapabilitiesResponse> = {}): CapabilitiesResponse => ({
-  analysis: true,
-  assistant: true,
-  sharing: true,
-  savedWork: false,
-  limits: { codeMaxChars: 20000, scriptMaxChars: 200000, messageMaxChars: 2000 },
-  ...over,
-});
-
-const base: FeatureInputs = {
-  authStatus: "authed",
-  capabilities: caps(),
-  capabilitiesLoading: false,
-  mockEnabled: false,
-  uiReady: true,
-};
-
-describe("resolveFeatureState", () => {
-  it("is loading while auth or capabilities are unknown", () => {
-    expect(resolveFeatureState("analysis", { ...base, authStatus: "loading" })).toBe("loading");
-    expect(resolveFeatureState("analysis", { ...base, capabilitiesLoading: true, capabilities: undefined })).toBe("loading");
-  });
-  it("is unavailable in production when the server does not offer it", () => {
-    expect(resolveFeatureState("savedWork", base)).toBe("unavailable");
-    expect(resolveFeatureState("analysis", { ...base, capabilities: caps({ analysis: false }) })).toBe("unavailable");
-  });
-  it("is unavailable in production when the capabilities request failed", () => {
-    expect(resolveFeatureState("analysis", { ...base, capabilities: undefined })).toBe("unavailable");
-  });
-  it("asks guests to sign in when the server offers the feature", () => {
-    expect(resolveFeatureState("analysis", { ...base, authStatus: "guest" })).toBe("needs-account");
-  });
-  it("does not ask guests to sign in for something the server does not offer", () => {
-    expect(resolveFeatureState("savedWork", { ...base, authStatus: "guest" })).toBe("unavailable");
-  });
-  it("is unavailable when the interface is not built yet", () => {
-    expect(resolveFeatureState("analysis", { ...base, uiReady: false })).toBe("unavailable");
-  });
-  it("is ready for a signed-in person when everything exists", () => {
-    expect(resolveFeatureState("analysis", base)).toBe("ready");
-  });
-  it("shows sample content only in development", () => {
-    expect(resolveFeatureState("analysis", { ...base, uiReady: false, mockEnabled: true })).toBe("preview");
-    expect(resolveFeatureState("savedWork", { ...base, mockEnabled: true })).toBe("preview");
-    expect(resolveFeatureState("analysis", { ...base, capabilities: undefined, mockEnabled: true })).toBe("preview");
-    expect(resolveFeatureState("analysis", { ...base, uiReady: false, mockEnabled: false })).toBe("unavailable");
-  });
-  it("still asks guests to sign in during development", () => {
-    expect(resolveFeatureState("analysis", { ...base, authStatus: "guest", mockEnabled: true })).toBe("needs-account");
-  });
-});
-
-__ALGOFORGE_FILE_7286e9122cb591e8__
-
-mkdir -p ./apps/web/src/lib/auth
 cat > ./apps/web/src/lib/auth/featureState.ts <<'__ALGOFORGE_FILE_e1f22956b9ce3fde__'
 import type { CapabilitiesResponse } from "@algoforge/contracts";
 
@@ -43227,47 +36323,6 @@ export { AUTH_ERROR_MESSAGES, buildLoginUrl, readAuthError, stripAuthError } fro
 export { notifySessionExpired, onSessionExpired } from "./sessionEvents";
 
 __ALGOFORGE_FILE_9fdd422eadb990bc__
-
-mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/loginUrl.test.ts <<'__ALGOFORGE_FILE_d49efe17189f3546__'
-import { describe, expect, it } from "vitest";
-import { buildLoginUrl, readAuthError, stripAuthError } from "./loginUrl";
-
-describe("buildLoginUrl", () => {
-  it("builds a same-origin link with an encoded return path", () => {
-    expect(buildLoginUrl("/dashboard?tab=history", "")).toBe("/api/auth/google/start?returnTo=%2Fdashboard%3Ftab%3Dhistory");
-  });
-  it("uses the given API base and trims its trailing slash", () => {
-    expect(buildLoginUrl("/dashboard", "http://localhost:4000/")).toBe("http://localhost:4000/api/auth/google/start?returnTo=%2Fdashboard");
-  });
-  it("replaces an unsafe return path", () => {
-    expect(buildLoginUrl("https://evil.com", "")).toBe("/api/auth/google/start?returnTo=%2Fdashboard");
-    expect(buildLoginUrl(undefined, "")).toBe("/api/auth/google/start?returnTo=%2Fdashboard");
-  });
-});
-
-describe("readAuthError", () => {
-  it("returns null when absent", () => {
-    expect(readAuthError("")).toBeNull();
-    expect(readAuthError("?tab=a")).toBeNull();
-  });
-  it("reads known codes", () => {
-    expect(readAuthError("?authError=oauth_denied")).toBe("oauth_denied");
-    expect(readAuthError("?x=1&authError=oauth_failed")).toBe("oauth_failed");
-  });
-  it("treats an unknown code as a failure", () => {
-    expect(readAuthError("?authError=whatever")).toBe("oauth_failed");
-  });
-});
-
-describe("stripAuthError", () => {
-  it("removes only the error parameter", () => {
-    expect(stripAuthError("http://localhost:3000/dashboard?authError=oauth_failed&tab=a#x")).toBe("/dashboard?tab=a#x");
-    expect(stripAuthError("/dashboard?authError=oauth_failed")).toBe("/dashboard");
-  });
-});
-
-__ALGOFORGE_FILE_d49efe17189f3546__
 
 mkdir -p ./apps/web/src/lib/auth
 cat > ./apps/web/src/lib/auth/loginUrl.ts <<'__ALGOFORGE_FILE_b4ef949baacb519f__'
@@ -43945,6 +37000,8 @@ cat > ./package.json <<'__ALGOFORGE_FILE_40b8419e3e2132ef__'
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "db:make-admin": "pnpm --filter @algoforge/db make-admin",
+    "db:verify:phase5": "pnpm --filter @algoforge/db verify:phase5",
+    "db:backfill:phase5": "pnpm --filter @algoforge/db backfill:phase5",
     "test": "pnpm --filter @algoforge/contracts test && pnpm --filter api test && pnpm --filter @algoforge/web test",
     "test:contracts": "pnpm --filter @algoforge/contracts test"
   },
@@ -44814,67 +37871,6 @@ export const SCHEMA_REGISTRY = {
 __ALGOFORGE_FILE_e7d33d5aa4f39d34__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/return-to.test.ts <<'__ALGOFORGE_FILE_55bb7c5b2090eb85__'
-import { describe, expect, it } from "vitest";
-import { appendAuthError, DEFAULT_RETURN_TO, sanitizeReturnTo } from "./return-to";
-
-describe("sanitizeReturnTo", () => {
-  it("falls back for missing or non-string values", () => {
-    for (const v of [undefined, null, 42, {}, [], "", "   ", "dashboard"]) {
-      expect(sanitizeReturnTo(v)).toBe(DEFAULT_RETURN_TO);
-    }
-  });
-
-  it("keeps allowed internal paths and their query", () => {
-    expect(sanitizeReturnTo("/")).toBe("/");
-    expect(sanitizeReturnTo("/dashboard")).toBe("/dashboard");
-    expect(sanitizeReturnTo("/dashboard?tab=history")).toBe("/dashboard?tab=history");
-    expect(sanitizeReturnTo("/visualizer")).toBe("/visualizer");
-    expect(sanitizeReturnTo("/s/abc123DEF456")).toBe("/s/abc123DEF456");
-  });
-
-  it("rejects external and protocol-relative targets", () => {
-    for (const v of ["https://evil.com", "//evil.com", "/\\evil.com", "/%2F%2Fevil.com", "javascript:alert(1)", "/\\/evil.com"]) {
-      expect(sanitizeReturnTo(v)).toBe(DEFAULT_RETURN_TO);
-    }
-  });
-
-  it("rejects paths outside the allowlist, including dot-segment tricks", () => {
-    for (const v of ["/api/auth/logout", "/admin", "/dashboard/../api/x", "/dashboard/%2e%2e/api/x", "/_next/data"]) {
-      expect(sanitizeReturnTo(v)).toBe(DEFAULT_RETURN_TO);
-    }
-  });
-
-  it("rejects control characters and very long values", () => {
-    expect(sanitizeReturnTo("/dashboard\u0000")).toBe(DEFAULT_RETURN_TO);
-    expect(sanitizeReturnTo("/dash\nboard")).toBe(DEFAULT_RETURN_TO);
-    expect(sanitizeReturnTo(`/dashboard?x=${"a".repeat(600)}`)).toBe(DEFAULT_RETURN_TO);
-  });
-
-  it("drops a stale authError parameter", () => {
-    expect(sanitizeReturnTo("/dashboard?authError=oauth_failed&tab=a")).toBe("/dashboard?tab=a");
-  });
-
-  it("uses the given fallback", () => {
-    expect(sanitizeReturnTo("https://evil.com", "/")).toBe("/");
-  });
-});
-
-describe("appendAuthError", () => {
-  it("adds the code to a path without a query", () => {
-    expect(appendAuthError("/dashboard", "oauth_failed")).toBe("/dashboard?authError=oauth_failed");
-  });
-  it("keeps an existing query", () => {
-    expect(appendAuthError("/dashboard?tab=a", "oauth_denied")).toBe("/dashboard?tab=a&authError=oauth_denied");
-  });
-  it("replaces an existing code", () => {
-    expect(appendAuthError("/dashboard?authError=oauth_failed", "oauth_denied")).toBe("/dashboard?authError=oauth_denied");
-  });
-});
-
-__ALGOFORGE_FILE_55bb7c5b2090eb85__
-
-mkdir -p ./packages/contracts/src
 cat > ./packages/contracts/src/return-to.ts <<'__ALGOFORGE_FILE_89193d1c1cabf810__'
 import { AUTH_ERROR_PARAM } from "./auth";
 
@@ -45217,7 +38213,9 @@ cat > ./packages/db/package.json <<'__ALGOFORGE_FILE_d9a61ffd69d1ad12__'
     "seed": "tsx prisma/seed.ts",
     "reset": "prisma migrate reset",
     "typecheck": "tsc --noEmit",
-    "make-admin": "tsx prisma/make-admin.ts"
+    "make-admin": "tsx prisma/make-admin.ts",
+    "verify:phase5": "tsx prisma/verify-phase5.ts",
+    "backfill:phase5": "tsx prisma/run-backfill.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0"
@@ -45285,6 +38283,29 @@ main()
 __ALGOFORGE_FILE_05a38f070671f357__
 
 mkdir -p ./packages/db/prisma
+cat > ./packages/db/prisma/run-backfill.ts <<'__ALGOFORGE_FILE_8585f7e0105c2cca__'
+/* Re-runs the Phase 5 backfill. Idempotent. Usage: pnpm db:backfill:phase5
+   Run it again right before the Phase 8 / Phase 9 cutovers to pick up rows written since the migration. */
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { prisma } from "../src/index";
+
+async function main(): Promise<void> {
+  const file = path.resolve(__dirname, "backfills/phase5_backfill.sql");
+  await prisma.$executeRawUnsafe(readFileSync(file, "utf8"));
+  console.log("Phase 5 backfill finished (safe to run again).");
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());
+
+__ALGOFORGE_FILE_8585f7e0105c2cca__
+
+mkdir -p ./packages/db/prisma
 cat > ./packages/db/prisma/schema.prisma <<'__ALGOFORGE_FILE_a2de0988a9680683__'
 // filename: packages/db/prisma/schema.prisma
 
@@ -45308,21 +38329,49 @@ enum Difficulty {
   advanced
 }
 
+enum ShareType {
+  analysis
+  explain
+  visualization
+}
+
+enum AiFeature {
+  analysis
+  explain
+  session
+}
+
+enum ExplanationContextType {
+  none
+  algorithm
+  visualization
+}
+
+enum ExplanationMessageRole {
+  user
+  assistant
+}
+
 model User {
-  id        String     @id @default(cuid())
-  email     String?    @unique
-  username  String?    @unique
-  name      String?
-  image     String?
-  role      Role       @default(USER)
+  id          String    @id @default(cuid())
+  email       String?   @unique
+  username    String?   @unique
+  name        String?
+  image       String?
+  role        Role      @default(USER)
   lastLoginAt DateTime? @map("last_login_at")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   accounts            Account[]
   sessions            Session[]
   analyses            Analysis[]
   explanationSessions ExplanationSession[]
+  visualizations      Visualization[]
+  shares              Share[]
+  aiUsage             AiUsage[]
+  auditLogs           AuditLog[]
+  createdAlgorithms   Algorithm[]
 
   @@index([email])
   @@index([username])
@@ -45345,7 +38394,7 @@ model Account {
 model Session {
   id            String    @id @default(cuid())
   userId        String    @map("user_id")
-  tokenHash     String    @map("token_hash")
+  tokenHash     String    @unique @map("token_hash")
   expiresAt     DateTime  @map("expires_at")
   revokedAt     DateTime? @map("revoked_at")
   lastUsedAt    DateTime  @map("last_used_at")
@@ -45364,49 +38413,162 @@ model Session {
 }
 
 model Analysis {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  code       String
-  language   String
-  complexity String?
-  suggestion String?
-  result     Json
-  shareId    String?  @unique @map("share_id")
-  isPublic   Boolean  @default(false) @map("is_public")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  code          String
+  language      String
+  complexity    String?
+  suggestion    String?
+  result        Json
+  // Legacy sharing columns: kept until Phase 9 moves every consumer to Share.
+  shareId       String?  @unique @map("share_id")
+  isPublic      Boolean  @default(false) @map("is_public")
+  // Phase 5 additions
+  title         String?
+  model         String?
+  promptVersion String?  @map("prompt_version")
+  schemaVersion Int      @default(1) @map("schema_version")
+  codeHash      String?  @map("code_hash")
+  latencyMs     Int?     @map("latency_ms")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([userId, language, createdAt])
   @@index([shareId])
   @@map("analyses")
 }
 
 model ExplanationSession {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  title     String?                      // Auto-set from first message if not provided
-  shareId   String?  @unique @map("share_id")
-  isPublic  Boolean  @default(false)     @map("is_public")
-  messages  Json     @default("[]")      // Array of SessionMessage objects
-  createdAt DateTime @default(now())     @map("created_at")
-  updatedAt DateTime @updatedAt          @map("updated_at")
+  id          String                 @id @default(cuid())
+  userId      String                 @map("user_id")
+  title       String? // Auto-set from first message if not provided
+  // Legacy columns: kept until Phase 8 (messages) and Phase 9 (sharing) switch to the new tables.
+  shareId     String?                @unique @map("share_id")
+  isPublic    Boolean                @default(false) @map("is_public")
+  messages    Json                   @default("[]") // Array of SessionMessage objects
+  // Phase 5 additions
+  contextType ExplanationContextType @default(none) @map("context_type")
+  contextId   String?                @map("context_id")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messageRows ExplanationMessage[]
 
   @@index([userId, createdAt])
+  @@index([userId, updatedAt])
   @@index([shareId])
   @@map("explanation_sessions")
 }
 
+model ExplanationMessage {
+  id        String                 @id @default(cuid())
+  sessionId String                 @map("session_id")
+  seq       Int
+  role      ExplanationMessageRole
+  content   String
+  intent    String?
+  createdAt DateTime               @default(now()) @map("created_at")
+
+  session ExplanationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, seq])
+  @@map("explanation_messages")
+}
+
+model Visualization {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  title        String
+  description  String?
+  script       String
+  code         String?
+  language     String?
+  structures   Json     @default("[]")
+  stepCount    Int      @default(0) @map("step_count")
+  schemaVersion Int     @default(1) @map("schema_version")
+  forkedFromId String?  @map("forked_from_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forkedFrom Visualization?  @relation("VisualizationFork", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks      Visualization[] @relation("VisualizationFork")
+
+  @@index([userId, updatedAt])
+  @@index([forkedFromId])
+  @@map("visualizations")
+}
+
+// One row per shareable object. targetId is polymorphic (no FK): the repository verifies
+// that the owner owns the target before creating a share.
+model Share {
+  id        String    @id @default(cuid())
+  shareId   String    @unique @map("share_id")
+  type      ShareType
+  targetId  String    @map("target_id")
+  ownerId   String    @map("owner_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  expiresAt DateTime? @map("expires_at")
+  viewCount Int       @default(0) @map("view_count")
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([type, targetId])
+  @@index([targetId])
+  @@index([ownerId])
+  @@map("shares")
+}
+
+model AiUsage {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  feature   AiFeature
+  day       DateTime  @db.Date
+  requests  Int       @default(0)
+  tokensIn  Int       @default(0) @map("tokens_in")
+  tokensOut Int       @default(0) @map("tokens_out")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature, day])
+  @@index([day])
+  @@map("ai_usage")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  meta       Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
 model Category {
-  id          String      @id
+  id          String   @id
+  // Documented slug. Equal to id today; lets ids change later without breaking URLs.
+  slug        String   @unique
   label       String
   description String?
-  iconName    String?     @map("icon_name")
-  sortOrder   Int         @default(0) @map("sort_order")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  iconName    String?  @map("icon_name")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   algorithms Algorithm[]
 
@@ -45426,10 +38588,17 @@ model Algorithm {
   timeAverage     String?    @map("time_average")
   timeWorst       String?    @map("time_worst")
   spaceComplexity String?    @map("space_complexity")
+  // Phase 5 additions (script replaces forge in Phase 6; forge stays until then)
+  script          String?
+  scriptVersion   Int        @default(1) @map("script_version")
+  sortOrder       Int        @default(0) @map("sort_order")
+  publishedAt     DateTime?  @map("published_at")
+  createdById     String?    @map("created_by_id")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
   category     Category       @relation(fields: [categoryId], references: [id])
+  createdBy    User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
   displayCodes DisplayCode[]
   forge        ForgeConfig?
   tags         AlgorithmTag[]
@@ -45438,6 +38607,10 @@ model Algorithm {
   @@index([slug])
   @@index([difficulty])
   @@index([isPublished])
+  @@index([isPublished, sortOrder])
+  @@index([createdById])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "algorithms_name_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "algorithms_description_trgm_idx")
   @@map("algorithms")
 }
 
@@ -45485,18 +38658,28 @@ model AlgorithmTag {
   @@id([algorithmId, tagId])
   @@map("algorithm_tags")
 }
+
 __ALGOFORGE_FILE_a2de0988a9680683__
 
 mkdir -p ./packages/db/prisma
 cat > ./packages/db/prisma/seed.ts <<'__ALGOFORGE_FILE_b996d07cdcdecd7a__'
-/* Development seed: 3 categories and 6 published algorithms. Idempotent (upserts).
-   Refuses to run in production. */
-import { prisma, Difficulty } from "../src/index";
+/* Development seed. Idempotent (upserts with fixed ids). Refuses to run in production.
+   Creates: 3 categories, 6 published algorithms (3 with visualizer scripts), 2 demo users,
+   2 analyses, 2 chat sessions with 6 messages, 2 visualizations (one a fork),
+   3 shares, 2 AI usage rows and 2 audit-log rows. Demo emails use the reserved .invalid TLD.
+   Sessions/accounts are intentionally not seeded (they hold auth tokens). */
+import { createHash } from "node:crypto";
+import { prisma, Difficulty, Role, Prisma } from "../src/index";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Refusing to seed: NODE_ENV=production.");
   process.exit(1);
 }
+
+const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
+const messageRowId = (sessionId: string, seq: number) => createHash("md5").update(`${sessionId}:${seq}`).digest("hex");
+const utcDay = (d = new Date()) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+const json = (v: unknown) => v as Prisma.InputJsonValue;
 
 const categories = [
   { id: "sorting", label: "Sorting", description: "Put items in order.", iconName: "sort", sortOrder: 1 },
@@ -45632,6 +38815,43 @@ const dfsPy = `def dfs(graph, start, seen=None):
             order.extend(dfs(graph, nxt, seen))
     return order`;
 
+// Visualizer scripts in the frontend's JSON script format (see Phase 6 for the shared compiler).
+const scripts: Record<string, string> = {
+  "bubble-sort": JSON.stringify(
+    [
+      { step: 1, id: "A", ds: "array", op: "initialize", values: [5, 3, 8, 1] },
+      { step: 2, id: "A", op: "swap", indexA: 0, indexB: 1 },
+      { step: 2, message: "5 > 3, so the two are swapped." },
+      { step: 3, id: "A", op: "swap", indexA: 2, indexB: 3 },
+      { step: 3, message: "8 > 1, so they are swapped." },
+    ],
+    null,
+    2,
+  ),
+  "linear-search": JSON.stringify(
+    [
+      { step: 1, id: "A", ds: "array", op: "initialize", values: [4, 8, 15, 16] },
+      { step: 2, id: "A", op: "highlight", index: 0, color: "#FF430F" },
+      { step: 2, message: "Check index 0: 4 is not 15." },
+      { step: 3, id: "A", op: "highlight", index: 2, color: "#17A34A" },
+      { step: 3, message: "Index 2 holds 15: found." },
+    ],
+    null,
+    2,
+  ),
+  "binary-search": JSON.stringify(
+    [
+      { step: 1, id: "A", ds: "array", op: "initialize", values: [1, 3, 5, 7, 9, 11] },
+      { step: 2, id: "A", op: "highlight", index: 2, color: "#FF430F" },
+      { step: 2, message: "mid = 2 holds 5, which is smaller than 9: search the right half." },
+      { step: 3, id: "A", op: "highlight", index: 4, color: "#17A34A" },
+      { step: 3, message: "mid = 4 holds 9: found." },
+    ],
+    null,
+    2,
+  ),
+};
+
 const algorithms = [
   { slug: "bubble-sort", name: "Bubble Sort", categoryId: "sorting", difficulty: Difficulty.beginner,
     description: "Repeatedly swaps adjacent elements that are out of order until the array is sorted.",
@@ -45660,14 +38880,36 @@ const algorithms = [
 ];
 
 async function main() {
+  // ── users ──
+  const admin = await prisma.user.upsert({
+    where: { email: "dev-admin@example.invalid" },
+    update: { role: Role.ADMIN, name: "Dev Admin" },
+    create: { email: "dev-admin@example.invalid", username: "dev_admin", name: "Dev Admin", role: Role.ADMIN },
+    select: { id: true },
+  });
+  const learner = await prisma.user.upsert({
+    where: { email: "dev-learner@example.invalid" },
+    update: { name: "Dev Learner" },
+    create: { email: "dev-learner@example.invalid", username: "dev_learner", name: "Dev Learner", role: Role.USER },
+    select: { id: true },
+  });
+
+  // ── catalog ──
   for (const c of categories) {
-    await prisma.category.upsert({ where: { id: c.id }, create: c, update: { label: c.label, description: c.description, iconName: c.iconName, sortOrder: c.sortOrder } });
+    await prisma.category.upsert({
+      where: { id: c.id },
+      create: { ...c, slug: c.id },
+      update: { label: c.label, description: c.description, iconName: c.iconName, sortOrder: c.sortOrder },
+    });
   }
+  let order = 0;
   for (const a of algorithms) {
+    order += 1;
+    const script = scripts[a.slug] ?? null;
     const fields = {
       name: a.name, description: a.description, categoryId: a.categoryId, difficulty: a.difficulty,
       isPublished: true, timeBest: a.timeBest, timeAverage: a.timeAverage, timeWorst: a.timeWorst,
-      spaceComplexity: a.spaceComplexity,
+      spaceComplexity: a.spaceComplexity, sortOrder: order, script, scriptVersion: 1,
     };
     await prisma.algorithm.upsert({
       where: { slug: a.slug },
@@ -45675,12 +38917,143 @@ async function main() {
       create: {
         slug: a.slug,
         ...fields,
+        publishedAt: new Date(),
+        createdById: admin.id,
         displayCodes: { create: [{ language: "javascript", code: a.js }, { language: "python", code: a.py }] },
         tags: { create: a.tags.map((label) => ({ tag: { connectOrCreate: { where: { label }, create: { label } } } })) },
       },
     });
   }
-  console.log(`Seeded ${categories.length} categories and ${algorithms.length} algorithms.`);
+  const bubble = await prisma.algorithm.findUnique({ where: { slug: "bubble-sort" }, select: { id: true } });
+
+  // ── analyses (one shared) ──
+  const code1 = linearJs;
+  const result = (summary: string) => ({
+    schemaVersion: 1,
+    data: {
+      summary,
+      complexity: { time: { best: "O(1)", average: "O(n)", worst: "O(n)" }, space: "O(1)" },
+      breakdown: { approach: "Sequential scan.", steps: ["Visit each element", "Compare with the target", "Return the index or -1"] },
+      bottlenecks: [],
+      antiPatterns: [],
+      improvements: [{ suggestion: "Sort the data and use binary search for repeated lookups.", expectedImpact: "O(log n) per lookup" }],
+      optimizedCode: "function linearSearch(arr, target) { return arr.indexOf(target); }",
+      edgeCases: [],
+      readabilityScore: 90,
+      tags: ["searching"],
+    },
+  });
+  await prisma.analysis.upsert({
+    where: { id: "seed_analysis_1" },
+    update: {},
+    create: {
+      id: "seed_analysis_1", userId: learner.id, code: code1, language: "javascript", complexity: "O(n)",
+      suggestion: "Sort the data and use binary search for repeated lookups.", result: json(result("Linear search over an array.")),
+      title: "Linear search", model: "seed", promptVersion: "seed-1", schemaVersion: 1, codeHash: sha256(code1),
+      latencyMs: 820, shareId: "seedshare001", isPublic: true,
+    },
+  });
+  const code2 = bubbleJs;
+  await prisma.analysis.upsert({
+    where: { id: "seed_analysis_2" },
+    update: {},
+    create: {
+      id: "seed_analysis_2", userId: learner.id, code: code2, language: "javascript", complexity: "O(n^2)",
+      suggestion: "Use a built-in O(n log n) sort for large inputs.", result: json(result("Bubble sort with an early exit.")),
+      title: "Bubble sort", model: "seed", promptVersion: "seed-1", schemaVersion: 1, codeHash: sha256(code2), latencyMs: 1010,
+    },
+  });
+  await prisma.share.upsert({
+    where: { shareId: "seedshare001" }, update: {},
+    create: { shareId: "seedshare001", type: "analysis", targetId: "seed_analysis_1", ownerId: learner.id },
+  });
+
+  // ── chat sessions + messages (legacy JSON and the new table are kept in sync) ──
+  const sessions = [
+    {
+      id: "seed_session_1", title: "How does bubble sort work?", shareId: "seedshare002" as string | null,
+      contextType: "algorithm" as const, contextId: bubble?.id ?? null,
+      messages: [
+        { role: "user" as const, content: "How does bubble sort work?" },
+        { role: "assistant" as const, content: "It repeatedly swaps neighbouring elements that are out of order.", intent: "explain_algorithm" },
+        { role: "user" as const, content: "Why is it O(n^2)?" },
+        { role: "assistant" as const, content: "Each of the n passes compares up to n elements.", intent: "explain_algorithm" },
+      ],
+    },
+    {
+      id: "seed_session_2", title: "Binary search edge cases", shareId: null,
+      contextType: "none" as const, contextId: null,
+      messages: [
+        { role: "user" as const, content: "What breaks binary search?" },
+        { role: "assistant" as const, content: "Unsorted input and overflow in (lo + hi) / 2.", intent: "general" },
+      ],
+    },
+  ];
+  for (const s of sessions) {
+    const now = Date.now();
+    const rows = s.messages.map((m, i) => ({ ...m, id: `seed_msg_${s.id}_${i + 1}`, createdAt: new Date(now - (s.messages.length - i) * 60_000) }));
+    await prisma.explanationSession.upsert({
+      where: { id: s.id }, update: {},
+      create: {
+        id: s.id, userId: learner.id, title: s.title, shareId: s.shareId, isPublic: s.shareId !== null,
+        contextType: s.contextType, contextId: s.contextId,
+        messages: json(rows.map((r) => ({ id: r.id, role: r.role, content: r.content, ...(r.intent ? { intent: r.intent } : {}), createdAt: r.createdAt.toISOString() }))),
+      },
+    });
+    await prisma.explanationMessage.createMany({
+      data: rows.map((r, i) => ({ id: messageRowId(s.id, i + 1), sessionId: s.id, seq: i + 1, role: r.role, content: r.content, intent: r.intent ?? null, createdAt: r.createdAt })),
+      skipDuplicates: true,
+    });
+    if (s.shareId) {
+      await prisma.share.upsert({
+        where: { shareId: s.shareId }, update: {},
+        create: { shareId: s.shareId, type: "explain", targetId: s.id, ownerId: learner.id },
+      });
+    }
+  }
+
+  // ── visualizations (one shared, one fork) ──
+  const structures = [{ id: "A", ds: "array", label: "Array" }];
+  await prisma.visualization.upsert({
+    where: { id: "seed_viz_1" }, update: {},
+    create: {
+      id: "seed_viz_1", userId: learner.id, title: "Bubble sort, first pass", description: "Two swaps on a four-element array.",
+      script: scripts["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1,
+    },
+  });
+  await prisma.visualization.upsert({
+    where: { id: "seed_viz_2" }, update: {},
+    create: {
+      id: "seed_viz_2", userId: admin.id, title: "Bubble sort (copy)", description: "A fork of the learner's visualization.",
+      script: scripts["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1, forkedFromId: "seed_viz_1",
+    },
+  });
+  await prisma.share.upsert({
+    where: { shareId: "seedshare003" }, update: {},
+    create: { shareId: "seedshare003", type: "visualization", targetId: "seed_viz_1", ownerId: learner.id },
+  });
+
+  // ── AI usage and audit log ──
+  const day = utcDay();
+  for (const u of [
+    { feature: "analysis" as const, requests: 2, tokensIn: 1800, tokensOut: 2600 },
+    { feature: "session" as const, requests: 3, tokensIn: 900, tokensOut: 1400 },
+  ]) {
+    await prisma.aiUsage.upsert({
+      where: { userId_feature_day: { userId: learner.id, feature: u.feature, day } }, update: {},
+      create: { userId: learner.id, feature: u.feature, day, requests: u.requests, tokensIn: u.tokensIn, tokensOut: u.tokensOut },
+    });
+  }
+  await prisma.auditLog.upsert({
+    where: { id: "seed_audit_1" }, update: {},
+    create: { id: "seed_audit_1", actorId: admin.id, action: "seed.data_created", targetType: "seed", targetId: null, meta: json({ source: "seed.ts" }) },
+  });
+  await prisma.auditLog.upsert({
+    where: { id: "seed_audit_2" }, update: {},
+    create: { id: "seed_audit_2", actorId: admin.id, action: "algorithm.create", targetType: "algorithm", targetId: bubble?.id ?? null, meta: json({ slug: "bubble-sort", source: "seed.ts" }) },
+  });
+
+  console.log(`Seeded ${categories.length} categories, ${algorithms.length} algorithms and demo data for every Phase 5 model.`);
 }
 
 main()
@@ -45688,6 +39061,76 @@ main()
   .finally(() => prisma.$disconnect());
 
 __ALGOFORGE_FILE_b996d07cdcdecd7a__
+
+mkdir -p ./packages/db/prisma
+cat > ./packages/db/prisma/verify-phase5.ts <<'__ALGOFORGE_FILE_7f01f99dac3f2fb4__'
+/* Verifies Phase 5 data invariants. Exit code 1 when any check finds violations.
+   Usage: pnpm db:verify:phase5 */
+import { prisma } from "../src/index";
+
+const checks: { name: string; sql: string }[] = [
+  {
+    name: "analyses with a legacy share_id but no shares row",
+    sql: `SELECT count(*)::int AS n FROM analyses a WHERE a.share_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM shares s WHERE s.type = 'analysis' AND s.target_id = a.id)`,
+  },
+  {
+    name: "explanation sessions with a legacy share_id but no shares row",
+    sql: `SELECT count(*)::int AS n FROM explanation_sessions e WHERE e.share_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM shares s WHERE s.type = 'explain' AND s.target_id = e.id)`,
+  },
+  {
+    name: "shares whose share_id differs from the legacy column",
+    sql: `SELECT count(*)::int AS n FROM shares s WHERE (s.type = 'analysis' AND EXISTS (SELECT 1 FROM analyses a WHERE a.id = s.target_id AND a.share_id IS NOT NULL AND a.share_id <> s.share_id)) OR (s.type = 'explain' AND EXISTS (SELECT 1 FROM explanation_sessions e WHERE e.id = s.target_id AND e.share_id IS NOT NULL AND e.share_id <> s.share_id))`,
+  },
+  {
+    name: "shares pointing at a missing target (orphans)",
+    sql: `SELECT count(*)::int AS n FROM shares s WHERE (s.type = 'analysis' AND NOT EXISTS (SELECT 1 FROM analyses a WHERE a.id = s.target_id)) OR (s.type = 'explain' AND NOT EXISTS (SELECT 1 FROM explanation_sessions e WHERE e.id = s.target_id)) OR (s.type = 'visualization' AND NOT EXISTS (SELECT 1 FROM visualizations v WHERE v.id = s.target_id))`,
+  },
+  {
+    name: "sessions whose valid JSON messages differ in number from explanation_messages rows",
+    sql: `SELECT count(*)::int AS n FROM explanation_sessions s WHERE (SELECT count(*) FROM jsonb_array_elements(CASE WHEN jsonb_typeof(s.messages) = 'array' THEN s.messages ELSE '[]'::jsonb END) e WHERE jsonb_typeof(e) = 'object' AND (e ->> 'role') IN ('user', 'assistant')) <> (SELECT count(*) FROM explanation_messages m WHERE m.session_id = s.id)`,
+  },
+  {
+    name: "sessions whose message seq numbers are not 1..n without gaps",
+    sql: `SELECT count(*)::int AS n FROM (SELECT session_id FROM explanation_messages GROUP BY session_id HAVING MIN(seq) <> 1 OR MAX(seq) <> COUNT(*)) t`,
+  },
+  {
+    name: "analyses without code_hash",
+    sql: `SELECT count(*)::int AS n FROM analyses WHERE code_hash IS NULL`,
+  },
+  {
+    name: "published algorithms without published_at",
+    sql: `SELECT count(*)::int AS n FROM algorithms WHERE is_published AND published_at IS NULL`,
+  },
+  {
+    name: "categories whose slug is empty",
+    sql: `SELECT count(*)::int AS n FROM categories WHERE slug = ''`,
+  },
+];
+
+async function main(): Promise<void> {
+  let failed = 0;
+  for (const c of checks) {
+    const rows = await prisma.$queryRawUnsafe<{ n: number }[]>(c.sql);
+    const n = Number(rows[0]?.n ?? 0);
+    console.log(`${n === 0 ? "ok  " : "FAIL"}  ${c.name}${n === 0 ? "" : ` (${n})`}`);
+    if (n !== 0) failed++;
+  }
+  if (failed > 0) {
+    console.error(`${failed} Phase 5 check(s) failed.`);
+    process.exitCode = 1;
+  } else {
+    console.log("All Phase 5 data checks passed.");
+  }
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());
+
+__ALGOFORGE_FILE_7f01f99dac3f2fb4__
 
 mkdir -p ./packages/db/src
 cat > ./packages/db/src/index.ts <<'__ALGOFORGE_FILE_ad66074ce04df320__'
