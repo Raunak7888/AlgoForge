@@ -1,0 +1,199 @@
+// filename: packages/db/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Difficulty {
+  beginner
+  intermediate
+  advanced
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String?    @unique
+  username  String?    @unique
+  name      String?
+  image     String?
+  role      Role       @default(USER)
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  accounts            Account[]
+  sessions            Session[]
+  analyses            Analysis[]
+  explanationSessions ExplanationSession[]
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+model Account {
+  id                String @id @default(cuid())
+  userId            String @map("user_id")
+  provider          String
+  providerAccountId String @map("provider_account_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  tokenHash     String    @map("token_hash")
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  lastUsedAt    DateTime  @map("last_used_at")
+  ipAddress     String?   @map("ip_address")
+  userAgent     String?   @map("user_agent")
+  rotatedFromId String?   @map("rotated_from_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([rotatedFromId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Analysis {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  code       String
+  language   String
+  complexity String?
+  suggestion String?
+  result     Json
+  shareId    String?  @unique @map("share_id")
+  isPublic   Boolean  @default(false) @map("is_public")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([shareId])
+  @@map("analyses")
+}
+
+model ExplanationSession {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  title     String?                      // Auto-set from first message if not provided
+  shareId   String?  @unique @map("share_id")
+  isPublic  Boolean  @default(false)     @map("is_public")
+  messages  Json     @default("[]")      // Array of SessionMessage objects
+  createdAt DateTime @default(now())     @map("created_at")
+  updatedAt DateTime @updatedAt          @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([shareId])
+  @@map("explanation_sessions")
+}
+
+model Category {
+  id          String      @id
+  label       String
+  description String?
+  iconName    String?     @map("icon_name")
+  sortOrder   Int         @default(0) @map("sort_order")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  algorithms Algorithm[]
+
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Algorithm {
+  id              String     @id @default(uuid())
+  slug            String     @unique
+  name            String
+  description     String
+  categoryId      String     @map("category_id")
+  difficulty      Difficulty @default(beginner)
+  isPublished     Boolean    @default(false) @map("is_published")
+  timeBest        String?    @map("time_best")
+  timeAverage     String?    @map("time_average")
+  timeWorst       String?    @map("time_worst")
+  spaceComplexity String?    @map("space_complexity")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  category     Category       @relation(fields: [categoryId], references: [id])
+  displayCodes DisplayCode[]
+  forge        ForgeConfig?
+  tags         AlgorithmTag[]
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([difficulty])
+  @@index([isPublished])
+  @@map("algorithms")
+}
+
+model DisplayCode {
+  id          String @id @default(uuid())
+  algorithmId String @map("algorithm_id")
+  language    String
+  code        String
+
+  algorithm Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
+
+  @@unique([algorithmId, language])
+  @@index([algorithmId])
+  @@map("display_codes")
+}
+
+model ForgeConfig {
+  id          String @id @default(uuid())
+  algorithmId String @unique @map("algorithm_id")
+  forgeCode   Json   @map("forge_code")
+  inputSchema Json   @map("input_schema")
+  guardRanges Json   @map("guard_ranges")
+  version     Int    @default(1)
+
+  algorithm Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
+
+  @@map("forge_configs")
+}
+
+model Tag {
+  id         String         @id @default(uuid())
+  label      String         @unique
+  algorithms AlgorithmTag[]
+
+  @@map("tags")
+}
+
+model AlgorithmTag {
+  algorithmId String @map("algorithm_id")
+  tagId       String @map("tag_id")
+
+  algorithm Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([algorithmId, tagId])
+  @@map("algorithm_tags")
+}

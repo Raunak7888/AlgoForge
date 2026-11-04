@@ -4,6 +4,7 @@ import { Request, Response } from "express";
 import { LIMITS, type AdminRoleChangeResponse, type AdminUserListResponse } from "@algoforge/contracts";
 import { serializeAdminUser } from "../serializers/admin";
 import { adminService } from "../services/admin.service";
+import { AUDIT_ACTIONS, auditService } from "../services/audit.service";
 import { asyncHandler } from "../utils/async-handler";
 import { AppError } from "../utils/app-error";
 
@@ -28,6 +29,7 @@ class AdminController {
   /** POST /api/admin/upgrade-user. The role is hard-coded server-side, never read from the body. */
   upgradeUser = asyncHandler(async (req: Request, res: Response) => {
     const result = await adminService.upgradeToAdmin(readUserId(req.body));
+    if (result.changed) await auditService.recordFromRequest(req, AUDIT_ACTIONS.USER_UPGRADE, { type: "user", id: result.user.id }, { newRole: "ADMIN" });
     const body: AdminRoleChangeResponse = {
       changed: result.changed,
       user: { id: result.user.id, email: result.user.email, role: result.user.role },
@@ -38,6 +40,7 @@ class AdminController {
   /** POST /api/admin/downgrade-user */
   downgradeUser = asyncHandler(async (req: Request, res: Response) => {
     const result = await adminService.downgradeToUser(readUserId(req.body));
+    if (result.changed) await auditService.recordFromRequest(req, AUDIT_ACTIONS.USER_DOWNGRADE, { type: "user", id: result.user.id }, { newRole: "USER" });
     const body: AdminRoleChangeResponse = {
       changed: result.changed,
       user: { id: result.user.id, email: result.user.email, role: result.user.role },

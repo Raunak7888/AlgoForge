@@ -85,6 +85,8 @@ export const algorithmRepository = {
     categoryId: string;
     difficulty: Difficulty;
     isPublished: boolean;
+    publishedAt?: Date | null;
+    createdById?: string | null;
     timeBest: string | null;
     timeAverage: string | null;
     timeWorst: string | null;
@@ -100,6 +102,8 @@ export const algorithmRepository = {
     return prisma.algorithm.create({
       data: {
         slug: data.slug,
+        publishedAt: data.publishedAt ?? null,
+        createdById: data.createdById ?? null,
         name: data.name,
         description: data.description,
         categoryId: data.categoryId,

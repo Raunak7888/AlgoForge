@@ -1,7 +1,8 @@
 import { createHash } from "crypto";
 import { aiService } from "./ai.service";
 import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
-import { processQuery, type QueryScope } from "../ai/query-processor";
+import { processQuery } from "../ai/query-processor";
+// import {type QueryScope} from "../ai/query-processor";
 import { buildExplanationPrompt } from "../prompts/explanation.prompt";
 import { formatExplanationResponse, type ExplanationResponse } from "../ai/response-formatter";
 import { AppError } from "../utils/app-error";

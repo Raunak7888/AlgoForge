@@ -76,7 +76,7 @@ class AnalysisService {
     }
 
     const shareId = generateShareId();
-    await analysisRepository.setPublic(analysisId, shareId);
+    await analysisRepository.setPublic(analysisId, userId, shareId);
     return { shareUrl: `${env.webAppUrl}/share/analysis/${shareId}` };
   }
 

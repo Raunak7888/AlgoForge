@@ -2,12 +2,13 @@ import { Request, Response } from "express";
 import { Role } from "@algoforge/db";
 import type { AlgorithmListResponse } from "@algoforge/contracts";
 import { algorithmService } from "../services/algorithm/index";
+import { AUDIT_ACTIONS, auditService } from "../services/audit.service";
 import type { AlgorithmVisibility } from "../types/algorithm.types";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
 import { parseCreateAlgorithm, parseUpdateAlgorithm, parseAlgorithmQuery } from "../validation/algorithm";
 
-const ADMIN_VIEW: AlgorithmVisibility = { isAdmin: true };
+// const ADMIN_VIEW: AlgorithmVisibility = { isAdmin: true };
 
 function visibilityOf(req: Request): AlgorithmVisibility {
   return { isAdmin: req.auth?.user.role === Role.ADMIN };
@@ -43,7 +44,8 @@ class AlgorithmController {
 
   create = asyncHandler(async (req: Request, res: Response) => {
     const input = parseCreateAlgorithm(req.body);
-    const created = await algorithmService.createAlgorithm(input);
+    const created = await algorithmService.createAlgorithm(input, req.auth?.user.id);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.ALGORITHM_CREATE, { type: "algorithm", id: created.id }, { slug: input.slug });
     res.status(201).json(created);
   });
 
@@ -51,12 +53,14 @@ class AlgorithmController {
     const id = ensureString(req.params.id, "Algorithm ID is required.");
     const input = parseUpdateAlgorithm(req.body);
     const updated = await algorithmService.updateAlgorithm(id, input);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.ALGORITHM_UPDATE, { type: "algorithm", id }, { fields: Object.keys(input) });
     res.status(200).json(updated);
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
     const id = ensureString(req.params.id, "Algorithm ID is required.");
     await algorithmService.deleteAlgorithm(id);
+    await auditService.recordFromRequest(req, AUDIT_ACTIONS.ALGORITHM_DELETE, { type: "algorithm", id });
     res.status(204).send();
   });
 }

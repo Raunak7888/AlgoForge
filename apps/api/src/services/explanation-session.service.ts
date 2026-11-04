@@ -126,7 +126,7 @@ class ExplanationSessionService {
     ];
 
     const title = session.title ?? input.query.slice(0, 80);
-    await explanationSessionRepository.appendMessages(sessionId, updatedMessages, title);
+    await explanationSessionRepository.appendMessages(sessionId, userId, updatedMessages, title);
     await layeredCache.del(sessionCacheKey(userId, sessionId));
     if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
 
@@ -154,7 +154,7 @@ class ExplanationSessionService {
     }
 
     const shareId = newShareId();
-    await explanationSessionRepository.share(id, shareId);
+    await explanationSessionRepository.share(id, userId, shareId);
     await layeredCache.del(sessionCacheKey(userId, id));
 
     return { shareUrl: buildShareUrl(shareId) };

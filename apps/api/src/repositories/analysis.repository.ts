@@ -1,6 +1,11 @@
 //# filename: apps/api/src/repositories/analysis.repository.ts
 
+import { createHash } from "crypto";
 import { prisma, Prisma } from "@algoforge/db";
+import { AppError } from "../utils/app-error";
+
+/** SHA-256 (hex) of the submitted code. Same formula as the Phase 5 backfill. */
+export const hashCode = (code: string): string => createHash("sha256").update(code, "utf8").digest("hex");
 
 export const analysisRepository = {
   create(data: {
@@ -12,7 +17,7 @@ export const analysisRepository = {
     result: Prisma.InputJsonValue;
   }) {
     return prisma.analysis.create({
-      data,
+      data: { ...data, codeHash: hashCode(data.code) },
       select: { id: true, language: true, result: true, createdAt: true },
     });
   },
@@ -63,10 +68,23 @@ export const analysisRepository = {
     return prisma.analysis.findFirst({ where: { id: analysisId, userId } });
   },
 
-  setPublic(analysisId: string, shareId: string) {
-    return prisma.analysis.update({
-      where: { id: analysisId },
-      data: { shareId, isPublic: true },
+  /**
+   * Marks the analysis public AND mirrors that into the shares table in one transaction.
+   * The legacy columns stay authoritative until Phase 9. The owner is part of the query.
+   */
+  setPublic(analysisId: string, userId: string, shareId: string) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.analysis.updateMany({
+        where: { id: analysisId, userId },
+        data: { shareId, isPublic: true },
+      });
+      if (updated.count === 0) throw AppError.notFound("Analysis not found.");
+      await tx.share.upsert({
+        where: { type_targetId: { type: "analysis", targetId: analysisId } },
+        create: { shareId, type: "analysis", targetId: analysisId, ownerId: userId },
+        update: { shareId, revokedAt: null },
+      });
+      return { id: analysisId, shareId };
     });
   },
 

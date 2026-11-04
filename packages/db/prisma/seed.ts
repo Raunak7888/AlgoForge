@@ -1,11 +1,20 @@
-/* Development seed: 3 categories and 6 published algorithms. Idempotent (upserts).
-   Refuses to run in production. */
-import { prisma, Difficulty } from "../src/index";
+/* Development seed. Idempotent (upserts with fixed ids). Refuses to run in production.
+   Creates: 3 categories, 6 published algorithms (3 with visualizer scripts), 2 demo users,
+   2 analyses, 2 chat sessions with 6 messages, 2 visualizations (one a fork),
+   3 shares, 2 AI usage rows and 2 audit-log rows. Demo emails use the reserved .invalid TLD.
+   Sessions/accounts are intentionally not seeded (they hold auth tokens). */
+import { createHash } from "node:crypto";
+import { prisma, Difficulty, Role, Prisma } from "../src/index";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Refusing to seed: NODE_ENV=production.");
   process.exit(1);
 }
+
+const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
+const messageRowId = (sessionId: string, seq: number) => createHash("md5").update(`${sessionId}:${seq}`).digest("hex");
+const utcDay = (d = new Date()) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+const json = (v: unknown) => v as Prisma.InputJsonValue;
 
 const categories = [
   { id: "sorting", label: "Sorting", description: "Put items in order.", iconName: "sort", sortOrder: 1 },
@@ -141,6 +150,43 @@ const dfsPy = `def dfs(graph, start, seen=None):
             order.extend(dfs(graph, nxt, seen))
     return order`;
 
+// Visualizer scripts in the frontend's JSON script format (see Phase 6 for the shared compiler).
+const scripts: Record<string, string> = {
+  "bubble-sort": JSON.stringify(
+    [
+      { step: 1, id: "A", ds: "array", op: "initialize", values: [5, 3, 8, 1] },
+      { step: 2, id: "A", op: "swap", indexA: 0, indexB: 1 },
+      { step: 2, message: "5 > 3, so the two are swapped." },
+      { step: 3, id: "A", op: "swap", indexA: 2, indexB: 3 },
+      { step: 3, message: "8 > 1, so they are swapped." },
+    ],
+    null,
+    2,
+  ),
+  "linear-search": JSON.stringify(
+    [
+      { step: 1, id: "A", ds: "array", op: "initialize", values: [4, 8, 15, 16] },
+      { step: 2, id: "A", op: "highlight", index: 0, color: "#FF430F" },
+      { step: 2, message: "Check index 0: 4 is not 15." },
+      { step: 3, id: "A", op: "highlight", index: 2, color: "#17A34A" },
+      { step: 3, message: "Index 2 holds 15: found." },
+    ],
+    null,
+    2,
+  ),
+  "binary-search": JSON.stringify(
+    [
+      { step: 1, id: "A", ds: "array", op: "initialize", values: [1, 3, 5, 7, 9, 11] },
+      { step: 2, id: "A", op: "highlight", index: 2, color: "#FF430F" },
+      { step: 2, message: "mid = 2 holds 5, which is smaller than 9: search the right half." },
+      { step: 3, id: "A", op: "highlight", index: 4, color: "#17A34A" },
+      { step: 3, message: "mid = 4 holds 9: found." },
+    ],
+    null,
+    2,
+  ),
+};
+
 const algorithms = [
   { slug: "bubble-sort", name: "Bubble Sort", categoryId: "sorting", difficulty: Difficulty.beginner,
     description: "Repeatedly swaps adjacent elements that are out of order until the array is sorted.",
@@ -169,14 +215,36 @@ const algorithms = [
 ];
 
 async function main() {
+  // ── users ──
+  const admin = await prisma.user.upsert({
+    where: { email: "dev-admin@example.invalid" },
+    update: { role: Role.ADMIN, name: "Dev Admin" },
+    create: { email: "dev-admin@example.invalid", username: "dev_admin", name: "Dev Admin", role: Role.ADMIN },
+    select: { id: true },
+  });
+  const learner = await prisma.user.upsert({
+    where: { email: "dev-learner@example.invalid" },
+    update: { name: "Dev Learner" },
+    create: { email: "dev-learner@example.invalid", username: "dev_learner", name: "Dev Learner", role: Role.USER },
+    select: { id: true },
+  });
+
+  // ── catalog ──
   for (const c of categories) {
-    await prisma.category.upsert({ where: { id: c.id }, create: c, update: { label: c.label, description: c.description, iconName: c.iconName, sortOrder: c.sortOrder } });
+    await prisma.category.upsert({
+      where: { id: c.id },
+      create: { ...c, slug: c.id },
+      update: { label: c.label, description: c.description, iconName: c.iconName, sortOrder: c.sortOrder },
+    });
   }
+  let order = 0;
   for (const a of algorithms) {
+    order += 1;
+    const script = scripts[a.slug] ?? null;
     const fields = {
       name: a.name, description: a.description, categoryId: a.categoryId, difficulty: a.difficulty,
       isPublished: true, timeBest: a.timeBest, timeAverage: a.timeAverage, timeWorst: a.timeWorst,
-      spaceComplexity: a.spaceComplexity,
+      spaceComplexity: a.spaceComplexity, sortOrder: order, script, scriptVersion: 1,
     };
     await prisma.algorithm.upsert({
       where: { slug: a.slug },
@@ -184,12 +252,143 @@ async function main() {
       create: {
         slug: a.slug,
         ...fields,
+        publishedAt: new Date(),
+        createdById: admin.id,
         displayCodes: { create: [{ language: "javascript", code: a.js }, { language: "python", code: a.py }] },
         tags: { create: a.tags.map((label) => ({ tag: { connectOrCreate: { where: { label }, create: { label } } } })) },
       },
     });
   }
-  console.log(`Seeded ${categories.length} categories and ${algorithms.length} algorithms.`);
+  const bubble = await prisma.algorithm.findUnique({ where: { slug: "bubble-sort" }, select: { id: true } });
+
+  // ── analyses (one shared) ──
+  const code1 = linearJs;
+  const result = (summary: string) => ({
+    schemaVersion: 1,
+    data: {
+      summary,
+      complexity: { time: { best: "O(1)", average: "O(n)", worst: "O(n)" }, space: "O(1)" },
+      breakdown: { approach: "Sequential scan.", steps: ["Visit each element", "Compare with the target", "Return the index or -1"] },
+      bottlenecks: [],
+      antiPatterns: [],
+      improvements: [{ suggestion: "Sort the data and use binary search for repeated lookups.", expectedImpact: "O(log n) per lookup" }],
+      optimizedCode: "function linearSearch(arr, target) { return arr.indexOf(target); }",
+      edgeCases: [],
+      readabilityScore: 90,
+      tags: ["searching"],
+    },
+  });
+  await prisma.analysis.upsert({
+    where: { id: "seed_analysis_1" },
+    update: {},
+    create: {
+      id: "seed_analysis_1", userId: learner.id, code: code1, language: "javascript", complexity: "O(n)",
+      suggestion: "Sort the data and use binary search for repeated lookups.", result: json(result("Linear search over an array.")),
+      title: "Linear search", model: "seed", promptVersion: "seed-1", schemaVersion: 1, codeHash: sha256(code1),
+      latencyMs: 820, shareId: "seedshare001", isPublic: true,
+    },
+  });
+  const code2 = bubbleJs;
+  await prisma.analysis.upsert({
+    where: { id: "seed_analysis_2" },
+    update: {},
+    create: {
+      id: "seed_analysis_2", userId: learner.id, code: code2, language: "javascript", complexity: "O(n^2)",
+      suggestion: "Use a built-in O(n log n) sort for large inputs.", result: json(result("Bubble sort with an early exit.")),
+      title: "Bubble sort", model: "seed", promptVersion: "seed-1", schemaVersion: 1, codeHash: sha256(code2), latencyMs: 1010,
+    },
+  });
+  await prisma.share.upsert({
+    where: { shareId: "seedshare001" }, update: {},
+    create: { shareId: "seedshare001", type: "analysis", targetId: "seed_analysis_1", ownerId: learner.id },
+  });
+
+  // ── chat sessions + messages (legacy JSON and the new table are kept in sync) ──
+  const sessions = [
+    {
+      id: "seed_session_1", title: "How does bubble sort work?", shareId: "seedshare002" as string | null,
+      contextType: "algorithm" as const, contextId: bubble?.id ?? null,
+      messages: [
+        { role: "user" as const, content: "How does bubble sort work?" },
+        { role: "assistant" as const, content: "It repeatedly swaps neighbouring elements that are out of order.", intent: "explain_algorithm" },
+        { role: "user" as const, content: "Why is it O(n^2)?" },
+        { role: "assistant" as const, content: "Each of the n passes compares up to n elements.", intent: "explain_algorithm" },
+      ],
+    },
+    {
+      id: "seed_session_2", title: "Binary search edge cases", shareId: null,
+      contextType: "none" as const, contextId: null,
+      messages: [
+        { role: "user" as const, content: "What breaks binary search?" },
+        { role: "assistant" as const, content: "Unsorted input and overflow in (lo + hi) / 2.", intent: "general" },
+      ],
+    },
+  ];
+  for (const s of sessions) {
+    const now = Date.now();
+    const rows = s.messages.map((m, i) => ({ ...m, id: `seed_msg_${s.id}_${i + 1}`, createdAt: new Date(now - (s.messages.length - i) * 60_000) }));
+    await prisma.explanationSession.upsert({
+      where: { id: s.id }, update: {},
+      create: {
+        id: s.id, userId: learner.id, title: s.title, shareId: s.shareId, isPublic: s.shareId !== null,
+        contextType: s.contextType, contextId: s.contextId,
+        messages: json(rows.map((r) => ({ id: r.id, role: r.role, content: r.content, ...(r.intent ? { intent: r.intent } : {}), createdAt: r.createdAt.toISOString() }))),
+      },
+    });
+    await prisma.explanationMessage.createMany({
+      data: rows.map((r, i) => ({ id: messageRowId(s.id, i + 1), sessionId: s.id, seq: i + 1, role: r.role, content: r.content, intent: r.intent ?? null, createdAt: r.createdAt })),
+      skipDuplicates: true,
+    });
+    if (s.shareId) {
+      await prisma.share.upsert({
+        where: { shareId: s.shareId }, update: {},
+        create: { shareId: s.shareId, type: "explain", targetId: s.id, ownerId: learner.id },
+      });
+    }
+  }
+
+  // ── visualizations (one shared, one fork) ──
+  const structures = [{ id: "A", ds: "array", label: "Array" }];
+  await prisma.visualization.upsert({
+    where: { id: "seed_viz_1" }, update: {},
+    create: {
+      id: "seed_viz_1", userId: learner.id, title: "Bubble sort, first pass", description: "Two swaps on a four-element array.",
+      script: scripts["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1,
+    },
+  });
+  await prisma.visualization.upsert({
+    where: { id: "seed_viz_2" }, update: {},
+    create: {
+      id: "seed_viz_2", userId: admin.id, title: "Bubble sort (copy)", description: "A fork of the learner's visualization.",
+      script: scripts["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1, forkedFromId: "seed_viz_1",
+    },
+  });
+  await prisma.share.upsert({
+    where: { shareId: "seedshare003" }, update: {},
+    create: { shareId: "seedshare003", type: "visualization", targetId: "seed_viz_1", ownerId: learner.id },
+  });
+
+  // ── AI usage and audit log ──
+  const day = utcDay();
+  for (const u of [
+    { feature: "analysis" as const, requests: 2, tokensIn: 1800, tokensOut: 2600 },
+    { feature: "session" as const, requests: 3, tokensIn: 900, tokensOut: 1400 },
+  ]) {
+    await prisma.aiUsage.upsert({
+      where: { userId_feature_day: { userId: learner.id, feature: u.feature, day } }, update: {},
+      create: { userId: learner.id, feature: u.feature, day, requests: u.requests, tokensIn: u.tokensIn, tokensOut: u.tokensOut },
+    });
+  }
+  await prisma.auditLog.upsert({
+    where: { id: "seed_audit_1" }, update: {},
+    create: { id: "seed_audit_1", actorId: admin.id, action: "seed.data_created", targetType: "seed", targetId: null, meta: json({ source: "seed.ts" }) },
+  });
+  await prisma.auditLog.upsert({
+    where: { id: "seed_audit_2" }, update: {},
+    create: { id: "seed_audit_2", actorId: admin.id, action: "algorithm.create", targetType: "algorithm", targetId: bubble?.id ?? null, meta: json({ slug: "bubble-sort", source: "seed.ts" }) },
+  });
+
+  console.log(`Seeded ${categories.length} categories, ${algorithms.length} algorithms and demo data for every Phase 5 model.`);
 }
 
 main()

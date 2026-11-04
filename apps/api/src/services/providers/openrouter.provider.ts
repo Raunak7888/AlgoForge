@@ -23,11 +23,11 @@ type OpenRouterCompletionResponse = {
   choices?: Array<{ message?: OpenRouterChoiceMessage }>;
 };
 
-type OpenRouterChatRequest = {
-  model: string;
-  messages: OpenRouterMessage[];
-  reasoning: { enabled: boolean };
-};
+// type OpenRouterChatRequest = {
+//   model: string;
+//   messages: OpenRouterMessage[];
+//   reasoning: { enabled: boolean };
+// };
 
 export class OpenRouterProvider implements AIProvider {
   readonly name = "openrouter";

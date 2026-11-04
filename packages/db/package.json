@@ -13,7 +13,9 @@
     "seed": "tsx prisma/seed.ts",
     "reset": "prisma migrate reset",
     "typecheck": "tsc --noEmit",
-    "make-admin": "tsx prisma/make-admin.ts"
+    "make-admin": "tsx prisma/make-admin.ts",
+    "verify:phase5": "tsx prisma/verify-phase5.ts",
+    "backfill:phase5": "tsx prisma/run-backfill.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0"

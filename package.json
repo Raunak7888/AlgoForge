@@ -25,6 +25,8 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "db:make-admin": "pnpm --filter @algoforge/db make-admin",
+    "db:verify:phase5": "pnpm --filter @algoforge/db verify:phase5",
+    "db:backfill:phase5": "pnpm --filter @algoforge/db backfill:phase5",
     "test": "pnpm --filter @algoforge/contracts test && pnpm --filter api test && pnpm --filter @algoforge/web test",
     "test:contracts": "pnpm --filter @algoforge/contracts test"
   },

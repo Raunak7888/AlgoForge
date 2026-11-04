@@ -20,10 +20,14 @@ type ExistingForge = {
   version:     number;
 } | null;
 
-export async function createAlgorithm(input: CreateAlgorithm) {
+export async function createAlgorithm(input: CreateAlgorithm, actorId?: string) {
   if (input.forge) validateForge(input.forge);
   const category = await resolveCategory(input.categoryId);
-  const created = await algorithmRepository.create(toCreateData(input, category.id));
+  const created = await algorithmRepository.create({
+    ...toCreateData(input, category.id),
+    publishedAt: input.isPublished ? new Date() : null,
+    createdById: actorId ?? null,
+  });
   await bustCache();
   return created;
 }
@@ -49,7 +53,11 @@ export async function updateAlgorithm(id: string, input: UpdateAlgorithm) {
 
   const updated = await algorithmRepository.update(
     id,
-    toUpdateData(input, existing.forge ?? null, categoryId),
+    {
+      ...toUpdateData(input, existing.forge ?? null, categoryId),
+      // First publication time: set when a draft becomes published, never rewritten afterwards.
+      ...(input.isPublished === true && !existing.isPublished ? { publishedAt: new Date() } : {}),
+    },
   );
   await bustCache();
   return updated;
