@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import type { ErrorCode, ErrorDetail, ErrorResponse } from "@algoforge/contracts";
 import { Prisma } from "@algoforge/db";
-import { AppError } from "../utils/app-error";
+import { AppError, type ErrorExtras } from "../utils/app-error";
 import { logger, serializeError } from "../utils/logger";
 
 type LogLevel = "none" | "warn" | "error";
@@ -11,6 +11,7 @@ interface MappedError {
   code: ErrorCode;
   message: string;
   details?: readonly ErrorDetail[];
+  extras?: ErrorExtras;
   level: LogLevel;
 }
 
@@ -24,12 +25,14 @@ function bodyParserType(err: unknown): string | undefined {
 
 function mapError(err: unknown): MappedError {
   if (err instanceof AppError) {
+    const provider = err.code.startsWith("AI_");
     return {
       statusCode: err.statusCode,
       code: err.code,
       message: err.message,
       details: err.details,
-      level: err.statusCode >= 500 ? "error" : "none",
+      extras: err.extras,
+      level: err.statusCode >= 500 ? (provider ? "warn" : "error") : "none",
     };
   }
 
@@ -74,11 +77,16 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     else logger.warn("request failed", fields);
   }
 
+  const retryAfter = mapped.extras?.retryAfterSeconds;
+  if (retryAfter !== undefined) res.setHeader("Retry-After", String(retryAfter));
+
   const body: ErrorResponse = {
     error: {
       code: mapped.code,
       message: mapped.message,
       ...(mapped.details && mapped.details.length > 0 ? { details: [...mapped.details] } : {}),
+      ...(retryAfter !== undefined ? { retryAfterSeconds: retryAfter } : {}),
+      ...(mapped.extras?.quota ? { quota: mapped.extras.quota } : {}),
     },
   };
   res.status(mapped.statusCode).json(body);

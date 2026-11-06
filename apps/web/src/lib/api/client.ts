@@ -66,8 +66,8 @@ async function toApiError(res: Response): Promise<ApiError> {
   }
   const parsed = ErrorResponseSchema.safeParse(payload);
   if (parsed.success) {
-    const { code, message, details } = parsed.data.error;
-    return new ApiError({ status: res.status, code, message, details, requestId, retryAfterSeconds });
+    const { code, message, details, quota, retryAfterSeconds: bodyRetry } = parsed.data.error;
+    return new ApiError({ status: res.status, code, message, details, requestId, retryAfterSeconds: retryAfterSeconds ?? bodyRetry ?? null, quota: quota ?? null });
   }
   const code = CODE_FOR_STATUS[res.status] ?? "INTERNAL_ERROR";
   return new ApiError({ status: res.status, code: isErrorCode(code) ? code : "INTERNAL_ERROR", message: res.statusText || "Request failed.", requestId, retryAfterSeconds });

@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListResponseSchema, AdminUserSchema } from "./admin";
 import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmListResponseSchema, AlgorithmSummarySchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
-import { AnalysisHistoryItemSchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, AnalysisResultSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
+import { AnalysisQuotaResponseSchema, AnalysisHistoryItemSchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, AnalysisResultSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
 import { AuthUserSchema, MeResponseSchema } from "./auth";
 import { CapabilitiesResponseSchema } from "./capabilities";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
@@ -40,6 +40,7 @@ export const SCHEMA_REGISTRY = {
   AnalysisHistoryResponse: AnalysisHistoryResponseSchema,
   SharedAnalysisResponse: SharedAnalysisResponseSchema,
   ShareUrlResponse: ShareUrlResponseSchema,
+  AnalysisQuotaResponse: AnalysisQuotaResponseSchema,
   SessionMessage: SessionMessageSchema,
   ExplainSessionSummary: ExplainSessionSummarySchema,
   ExplainSessionDetail: ExplainSessionDetailSchema,

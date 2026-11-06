@@ -55,6 +55,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     defaultValue,
     language: initialLanguage = "javascript",
     onChange,
+    onLanguageChange,
     readOnly = false,
     // Default '100%' → fills parent via CSS flex; pass an explicit px/number
     // value to override (e.g. height={520} or height="400px").
@@ -65,11 +66,15 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     defaultValue?: Record<Language, string>;
     language?: Language;
     onChange?: (value: string) => void;
+    onLanguageChange?: (language: Language) => void;
     readOnly?: boolean;
     height?: number | string;
     className?: string;
 }) => {
-    const [language, setLanguage] = useState<Language>(initialLanguage);
+    const [internalLanguage, setInternalLanguage] = useState<Language>(initialLanguage);
+    // Controlled by the parent when it passes onLanguageChange; otherwise the editor owns it.
+    const language: Language = onLanguageChange ? initialLanguage : internalLanguage;
+    const setLanguage = onLanguageChange ?? setInternalLanguage;
     const [isFormatting, setIsFormatting] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     const [isEditorReady, setIsEditorReady] = useState(false);
@@ -239,7 +244,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             setLanguage(lang);
             if (!isControlled) setInternalValue(defaultValue?.[lang] ?? "");
         },
-        [defaultValue, isControlled],
+        [defaultValue, isControlled, setLanguage],
     );
 
     const handleChange = useCallback(

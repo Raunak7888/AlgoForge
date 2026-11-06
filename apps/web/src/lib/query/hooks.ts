@@ -1,19 +1,55 @@
 "use client";
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { LIMITS, type AlgorithmListQuery } from "@algoforge/contracts";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { LIMITS, type AlgorithmListQuery, type AnalysisLanguage } from "@algoforge/contracts";
 import { endpoints } from "../api/endpoints";
 import { queryKeys } from "./keys";
 
-/** History pages follow meta.nextCursor until meta.hasMore is false. */
-export function useAnalysisHistory(options: { enabled?: boolean; pageSize?: number } = {}) {
+export interface AnalysisHistoryOptions {
+  enabled?: boolean;
+  pageSize?: number;
+  /** Server-side search over title, suggestion and complexity. */
+  q?: string;
+  language?: AnalysisLanguage;
+  sort?: "newest" | "oldest";
+}
+
+/** History pages follow meta.nextCursor until meta.hasMore is false. Filters are applied by the server. */
+export function useAnalysisHistory(options: AnalysisHistoryOptions = {}) {
   const pageSize = options.pageSize ?? LIMITS.pagination.analysisHistory.defaultSize;
+  const filters = {
+    ...(options.q ? { q: options.q } : {}),
+    ...(options.language ? { language: options.language } : {}),
+    ...(options.sort && options.sort !== "newest" ? { sort: options.sort } : {}),
+  };
   return useInfiniteQuery({
-    queryKey: [...queryKeys.analysisHistory(), pageSize],
+    queryKey: queryKeys.analysisHistory({ pageSize, ...filters }),
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam, signal }) => endpoints.analysisHistory({ limit: pageSize, ...(pageParam ? { cursor: pageParam } : {}) }, signal),
+    queryFn: ({ pageParam, signal }) => endpoints.analysisHistory({ limit: pageSize, ...filters, ...(pageParam ? { cursor: pageParam } : {}) }, signal),
     getNextPageParam: (last) => (last.meta.hasMore ? (last.meta.nextCursor ?? undefined) : undefined),
+    placeholderData: keepPreviousData,
     enabled: options.enabled ?? true,
+  });
+}
+
+/** One saved analysis, including its code (used to reopen it). */
+export function useAnalysis(id: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.analysisDetail(id),
+    queryFn: ({ signal }) => endpoints.analysis(id, signal),
+    enabled: enabled && id !== "",
+    retry: false,
+  });
+}
+
+/** What is left of the per-minute and per-day analysis quota. Polls while the minute window is used up. */
+export function useAnalysisQuota(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.analysisQuota(),
+    queryFn: ({ signal }) => endpoints.analysisQuota(signal),
+    enabled,
+    staleTime: 10_000,
+    refetchInterval: (query) => (query.state.data && query.state.data.minute.remaining <= 0 ? 15_000 : false),
   });
 }
 

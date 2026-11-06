@@ -1,4 +1,4 @@
-import type { ErrorCode, ErrorDetail } from "@algoforge/contracts";
+import type { ErrorCode, ErrorDetail, QuotaInfo } from "@algoforge/contracts";
 
 /** The API answered with a non-2xx status. Always carries the typed error envelope when the API sent one. */
 export class ApiError extends Error {
@@ -6,10 +6,20 @@ export class ApiError extends Error {
   readonly code: ErrorCode;
   readonly details: readonly ErrorDetail[];
   readonly requestId: string | null;
-  /** Seconds the server asked us to wait (429 only). */
+  /** Seconds the server asked us to wait (429 and some 503). */
   readonly retryAfterSeconds: number | null;
+  /** The quota window that rejected the request (QUOTA_EXCEEDED only). */
+  readonly quota: QuotaInfo | null;
 
-  constructor(init: { status: number; code: ErrorCode; message: string; details?: readonly ErrorDetail[]; requestId?: string | null; retryAfterSeconds?: number | null }) {
+  constructor(init: {
+    status: number;
+    code: ErrorCode;
+    message: string;
+    details?: readonly ErrorDetail[];
+    requestId?: string | null;
+    retryAfterSeconds?: number | null;
+    quota?: QuotaInfo | null;
+  }) {
     super(init.message);
     this.name = "ApiError";
     this.status = init.status;
@@ -17,6 +27,7 @@ export class ApiError extends Error {
     this.details = init.details ?? [];
     this.requestId = init.requestId ?? null;
     this.retryAfterSeconds = init.retryAfterSeconds ?? null;
+    this.quota = init.quota ?? null;
   }
 }
 
@@ -43,9 +54,30 @@ export class ResponseValidationError extends Error {
 
 export const isApiError = (e: unknown): e is ApiError => e instanceof ApiError;
 
+function timeOf(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
 /** A short message that is safe to show to people. */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    switch (error.code) {
+      case "QUOTA_EXCEEDED": {
+        const q = error.quota;
+        if (q?.scope === "day") return `You have used all ${q.limit} analyses for today. You can analyze again at ${timeOf(q.resetAt)}.`;
+        const wait = error.retryAfterSeconds;
+        return wait !== null ? `You are analyzing too quickly. Try again in ${wait}s.` : "You are analyzing too quickly. Try again in a moment.";
+      }
+      case "AI_PROVIDER_UNAVAILABLE":
+        return "The analysis service is temporarily unavailable. Try again in a minute. This did not use your quota.";
+      case "AI_PROVIDER_TIMEOUT":
+        return "The analysis took too long and was stopped. Try again, or analyze a smaller piece of code. This did not use your quota.";
+      case "AI_INVALID_OUTPUT":
+        return "The analysis service returned an answer that could not be read. Try again. This did not use your quota.";
+      default:
+        break;
+    }
     if (error.status === 429) {
       return error.retryAfterSeconds !== null ? `Too many requests. Try again in ${error.retryAfterSeconds}s.` : "Too many requests. Try again shortly.";
     }

@@ -2,6 +2,8 @@ import {
   AlgorithmDetailResponseSchema,
   AlgorithmListResponseSchema,
   AnalysisHistoryResponseSchema,
+  AnalysisQuotaResponseSchema,
+  AnalysisRecordResponseSchema,
   CapabilitiesResponseSchema,
   CategoryListResponseSchema,
   DeviceSessionListResponseSchema,
@@ -14,9 +16,13 @@ import {
   type AlgorithmDetailResponse,
   type AlgorithmListQuery,
   type AlgorithmListResponse,
+  type AnalysisHistoryQuery,
   type AnalysisHistoryResponse,
+  type AnalysisQuotaResponse,
+  type AnalysisRecordResponse,
   type CapabilitiesResponse,
   type CategoryListResponse,
+  type CreateAnalysisRequest,
   type CreateVisualizationRequest,
   type ExplainSessionListResponse,
   type MeResponse,
@@ -52,8 +58,14 @@ export function createEndpoints(client: ApiClient) {
     logout: (): Promise<void> => client.postEmpty("/api/auth/logout"),
     logoutAll: (): Promise<void> => client.postEmpty("/api/auth/logout-all"),
 
-    analysisHistory: (params: PageParams = {}, signal?: AbortSignal): Promise<AnalysisHistoryResponse> =>
+    analysisHistory: (params: AnalysisHistoryQuery = {}, signal?: AbortSignal): Promise<AnalysisHistoryResponse> =>
       client.get("/api/analysis", AnalysisHistoryResponseSchema, { query: { ...params }, ...opt(signal) }),
+    analysis: (id: string, signal?: AbortSignal): Promise<AnalysisRecordResponse> =>
+      client.get(`/api/analysis/${seg(id)}`, AnalysisRecordResponseSchema, opt(signal)),
+    createAnalysis: (body: CreateAnalysisRequest): Promise<AnalysisRecordResponse> => client.post("/api/analysis", AnalysisRecordResponseSchema, body),
+    deleteAnalysis: (id: string): Promise<void> => client.delete(`/api/analysis/${seg(id)}`),
+    analysisQuota: (signal?: AbortSignal): Promise<AnalysisQuotaResponse> => client.get("/api/analysis/quota", AnalysisQuotaResponseSchema, opt(signal)),
+
     categories: (signal?: AbortSignal): Promise<CategoryListResponse> => client.get("/api/categories", CategoryListResponseSchema, opt(signal)),
     explainSessions: (params: PageParams = {}, signal?: AbortSignal): Promise<ExplainSessionListResponse> =>
       client.get("/api/explain-sessions", ExplainSessionListResponseSchema, { query: { ...params }, ...opt(signal) }),

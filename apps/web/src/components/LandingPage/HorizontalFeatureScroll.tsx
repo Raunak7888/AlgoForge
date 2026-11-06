@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { ANALYSIS_LIVE_COPY, useAnalysisAvailable } from "@/lib/analysisStatus";
 import type { FeatureStatus } from "@/lib/featureStatus";
 import { usePrefersReducedMotion } from "@/lib/reducedMotion";
 import DemoVideo from "./DemoVideo";
@@ -99,6 +100,7 @@ function VideoBlock() {
 }
 
 export default function HorizontalFeatureScroll() {
+    const analysisLive = useAnalysisAvailable();
     return (
         <>
             <VideoBlock />
@@ -122,14 +124,14 @@ export default function HorizontalFeatureScroll() {
                                                 <span className="font-mono text-xs font-bold tracking-widest text-foreground/50 transition-colors group-hover:text-accent">
                                                     {f.index}
                                                 </span>
-                                                <StatusChip status={f.status} />
+                                                <StatusChip status={f.id === "ai-analysis" && analysisLive ? "available" : f.status} />
                                             </div>
                                             <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/50">{f.tag}</span>
                                         </div>
                                         <h3 className="text-2xl font-bold tracking-tight">{f.title}</h3>
-                                        <p className="text-sm leading-relaxed text-foreground/60">{f.description}</p>
+                                        <p className="text-sm leading-relaxed text-foreground/60">{f.id === "ai-analysis" && analysisLive ? ANALYSIS_LIVE_COPY.description : f.description}</p>
                                         <ul className="mt-auto space-y-2 pt-2">
-                                            {f.points.map((p, pi) => (
+                                            {(f.id === "ai-analysis" && analysisLive ? ANALYSIS_LIVE_COPY.points : f.points).map((p, pi) => (
                                                 <li
                                                     key={p}
                                                     className="flex items-start gap-2.5 text-sm text-foreground/75 transition-transform duration-300 group-hover:translate-x-1"

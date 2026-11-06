@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick02Icon, ZapIcon, Fire, LineChart, Target } from "@hugeicons/core-free-icons";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { ANALYSIS_LIVE_COPY, useAnalysisAvailable } from "@/lib/analysisStatus";
 import type { FeatureStatus } from "@/lib/featureStatus";
 import { DASHBOARD_HREF, SITE } from "@/lib/site";
 import { PRODUCT_FACTS } from "@/lib/productFacts";
@@ -398,6 +399,7 @@ const FAQ = [
 function FeatureCarousel() {
     const track = useRef<HTMLDivElement>(null);
     const [idx, setIdx] = useState(0);
+    const analysisLive = useAnalysisAvailable();
 
     useEffect(() => {
         const el = track.current;
@@ -442,12 +444,12 @@ function FeatureCarousel() {
                                 <span className="text-5xl font-black leading-none text-transparent" style={{ WebkitTextStroke: "1px var(--accent)" }}>
                                     {String(i + 1).padStart(2, "0")}
                                 </span>
-                                <StatusChip status={f.status} />
+                                <StatusChip status={f.tag === "AI Code Analysis" && analysisLive ? "available" : f.status} />
                             </div>
                             <p className="mb-1 font-mono text-[11px] uppercase tracking-widest text-white/50">{f.tag}</p>
                             <h3 className="mb-3 text-lg font-bold">{f.headline}</h3>
                             <ul className="space-y-2">
-                                {f.points.map((p) => (
+                                {(f.tag === "AI Code Analysis" && analysisLive ? ANALYSIS_LIVE_COPY.points : f.points).map((p) => (
                                     <li key={p} className="flex items-start gap-2.5 text-sm leading-snug text-white/65">
                                         <HugeiconsIcon icon={Tick02Icon} size={13} color="currentColor" strokeWidth={2} className="mt-0.5 shrink-0 text-accent" />
                                         {p}
@@ -513,6 +515,7 @@ function UseCases() {
 
 function Faq() {
     const [open, setOpen] = useState<number | null>(null);
+    const analysisLive = useAnalysisAvailable();
     return (
         <div className="space-y-2">
             {FAQ.map((f, i) => {
@@ -533,7 +536,7 @@ function Faq() {
                                 <span className={`font-mono text-xl leading-none text-accent transition-transform duration-300 ${on ? "rotate-45" : ""}`}>+</span>
                             </button>
                             <Collapse open={on}>
-                                <p className="px-4 pb-4 text-sm leading-relaxed text-white/60">{f.a}</p>
+                                <p className="px-4 pb-4 text-sm leading-relaxed text-white/60">{f.q === "Is the AI analysis real?" && analysisLive ? ANALYSIS_LIVE_COPY.faq : f.a}</p>
                             </Collapse>
                         </div>
                     </R>
@@ -578,6 +581,7 @@ export default function AlgoForgeLanding() {
     const finalCta = useRef<HTMLElement>(null);
     const scroller = useRef<HTMLElement | null>(null); // null = window
     const [bar, setBar] = useState(false);
+    const analysisLive = useAnalysisAvailable();
     const [menu, setMenu] = useState(false);
 
     /* Observers + one rAF-throttled scroll handler */
@@ -838,8 +842,7 @@ export default function AlgoForgeLanding() {
                         </h1>
 
                         <p className="m-rise mb-8 text-[15px] leading-relaxed text-white/60" style={cv({ "--i": 3 })}>
-                            Write a short script, press play, and step through arrays, trees, graphs and hash maps. AI
-                            code analysis is still a preview.
+                            Write a short script, press play, and step through arrays, trees, graphs and hash maps. {analysisLive ? "Sign in to run AI code analysis on your own code." : "AI code analysis is still a preview."}
                         </p>
 
                         <div className="m-rise flex flex-col gap-3" style={cv({ "--i": 4 })}>

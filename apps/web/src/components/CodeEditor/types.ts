@@ -6,6 +6,8 @@ export interface CodeEditorProps {
   defaultValue?: Record<Language, string>;
   language?: Language;
   onChange?: (value: string) => void;
+  /** When given, the language is controlled by the parent. */
+  onLanguageChange?: (language: Language) => void;
   readOnly?: boolean;
   height?: string | number;
   className?: string;

@@ -2,7 +2,7 @@
 
 import { growthFor } from "@/lib/complexity";
 import { wait } from "@/lib/async";
-import { FeatureGate, type FeatureCopy } from "@/components/auth/FeatureGate";
+import type { FeatureCopy } from "@/components/auth/FeatureGate";
 import { SampleChip } from "@/components/ui/SampleChip";
 import type {
     AnalysisLanguage,
@@ -1088,11 +1088,14 @@ function AnalyzingScreen({ step }: { step: number }) {
 
 interface ResultsProps {
     language: Language;
+    result: AnalysisResult;
+    /** The result is fixed sample content (development only). */
+    sample?: boolean;
+    resetLabel?: string;
     onReset: () => void;
 }
 
-function ResultsScreen({ language, onReset }: ResultsProps) {
-    const result = codeAnalysis[language].result;
+export function ResultsScreen({ language, result, sample = false, resetLabel = "Re-run", onReset }: ResultsProps) {
     const { complexity } = result;
     const chart = useMemo(() => generateChartData(complexity), [complexity]);
 
@@ -1164,7 +1167,7 @@ function ResultsScreen({ language, onReset }: ResultsProps) {
                         </span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <SampleChip />
+                        {sample && <SampleChip />}
                         <span className="hidden items-center gap-1.5 font-mono text-[11px] text-zinc-400 sm:flex">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                             Complete
@@ -1174,8 +1177,8 @@ function ResultsScreen({ language, onReset }: ResultsProps) {
                             className="flex h-7 cursor-pointer items-center gap-2 rounded-md border border-white/10 px-2.5 text-[11px] text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-50"
                         >
                             <RotateCcw className="h-3 w-3" />
-                            Re-run
-                            <Kbd>R</Kbd>
+                            {resetLabel}
+                            {sample && <Kbd>R</Kbd>}
                         </button>
                     </div>
                     <motion.span
@@ -1574,7 +1577,7 @@ interface AnalysisPanelProps {
     onComplete: () => void;
 }
 
-function SampleAnalysisPanel({
+export function SampleAnalysisPanel({
     language,
     onComplete, // eslint-disable-line @typescript-eslint/no-unused-vars
 }: AnalysisPanelProps) {
@@ -1666,7 +1669,7 @@ function SampleAnalysisPanel({
                             transition={{ duration: 0.3 }}
                             className="h-full"
                         >
-                            <ResultsScreen language={language} onReset={handleReset} />
+                            <ResultsScreen language={language} result={codeAnalysis[language].result} sample onReset={handleReset} />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -1675,7 +1678,7 @@ function SampleAnalysisPanel({
     );
 }
 
-const ANALYSIS_COPY: FeatureCopy = {
+export const ANALYSIS_COPY: FeatureCopy = {
     signInTitle: "Sign in to analyze your code",
     signInBody: "Analysis, history and sharing belong to your account. The editor and the visualizer keep working without one.",
     unavailableTitle: "Analysis isn't available yet",
@@ -1686,6 +1689,4 @@ const ANALYSIS_COPY: FeatureCopy = {
  * Real analysis needs an account and a connected engine. The server's capabilities decide what is shown;
  * the fixed sample report appears only in development.
  */
-export default function AnalysisPanel(props: AnalysisPanelProps) {
-    return <FeatureGate feature="analysis" copy={ANALYSIS_COPY} preview={<SampleAnalysisPanel {...props} />} />;
-}
+// The default panel moved to AnalysisFeature.tsx (Phase 7): it chooses between real and sample analysis.

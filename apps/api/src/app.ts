@@ -54,7 +54,7 @@ app.use("/api/visualizations", visualizationRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/algorithms", generalRateLimiter({ scope: "catalog", limitPerMinute: env.redis.catalogRateLimitPerMinute }), algorithmRouter);
 app.use("/api/categories", categoryRouter);
-app.use("/api/analysis",  generalRateLimiter(), analysisRouter);
+app.use("/api/analysis",  generalRateLimiter({ scope: "analysis", limitPerMinute: env.redis.catalogRateLimitPerMinute }), analysisRouter);
 
 // Sessions mounted at a path that cannot be prefix-matched by the explain router.
 app.use("/api/explain-sessions", explanationSessionRouter);

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import type { AnalysisHistoryResponse } from "@algoforge/contracts";
+import type { AnalysisHistoryResponse, AnalysisQuotaResponse } from "@algoforge/contracts";
 import { serializeAnalysisRecord, serializeHistoryItem } from "../serializers/analysis";
 import { analysisService } from "../services/analysis.service";
 import { asyncHandler } from "../utils/async-handler";
@@ -28,6 +28,18 @@ class AnalysisController {
     const id = ensureString(req.params.id, "Analysis id is required.");
     const analysis = await analysisService.getUserAnalysisById(req.auth!.user.id, id);
     res.json(serializeAnalysisRecord(analysis));
+  });
+
+  deleteAnalysis = asyncHandler(async (req: Request, res: Response) => {
+    const id = ensureString(req.params.id, "Analysis id is required.");
+    await analysisService.deleteAnalysis(req.auth!.user.id, id);
+    res.status(204).send();
+  });
+
+  getQuota = asyncHandler(async (req: Request, res: Response) => {
+    const body: AnalysisQuotaResponse = await analysisService.getQuota(req.auth!.user.id);
+    res.setHeader("Cache-Control", "no-store");
+    res.json(body);
   });
 
   shareAnalysis = asyncHandler(async (req: Request, res: Response) => {

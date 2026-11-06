@@ -34,12 +34,22 @@ export interface AnalysisHistoryItem {
     language: Language;
     complexity: string | null;
     suggestion: string | null;
+    title?: string | null;
+    isShared?: boolean;
     createdAt: string;
 }
 
 export interface AnalysisHistoryMeta {
     nextCursor: string | null;
     hasMore: boolean;
+}
+
+/** When given, search, language filter and sort are applied by the server instead of in the browser. */
+export interface HistoryFilters {
+    q: string;
+    language: "all" | "javascript" | "python";
+    sort: "newest" | "oldest";
+    onChange: (patch: Partial<{ q: string; language: "all" | "javascript" | "python"; sort: "newest" | "oldest" }>) => void;
 }
 
 interface AnalysisHistoryProps {
@@ -62,6 +72,8 @@ interface AnalysisHistoryProps {
     pageSize?: number;
     /** Builds the dashboard URL for an analysis. Default: `/dashboard/${id}`. */
     getDashboardHref?: (item: AnalysisHistoryItem) => string;
+    /** Server-side filters (see HistoryFilters). Omit for client-side filtering of the loaded rows. */
+    filters?: HistoryFilters;
     /** The rows are fixed sample content. */
     sample?: boolean;
 }
@@ -392,9 +404,10 @@ const HistoryItem = memo(
                         <span className="flex min-w-0 flex-1 flex-col gap-1">
                             <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                                 <span className="text-[13px] font-medium text-zinc-100">
-                                    {item.language === "javascript"
-                                        ? "JavaScript"
-                                        : "Python"}
+                                    {item.title ?? (item.language === "javascript" ? "JavaScript" : "Python")}
+                                    {item.isShared && (
+                                        <span className="ml-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[10px] font-normal text-emerald-300">Shared</span>
+                                    )}
                                 </span>
                                 {item.complexity && (
                                     <span className="inline-flex items-center gap-1.5 text-xs text-zinc-300">
@@ -567,14 +580,22 @@ export default function AnalysisHistory({
     pageSize = 8,
     getDashboardHref = (item) => `/dashboard/${item.id}`,
     sample = false,
+    filters,
 }: AnalysisHistoryProps) {
     const reduce = !!useReducedMotion();
     const now = useNow();
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [query, setQuery] = useState("");
-    const [language, setLanguage] = useState<LanguageFilter>("all");
-    const [sort, setSort] = useState<SortOrder>("newest");
+    const server = filters !== undefined;
+    const [localQuery, setLocalQuery] = useState("");
+    const [localLanguage, setLocalLanguage] = useState<LanguageFilter>("all");
+    const [localSort, setLocalSort] = useState<SortOrder>("newest");
+    const query = filters ? filters.q : localQuery;
+    const language: LanguageFilter = filters ? filters.language : localLanguage;
+    const sort: SortOrder = filters ? filters.sort : localSort;
+    const setQuery = (v: string) => (filters ? filters.onChange({ q: v }) : setLocalQuery(v));
+    const setLanguage = (v: LanguageFilter) => (filters ? filters.onChange({ language: v }) : setLocalLanguage(v));
+    const setSort = (v: SortOrder) => (filters ? filters.onChange({ sort: v }) : setLocalSort(v));
     const [page, setPage] = useState(1);
     const [awaitingMore, setAwaitingMore] = useState(false);
 
@@ -582,6 +603,7 @@ export default function AnalysisHistory({
 
     // Filter (suggestion search + language) and sort
     const visible = useMemo(() => {
+        if (server) return items; // the server already searched, filtered and sorted
         const q = query.trim().toLowerCase();
         const filtered = items.filter((i) => {
             if (language !== "all" && i.language !== language) return false;
@@ -594,9 +616,11 @@ export default function AnalysisHistory({
                 new Date(a.createdAt).getTime();
             return sort === "newest" ? diff : -diff;
         });
-    }, [items, query, language, sort]);
+    }, [items, query, language, sort, server]);
 
-    const isFiltering = query.trim() !== "" || language !== "all";
+    const hasFilters = query.trim() !== "" || language !== "all";
+    const serverFiltering = server && hasFilters;
+    const isFiltering = !server && hasFilters;
 
     // Pagination over the loaded rows
     const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
@@ -730,7 +754,7 @@ export default function AnalysisHistory({
                 : rows[Math.max(i - 1, 0)]
             )?.focus();
         },
-        [query, selectedId, clearSelection, currentPage, goTo, goNext, nextDisabled],
+        [query, setQuery, selectedId, clearSelection, currentPage, goTo, goNext, nextDisabled],
     );
 
     let runningIndex = 0;
@@ -782,8 +806,8 @@ export default function AnalysisHistory({
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search by suggestion"
-                        aria-label="Search by suggestion"
+                        placeholder="Search analyses"
+                        aria-label="Search analyses"
                         className="h-8 w-full rounded-md border border-primary-foreground/20 bg-transparent pl-8 pr-8 text-xs text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-zinc-500"
                     />
                     <AnimatePresence>
@@ -839,8 +863,8 @@ export default function AnalysisHistory({
                         />
                     ) : items.length === 0 ? (
                         <StateMessage
-                            title="No analyses yet"
-                            body="Run an analysis and it will show up here."
+                            title={serverFiltering ? "No matches" : "No analyses yet"}
+                            body={serverFiltering ? "No saved analysis fits these filters." : "Run an analysis and it will show up here."}
                         />
                     ) : visible.length === 0 ? (
                         <StateMessage

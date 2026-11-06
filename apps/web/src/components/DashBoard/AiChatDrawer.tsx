@@ -12,6 +12,7 @@ import {
 } from "react";
 import { LoaderOne } from "../ui/loader";
 import { useAuth, useFeatureState } from "@/lib/auth";
+import { useWorkspace } from "@/lib/workspace/store";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,8 @@ function AIChatDrawer({
 }) {
     const featureState = useFeatureState("assistant", { uiReady: false });
     const { openLoginModal } = useAuth();
+    const workspaceLanguage = useWorkspace((s) => s.language);
+    const workspaceLines = useWorkspace((s) => (s.codes[s.language].trim() === "" ? 0 : s.codes[s.language].split("\n").length));
     const available = featureState === "preview";
     const needsAccount = featureState === "needs-account";
     const greeting =
@@ -490,6 +493,9 @@ function AIChatDrawer({
                                 <ArrowUp size={15} strokeWidth={2.25} />
                             </motion.button>
                         </div>
+                        <p data-testid="drawer-context" className="mt-1.5 text-center text-[11px] text-primary-foreground/50">
+                            Context: {workspaceLanguage} · {workspaceLines} {workspaceLines === 1 ? "line" : "lines"} in the editor
+                        </p>
                         <p className="mt-1.5 text-center text-[11px] text-primary-foreground/60">
                             {available
                                 ? "Enter to send · Shift + Enter for a new line"

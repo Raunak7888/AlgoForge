@@ -1,28 +1,37 @@
 /**
  * Analysis service.
  *
- * Cache strategy (two-layer LRU + Redis):
- *   - AI result is cached by SHA-256 of (language + code) so identical
- *     submissions never hit the AI provider twice.
- *   - The DB record is always written; cache only shields the AI call.
- *
- * Stored results are versioned ({ schemaVersion, data }); reading them is tolerant (see contracts).
+ * Caching (two layers, LRU + Redis): the AI result is keyed by (prompt version, language, code hash),
+ * so identical submissions never hit the provider twice and a prompt change never serves stale output.
+ * Only uncached (billable) calls use quota; the quota is returned when the AI call fails.
+ * The DB record is always written.
  */
-import { createHash, randomBytes } from "crypto";
+import { randomBytes } from "crypto";
 import type { Prisma } from "@algoforge/db";
-import { wrapStoredAnalysisResult, type AnalysisResult, type SharedAnalysisResponse } from "@algoforge/contracts";
+import {
+  ANALYSIS_RESULT_SCHEMA_VERSION,
+  wrapStoredAnalysisResult,
+  type AnalysisQuotaResponse,
+  type AnalysisResult,
+  type SharedAnalysisResponse,
+} from "@algoforge/contracts";
 import { env } from "../config/env";
+import { ANALYSIS_PROMPT_VERSION } from "../prompts/analysis.prompt";
 import { analysisRepository } from "../repositories/analysis.repository";
 import { serializeSharedAnalysis } from "../serializers/analysis";
 import { AppError } from "../utils/app-error";
+import { analysisCacheKey, deriveTitle, hashCode } from "../utils/ai-cache-keys";
+import { logger, serializeError } from "../utils/logger";
 import { paginate } from "../utils/pagination";
 import { encodeAnalysisCursor, type AnalysisHistoryQuery, type AnalysisInput } from "../validation/analysis";
 import { aiService } from "./ai.service";
+import { aiUsageService } from "./ai-usage.service";
 import { layeredCache } from "./lib/layered-cache";
+import { quotaService } from "./quota.service";
 
-function aiCacheKey(language: string, code: string): string {
-  const hash = createHash("sha256").update(`${language}:${code}`).digest("hex").slice(0, 32);
-  return `ai:analysis:${hash}`;
+interface CachedAnalysis {
+  result: AnalysisResult;
+  model: string;
 }
 
 function generateShareId(): string {
@@ -31,39 +40,73 @@ function generateShareId(): string {
 
 class AnalysisService {
   async createAnalysis(userId: string, input: AnalysisInput) {
-    const key = aiCacheKey(input.language, input.code);
+    const started = Date.now();
+    const key = analysisCacheKey(input.language, hashCode(input.code), ANALYSIS_PROMPT_VERSION);
 
-    let aiResult = await layeredCache.get<AnalysisResult>(key);
+    let entry = await layeredCache.get<CachedAnalysis>(key);
 
-    if (!aiResult) {
-      aiResult = await aiService.analyzeCode({ code: input.code, language: input.language });
-      await layeredCache.set(key, aiResult);
+    if (!entry) {
+      const reservation = await quotaService.reserve(userId, "analysis");
+      try {
+        const out = await aiService.analyzeCode({ code: input.code, language: input.language });
+        entry = { result: out.result, model: out.model };
+      } catch (error) {
+        await reservation.release();
+        throw error;
+      }
+      await layeredCache.set(key, entry);
+      try {
+        await aiUsageService.record(userId, "analysis");
+      } catch (error) {
+        logger.warn("ai usage could not be recorded", { userId, ...serializeError(error) });
+      }
     }
 
+    const { result, model } = entry;
     return analysisRepository.create({
       userId,
       code: input.code,
       language: input.language,
-      complexity: aiResult.complexity?.time?.average ?? null,
-      suggestion: aiResult.improvements?.[0]?.suggestion ?? null,
-      result: wrapStoredAnalysisResult(aiResult) as unknown as Prisma.InputJsonValue,
+      title: deriveTitle(result.summary, input.code),
+      complexity: result.complexity?.time?.average ?? null,
+      suggestion: result.improvements?.[0]?.suggestion ?? null,
+      model,
+      promptVersion: ANALYSIS_PROMPT_VERSION,
+      schemaVersion: ANALYSIS_RESULT_SCHEMA_VERSION,
+      latencyMs: Date.now() - started,
+      result: wrapStoredAnalysisResult(result) as unknown as Prisma.InputJsonValue,
     });
   }
 
   async listUserAnalyses(userId: string, query: AnalysisHistoryQuery) {
     // One extra row proves whether another page exists.
     const rows = await analysisRepository.findManyByUser(userId, {
+      take: query.limit + 1,
+      sort: query.sort,
       cursorCreatedAt: query.cursorCreatedAt,
       cursorId: query.cursorId,
-      take: query.limit + 1,
+      q: query.q,
+      language: query.language,
     });
-    return paginate(rows, query.limit, (row) => encodeAnalysisCursor({ createdAt: row.createdAt.toISOString(), id: row.id }));
+    return paginate(rows, query.limit, (row) =>
+      encodeAnalysisCursor({ createdAt: row.createdAt.toISOString(), id: row.id, sort: query.sort }),
+    );
   }
 
   async getUserAnalysisById(userId: string, analysisId: string) {
     const analysis = await analysisRepository.findOneByUser(userId, analysisId);
     if (!analysis) throw AppError.notFound("Analysis not found.");
     return analysis;
+  }
+
+  async deleteAnalysis(userId: string, analysisId: string): Promise<void> {
+    const removed = await analysisRepository.deleteByUser(analysisId, userId);
+    if (removed === 0) throw AppError.notFound("Analysis not found.");
+  }
+
+  async getQuota(userId: string): Promise<AnalysisQuotaResponse> {
+    const snapshot = await quotaService.peek(userId, "analysis");
+    return { minute: snapshot.minute, day: snapshot.day };
   }
 
   async shareAnalysis(userId: string, analysisId: string) {

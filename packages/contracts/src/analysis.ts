@@ -12,6 +12,7 @@ import {
   ImprovementSchema,
 } from "@algoforge/analysis";
 import { IsoDateTimeSchema, pageQuerySchema } from "./common";
+import { QuotaWindowSchema } from "./errors";
 import { LIMITS } from "./limits";
 import { SafeUserSchema } from "./users";
 
@@ -48,8 +49,11 @@ export type ResultStatus = z.infer<typeof ResultStatusSchema>;
 export const AnalysisRecordResponseSchema = z.object({
   id: z.string().min(1),
   language: AnalysisLanguageSchema,
+  code: z.string(),
+  title: z.string().nullable(),
   result: AnalysisResultSchema.nullable(),
   resultStatus: ResultStatusSchema,
+  isShared: z.boolean(),
   createdAt: IsoDateTimeSchema,
 });
 export type AnalysisRecordResponse = z.infer<typeof AnalysisRecordResponseSchema>;
@@ -65,7 +69,20 @@ export const SharedAnalysisResponseSchema = z.object({
 });
 export type SharedAnalysisResponse = z.infer<typeof SharedAnalysisResponseSchema>;
 
-export const AnalysisHistoryQuerySchema = pageQuerySchema(LIMITS.pagination.analysisHistory);
+export const AnalysisSortSchema = z.enum(["newest", "oldest"]);
+export type AnalysisSort = z.infer<typeof AnalysisSortSchema>;
+
+export const AnalysisHistoryQuerySchema = pageQuerySchema(LIMITS.pagination.analysisHistory).extend({
+  q: z.string().max(LIMITS.search.maxQueryChars).optional().describe("Search title, suggestion and complexity."),
+  language: AnalysisLanguageSchema.optional(),
+  sort: AnalysisSortSchema.optional().describe("Default newest."),
+});
+export type AnalysisHistoryQuery = z.input<typeof AnalysisHistoryQuerySchema>;
+
+/** Remaining analysis quota for the signed-in user. */
+export const AnalysisQuotaResponseSchema = z.object({ minute: QuotaWindowSchema, day: QuotaWindowSchema });
+export type AnalysisQuotaResponse = z.infer<typeof AnalysisQuotaResponseSchema>;
+
 export const ShareUrlResponseSchema = z.object({ shareUrl: z.url() });
 export type ShareUrlResponse = z.infer<typeof ShareUrlResponseSchema>;
 

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import TopNav from "./TitleBar";
 import ResizeHandle from "./Resize";
 import { TooltipProvider } from "../ui/tooltip";
-import { CodeEditor } from "../CodeEditor";
+import WorkspaceEditor from "./WorkspaceEditor";
 import AIChatDrawer from "./AiChatDrawer";
 import FeaturePanel from "./FeaturePanel";
 import Toolbar from "./Toolbar";
@@ -66,7 +66,7 @@ export default function AlgoforgeDashboard() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                     >
-                        <CodeEditor height="100%" />
+                        <WorkspaceEditor />
                     </motion.section>
 
                     <ResizeHandle containerRef={containerRef} value={splitPct} min={SPLIT.min} max={SPLIT.max} defaultValue={SPLIT.default} onChange={setSplitPct} label="Resize panels" />

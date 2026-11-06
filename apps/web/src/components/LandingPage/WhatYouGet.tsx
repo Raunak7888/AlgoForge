@@ -3,6 +3,7 @@
 import { AiBrain01Icon, MessageMultiple01Icon, PlayIcon, TrendingUp } from "@hugeicons/core-free-icons";
 import { IconSvgObject } from "@/lib/types";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { ANALYSIS_LIVE_COPY, useAnalysisAvailable } from "@/lib/analysisStatus";
 import type { FeatureStatus } from "@/lib/featureStatus";
 import { Eyebrow, IconBubble, LandingStyles, Reveal, SpotCard } from "./shared";
 
@@ -63,6 +64,7 @@ function MarqueeRow({ items, reverse = false }: { items: string[]; reverse?: boo
 }
 
 export default function WhatYouGet() {
+    const analysisLive = useAnalysisAvailable();
     return (
         <section id="products" className="relative w-full overflow-x-clip px-4 py-16 md:py-28">
             <LandingStyles />
@@ -92,7 +94,7 @@ export default function WhatYouGet() {
                                             <span className="font-mono text-xs font-bold tracking-widest text-foreground/50 transition-colors group-hover:text-accent">
                                                 {f.index}
                                             </span>
-                                            <StatusChip status={f.status} />
+                                            <StatusChip status={f.id === "ai-analysis" && analysisLive ? "available" : f.status} />
                                         </div>
                                         <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-foreground/50">
                                             {f.tag}
@@ -102,7 +104,7 @@ export default function WhatYouGet() {
                                     <div className="flex flex-1 flex-col gap-2">
                                         <h3 className="text-sm font-bold tracking-tight">{f.title}</h3>
                                         <p className="text-xs font-medium text-accent">{f.short}</p>
-                                        <p className="mt-1 text-xs leading-relaxed text-foreground/60">{f.description}</p>
+                                        <p className="mt-1 text-xs leading-relaxed text-foreground/60">{f.id === "ai-analysis" && analysisLive ? ANALYSIS_LIVE_COPY.description : f.description}</p>
                                     </div>
                                 </div>
                             </SpotCard>
@@ -112,7 +114,7 @@ export default function WhatYouGet() {
 
                 <div className="mt-8 flex flex-wrap items-center justify-between gap-2 px-1">
                     <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/60">
-                        {availableCount} available · {features.length - availableCount} not yet
+                        {availableCount + (analysisLive ? 1 : 0)} available · {features.length - availableCount - (analysisLive ? 1 : 0)} not yet
                     </span>
                     <span className="font-mono text-[11px] uppercase tracking-widest text-accent">Preview</span>
                 </div>

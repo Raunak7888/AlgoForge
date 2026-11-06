@@ -30,7 +30,11 @@ function readResult(analysisId: string, raw: unknown): { result: AnalysisResult 
 export interface AnalysisRow {
   id: string;
   language: string;
+  code: string;
+  title: string | null;
   result: unknown;
+  isPublic: boolean;
+  shareId: string | null;
   createdAt: DateLike;
 }
 
@@ -38,7 +42,16 @@ export function serializeAnalysisRecord(row: AnalysisRow): AnalysisRecordRespons
   const language = languageOf(row.language);
   if (!language) throw AppError.internal("Stored analysis has an unsupported language.");
   const { result, resultStatus } = readResult(row.id, row.result);
-  return { id: row.id, language, result, resultStatus, createdAt: toIso(row.createdAt) };
+  return {
+    id: row.id,
+    language,
+    code: row.code,
+    title: row.title,
+    result,
+    resultStatus,
+    isShared: row.isPublic && row.shareId !== null,
+    createdAt: toIso(row.createdAt),
+  };
 }
 
 export interface HistoryRow {
@@ -46,6 +59,9 @@ export interface HistoryRow {
   language: string;
   complexity: string | null;
   suggestion: string | null;
+  title: string | null;
+  isPublic: boolean;
+  shareId: string | null;
   createdAt: DateLike;
 }
 
@@ -56,11 +72,23 @@ export function serializeHistoryItem(row: HistoryRow): AnalysisHistoryItem | nul
     logger.warn("skipping history row with unsupported language", { analysisId: row.id });
     return null;
   }
-  return { id: row.id, language, complexity: row.complexity, suggestion: row.suggestion, createdAt: toIso(row.createdAt) };
+  return {
+    id: row.id,
+    language,
+    complexity: row.complexity,
+    suggestion: row.suggestion,
+    title: row.title,
+    isShared: row.isPublic && row.shareId !== null,
+    createdAt: toIso(row.createdAt),
+  };
 }
 
-export interface SharedAnalysisRow extends AnalysisRow {
+export interface SharedAnalysisRow {
+  id: string;
   code: string;
+  language: string;
+  result: unknown;
+  createdAt: DateLike;
   user: { id: string; name: string | null; username: string | null; image: string | null } | null;
 }
 

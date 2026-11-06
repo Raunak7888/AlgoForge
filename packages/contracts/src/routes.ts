@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListQuerySchema, AdminUserListResponseSchema } from "./admin";
 import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmLangQuerySchema, AlgorithmListQuerySchema, AlgorithmListResponseSchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
-import { AnalysisHistoryQuerySchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
+import { AnalysisQuotaResponseSchema, AnalysisHistoryQuerySchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
 import { AuthStartQuerySchema, MeResponseSchema, RefreshResponseSchema } from "./auth";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
 import { IdParamsSchema, ShareIdParamsSchema, SlugParamsSchema } from "./common";
@@ -64,6 +64,9 @@ export const routes: readonly RouteDef[] = [
   { id: "analysisGet", method: "get", path: "/api/analysis/{id}", summary: "One analysis", tag: "Analysis", auth: "user", csrf: false, rateLimit: "general", params: IdParamsSchema, responses: { 200: AnalysisRecordResponseSchema } },
   { id: "analysisCreate", method: "post", path: "/api/analysis", summary: "Analyze code", tag: "Analysis", auth: "user", csrf: true, rateLimit: "ai", body: CreateAnalysisRequestSchema, responses: { 201: AnalysisRecordResponseSchema } },
   { id: "analysisShare", method: "post", path: "/api/analysis/{id}/share", summary: "Make an analysis public", tag: "Analysis", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 200: ShareUrlResponseSchema } },
+
+  { id: "analysisQuota", method: "get", path: "/api/analysis/quota", summary: "My remaining analysis quota (per minute and per day)", tag: "Analysis", auth: "user", csrf: false, rateLimit: "general", responses: { 200: AnalysisQuotaResponseSchema } },
+  { id: "analysisDelete", method: "delete", path: "/api/analysis/{id}", summary: "Delete one analysis", tag: "Analysis", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 204: "empty" } },
 
   { id: "explain", method: "post", path: "/api/explain", summary: "One-shot explanation", tag: "Explain", auth: "user", csrf: true, rateLimit: "ai", body: ExplainRequestSchema, responses: { 200: ExplainResponseSchema } },
   { id: "explainSessionsList", method: "get", path: "/api/explain-sessions", summary: "List chat sessions (cursor pagination)", tag: "Explain", auth: "user", csrf: false, query: ExplainSessionListQuerySchema, responses: { 200: ExplainSessionListResponseSchema } },

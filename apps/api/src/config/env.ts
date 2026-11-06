@@ -96,6 +96,10 @@ export const env = {
     model: aiModel,
     timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
     maxRetries: parseInteger("AI_MAX_RETRIES", 1),
+    /** Analysis returns a large JSON document, so it gets a longer, separate timeout (abortable). */
+    analysisTimeoutMs: parseInteger("AI_ANALYSIS_TIMEOUT_MS", 45000),
+    analysisMaxOutputTokens: parseInteger("AI_ANALYSIS_MAX_OUTPUT_TOKENS", 4096),
+    textMaxOutputTokens: parseInteger("AI_TEXT_MAX_OUTPUT_TOKENS", 1024),
   },
   openRouter: {
     baseUrl:
@@ -104,6 +108,11 @@ export const env = {
     freeModels: openRouterFreeModels,
     appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
     siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
+  },
+  quotas: {
+    /** Billable (uncached) analyses per user. Cache hits never use quota. */
+    analysisPerMinute: parseInteger("AI_ANALYSIS_PER_MINUTE", 3),
+    analysisPerDay: parseInteger("AI_ANALYSIS_PER_DAY", 30),
   },
   session: {
     /** A session's lastUsedAt is written at most this often. */

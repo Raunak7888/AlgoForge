@@ -2,8 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { FeatureGate, type FeatureCopy } from "@/components/auth/FeatureGate";
-import AnalysisPanel from "./Analysis";
+import AnalysisFeature from "./AnalysisFeature";
 import AnalysisHistory from "./analysis-history";
+import RealHistory from "./AnalysisHistoryFeature";
 import type { FeatureType } from "./DashBoard";
 import { SAMPLE_HISTORY, SAMPLE_META } from "@/data/samples/analysisHistory";
 
@@ -25,7 +26,7 @@ const HISTORY_COPY: FeatureCopy = {
 export default function FeaturePanel({ activeFeature }: { activeFeature: FeatureType }) {
     return (
         <div className="h-full w-full overflow-hidden rounded-xl bg-primary-background shadow-inner">
-            {activeFeature === "analysis" && <AnalysisPanel language="python" onComplete={noop} />}
+            {activeFeature === "analysis" && <AnalysisFeature />}
 
             {activeFeature === "visualizer" && <VisualizerPanel />}
 
@@ -34,6 +35,7 @@ export default function FeaturePanel({ activeFeature }: { activeFeature: Feature
                     feature="analysis"
                     copy={HISTORY_COPY}
                     preview={<AnalysisHistory items={SAMPLE_HISTORY} meta={SAMPLE_META} sample onLoadMore={noop} />}
+                    ready={<RealHistory />}
                 />
             )}
         </div>

@@ -34,6 +34,8 @@ export class GeminiProvider implements AIProvider {
         config: {
           ...(isJson ? { responseMimeType: "application/json" } : {}),
           temperature: isJson ? 0.1 : 0.4,
+          ...(request.maxOutputTokens ? { maxOutputTokens: request.maxOutputTokens } : {}),
+          ...(request.signal ? { abortSignal: request.signal } : {}),
         },
       });
 
@@ -51,7 +53,7 @@ export class GeminiProvider implements AIProvider {
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
-      if (!env.isProduction) {
+      if (!env.isProduction && !request.signal?.aborted) {
         console.error("[AI][gemini]", error);
       }
       throw AppError.badGateway("Gemini provider request failed.");
