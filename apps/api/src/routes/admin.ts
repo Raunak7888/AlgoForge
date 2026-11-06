@@ -1,28 +1,31 @@
 //# filename: apps/api/src/routes/admin.ts
 
 import { Router } from "express";
+import { Role } from "@algoforge/db";
 import { adminController } from "../controllers/admin.controller";
-import { requireAdminAccess } from "../middleware/admin-secret";
+import { requireAuth, requireRoles } from "../middleware/auth";
 import { requireCsrf } from "../middleware/csrf";
 
 const router = Router();
 
-// All admin management routes require admin access (JWT admin OR env secret).
-// CSRF is also required to protect against cross-site requests.
-// Role is never accepted from any request body — it is hardcoded per endpoint.
+// Admin access requires a signed-in ADMIN user. There is no secret-header path.
+// Bootstrap the first admin with: pnpm db:make-admin <email>
+// Role is never accepted from any request body: it is hardcoded per endpoint.
 
-router.get("/users", requireAdminAccess, adminController.listUsers);
+router.get("/users", requireAuth, requireRoles(Role.ADMIN), adminController.listUsers);
 
 router.post(
   "/upgrade-user",
-  requireAdminAccess,
+  requireAuth,
+  requireRoles(Role.ADMIN),
   requireCsrf,
   adminController.upgradeUser,
 );
 
 router.post(
   "/downgrade-user",
-  requireAdminAccess,
+  requireAuth,
+  requireRoles(Role.ADMIN),
   requireCsrf,
   adminController.downgradeUser,
 );

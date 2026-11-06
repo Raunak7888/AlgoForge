@@ -23,11 +23,11 @@ type OpenRouterCompletionResponse = {
   choices?: Array<{ message?: OpenRouterChoiceMessage }>;
 };
 
-type OpenRouterChatRequest = {
-  model: string;
-  messages: OpenRouterMessage[];
-  reasoning: { enabled: boolean };
-};
+// type OpenRouterChatRequest = {
+//   model: string;
+//   messages: OpenRouterMessage[];
+//   reasoning: { enabled: boolean };
+// };
 
 export class OpenRouterProvider implements AIProvider {
   readonly name = "openrouter";
@@ -68,11 +68,15 @@ export class OpenRouterProvider implements AIProvider {
 
         try {
           const client = this.getClient(keyState.apiKey);
-          const completion = await client.chat.completions.create({
-            model: modelState.model,
-            messages: this.toOpenRouterMessages(request.messages),
-            reasoning: { enabled: true },
-          } as OpenRouterChatRequest);
+          const completion = await client.chat.completions.create(
+            {
+              model: modelState.model,
+              messages: this.toOpenRouterMessages(request.messages),
+              reasoning: { enabled: true },
+              ...(request.maxOutputTokens ? { max_tokens: request.maxOutputTokens } : {}),
+            } as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+            request.signal ? { signal: request.signal } : undefined,
+          );
 
           const assistantMessage = this.toAssistantMessage(
             completion as unknown as OpenRouterCompletionResponse,
@@ -90,6 +94,9 @@ export class OpenRouterProvider implements AIProvider {
             history: [...request.messages, assistantMessage],
           };
         } catch (error) {
+          // An abort is a timeout decided by the caller: never rotate keys or models because of it.
+          if (request.signal?.aborted) throw this.normalizeFatalError(error);
+
           const statusCode = getStatusCode(error);
 
           if (statusCode === 429 || statusCode === 503) {

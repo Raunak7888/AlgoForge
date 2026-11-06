@@ -1,9 +1,10 @@
 import { app } from "./app";
 import { env } from "./config/env";
 import { connectRedis, closeRedis } from "./config/redis";
+import { startSessionCleanup } from "./services/session-cleanup.service";
 
 async function bootstrap(): Promise<void> {
-  // Attempt Redis connection; non-fatal — rate limiting and caching degrade gracefully
+  // Attempt Redis connection; non-fatal: rate limiting and caching degrade gracefully
   try {
     await connectRedis();
   } catch (err) {
@@ -18,10 +19,14 @@ async function bootstrap(): Promise<void> {
     }
   });
 
+  // Removes expired and long-revoked sessions on a timer.
+  const stopSessionCleanup = startSessionCleanup();
+
   async function shutdown(signal: string): Promise<void> {
     if (!env.isProduction) {
-      console.log(`[API] ${signal} — shutting down.`);
+      console.log(`[API] ${signal}: shutting down.`);
     }
+    stopSessionCleanup();
     server.close(async () => {
       await closeRedis();
       process.exit(0);

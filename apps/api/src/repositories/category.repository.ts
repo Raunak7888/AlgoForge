@@ -29,7 +29,7 @@ export const categoryRepository = {
     iconName?: string;
     sortOrder: number;
   }) {
-    return prisma.category.create({ data });
+    return prisma.category.create({ data: { ...data, slug: data.id } });
   },
 
   update(

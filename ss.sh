@@ -1,139 +1,202 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# --- Strict Mode ---
-set -euo pipefail
-IFS=$'\n\t'
+# ==========================================
+# AlgoForge Lint Source Code Dumper
+# Git Bash / Windows compatible
+#
+# Output:
+#   lint-files-dump.sh
+#   ss-debug.log
+# ==========================================
 
-# Output file path
-OUTPUT_FILE="project_context.md"
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
 
-# Clear or create output file
-: > "$OUTPUT_FILE"
+OUT="lint-files-dump.sh"
+DEBUG_LOG="ss-debug.log"
 
-echo "=========================================================="
-echo "Generating Project Context for AI..."
-echo "Output file: $OUTPUT_FILE"
-echo "=========================================================="
+# ==========================================
+# DEBUG SYSTEM
+# ==========================================
 
-# Write header to output file
-cat << 'EOF' >> "$OUTPUT_FILE"
-# Project Context: AlgoForge
+exec > >(tee -a "$DEBUG_LOG") 2>&1
 
-This document provides context about the project structure and source code to help understand its architecture, logic, and functionality.
+PS4='+ [${BASH_SOURCE##*/}:${LINENO}] '
 
-EOF
+debug() {
+    echo "[DEBUG $(date '+%H:%M:%S')] $*"
+}
 
-# 1. Append README.md if it exists
-if [ -f "README.md" ]; then
-    echo "Adding README.md..."
-    cat << 'EOF' >> "$OUTPUT_FILE"
-## Project Overview (README)
+debug "=========================================="
+debug "AlgoForge Lint Source Dumper started"
+debug "=========================================="
 
-```markdown
-EOF
-    cat "README.md" >> "$OUTPUT_FILE"
-    echo -e "\n\`\`\`\n" >> "$OUTPUT_FILE"
+debug "Current directory: $(pwd)"
+debug "Bash version: $BASH_VERSION"
+debug "Output file: $OUT"
+debug "Debug log: $DEBUG_LOG"
+
+# ==========================================
+# REPOSITORY CHECK
+# ==========================================
+
+debug "Checking repository directories..."
+
+if [[ ! -d "apps/web/src" || ! -d "packages" ]]; then
+    echo "[ERROR] Run this script from the AlgoForge repository root."
+    exit 1
 fi
 
-# 2. Append Directory Tree Structure
-echo "Adding Project Structure..."
-cat << 'EOF' >> "$OUTPUT_FILE"
-## Directory Structure
+debug "Repository structure verified."
 
-```text
-EOF
+# ==========================================
+# TARGET FILES
+# Exact paths prevent duplicate filename issues.
+# ==========================================
 
-# Use find and awk to generate a clean text tree structure (similar to your sss.sh)
-find . \
-    \( \
-    -path "./.git" -o \
-    -path "*/node_modules" -o \
-    -path "*/.next" -o \
-    -path "*/dist" -o \
-    -path "*/build" -o \
-    -path "*/.cache" \
-    \) -prune -o \
-    -print | sort | awk -F/ '
-BEGIN {
-    print "."
-}
-NR > 1 {
-    depth = NF - 1
-    for(i=2;i<NF;i++)
-        printf "│   "
-    printf "├── %s\n",$NF
-}
-' >> "$OUTPUT_FILE"
-
-echo -e "\`\`\`\n" >> "$OUTPUT_FILE"
-
-# 3. Helper function to append a file with appropriate syntax highlighting
-append_file() {
-    local filepath="$1"
-    if [ -f "$filepath" ]; then
-        echo "Adding $filepath..."
-        
-        # Determine language for markdown syntax highlighting
-        local lang="txt"
-        case "$filepath" in
-            *.ts) lang="typescript" ;;
-            *.tsx) lang="tsx" ;;
-            *.js) lang="javascript" ;;
-            *.jsx) lang="jsx" ;;
-            *.json) lang="json" ;;
-            *.prisma) lang="prisma" ;;
-            *.yaml|*.yml) lang="yaml" ;;
-            *.md) lang="markdown" ;;
-            *.sh) lang="bash" ;;
-        esac
-
-        {
-            echo "### File: $filepath"
-            echo ""
-            echo "\`\`\`$lang"
-            cat "$filepath"
-            echo ""
-            echo "\`\`\`"
-            echo ""
-        } >> "$OUTPUT_FILE"
-    fi
-}
-
-# 4. Curated list of important files that define the project's core logic
-IMPORTANT_FILES=(
-    # Root Configurations
-    "package.json"
-    "pnpm-workspace.yaml"
-    "docker-compose.yml"
-
-    # Database Schema
-    "packages/db/prisma/schema.prisma"
-    "packages/db/src/index.ts"
-
-    # Shared Package Logic
-    "packages/analysis/src/schema.ts"
-    "packages/forge/src/types.ts"
-    "packages/forge/src/recorder.ts"
-
-    # Express API (Backend Entrypoints & Core Logic)
-    "apps/api/src/server.ts"
-    "apps/api/src/app.ts"
-    "apps/api/src/routes/analysis.ts"
-    "apps/api/src/controllers/analysis.controller.ts"
-    "apps/api/src/services/analysis.service.ts"
-    "apps/api/src/prompts/analysis.prompt.ts"
-
-    # Next.js Web (Frontend Entrypoint & Core UI Components)
-    "apps/web/src/app/page.tsx"
-    "apps/web/src/components/AnalysisForm.tsx"
-    "apps/web/src/components/AnalysisResult.tsx"
+TARGETS=(
+    "apps/web/src/components/CodeEditor/EditorToolbar.tsx"
+    "apps/web/src/components/DashBoard/DashBoard.tsx"
+    "apps/web/src/components/DashBoard/DashboardGate.tsx"
+    "apps/web/src/components/DashBoard/DesktopOnlyScreen.tsx"
+    "apps/web/src/components/DashBoard/Setting.tsx"
+    "apps/web/src/components/DashBoard/ShareModal.tsx"
+    "apps/web/src/components/DashBoard/TitleBar.tsx"
+    "apps/web/src/components/DashBoard/analysis-history.tsx"
+    "apps/web/src/components/LandingPage/WhatYouGet.tsx"
+    "apps/web/src/components/LandingPage/shared.tsx"
+    "apps/web/src/components/auth/GoogleLoginModal.tsx"
+    "apps/web/src/components/ui/FeaturePanel.tsx"
+    "apps/web/src/components/ui/card-hover-effect.tsx"
+    "apps/web/src/components/ui/glowing-effect.tsx"
+    "apps/web/src/components/ui/hover-border-gradient.tsx"
+    "apps/web/src/components/ui/resizable-navbar.tsx"
+    "apps/web/src/components/visualizers/canvas/CanvasViewport.tsx"
+    "apps/web/src/components/visualizers/canvas/Group.tsx"
+    "apps/web/src/components/visualizers/canvas/VisualizerCanvas.tsx"
+    "apps/web/src/components/visualizers/graph/GraphStage.tsx"
+    "apps/web/src/components/visualizers/graph/model.ts"
+    "apps/web/src/components/visualizers/linear/engine.ts"
+    "apps/web/src/components/visualizers/linkedlist/engine.ts"
+    "apps/web/src/components/visualizers/shared/animationSettings.ts"
+    "apps/web/src/components/visualizers/shared/stage/StageFrame.tsx"
+    "apps/web/src/components/visualizers/tree/TreeStage.tsx"
+    "apps/web/src/components/visualizers/tree/model.ts"
+    "apps/web/src/components/visualizers/ui/ScriptDrawer.tsx"
+    "apps/web/src/components/visualizers/ui/ScriptEditor.tsx"
 )
 
-echo "Adding important files..."
-for file in "${IMPORTANT_FILES[@]}"; do
-    append_file "$file"
+# ==========================================
+# FILE DISCOVERY
+# ==========================================
+
+debug "Starting file discovery..."
+
+FILTERED=()
+MISSING=()
+
+for FILE in "${TARGETS[@]}"; do
+
+    debug "Checking: $FILE"
+
+    if [[ -f "$FILE" ]]; then
+        FILTERED+=("$FILE")
+        debug "FOUND: $FILE"
+    else
+        MISSING+=("$FILE")
+        debug "MISSING: $FILE"
+    fi
+
 done
 
-echo "=========================================================="
-echo "Done! Project context collected in $OUTPUT_FILE"
-echo "=========================================================="
+debug "File discovery completed."
+debug "Found: ${#FILTERED[@]}"
+debug "Missing: ${#MISSING[@]}"
+
+# ==========================================
+# GENERATE RESTORATION SCRIPT
+# ==========================================
+
+debug "Starting restoration script generation..."
+
+: > "$OUT"
+
+cat >> "$OUT" <<'HEADER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+echo "Restoring AlgoForge lint files..."
+
+HEADER
+
+for FILE in "${FILTERED[@]}"; do
+
+    debug "Processing: $FILE"
+
+    DELIMITER="__ALGOFORGE_FILE_$(printf '%s' "$FILE" | sha256sum | cut -c1-16)__"
+
+    while grep -Fqx "$DELIMITER" "$FILE"; do
+        DELIMITER="${DELIMITER}_X"
+    done
+
+    {
+        printf 'mkdir -p %q\n' "$(dirname "$FILE")"
+        printf 'cat > %q <<'\''%s'\''\n' "$FILE" "$DELIMITER"
+        cat "$FILE"
+        printf '\n%s\n\n' "$DELIMITER"
+    } >> "$OUT"
+
+    debug "Added to output: $FILE"
+
+done
+
+cat >> "$OUT" <<'FOOTER'
+echo "All AlgoForge lint files restored successfully."
+FOOTER
+
+chmod +x "$OUT"
+
+debug "Restoration script generated successfully."
+
+# ==========================================
+# DISPLAY RESULTS
+# ==========================================
+
+echo ""
+echo "================================================"
+echo "          ALGOFORGE LINT SOURCE DUMP"
+echo "================================================"
+
+echo ""
+echo "[INCLUDED FILES]"
+
+for FILE in "${FILTERED[@]}"; do
+    printf "  %s\n" "$FILE"
+done
+
+echo ""
+echo "[MISSING FILES]"
+
+if [[ ${#MISSING[@]} -eq 0 ]]; then
+    echo "  None"
+else
+    for FILE in "${MISSING[@]}"; do
+        printf "  %s\n" "$FILE"
+    done
+fi
+
+echo ""
+echo "================================================"
+echo "Target files       : ${#TARGETS[@]}"
+echo "Files included     : ${#FILTERED[@]}"
+echo "Files missing      : ${#MISSING[@]}"
+echo "Generated file     : $OUT"
+echo "Debug log          : $DEBUG_LOG"
+echo "================================================"
+
+echo ""
+echo "To restore the collected files:"
+echo "  bash $OUT"
+
+debug "Script completed successfully."

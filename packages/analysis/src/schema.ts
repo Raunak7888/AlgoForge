@@ -84,6 +84,8 @@ export const AnalysisHistoryItemSchema = z.object({
   language: AnalysisLanguageSchema,
   complexity: z.string().nullable(),
   suggestion: z.string().nullable(),
+  title: z.string().nullable(),
+  isShared: z.boolean(),
   createdAt: z.string().datetime(),
 });
 

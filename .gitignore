@@ -11,3 +11,14 @@ dist
 coverage
 *.cache
 *.tmp
+node_modules/
+dist/
+.next/
+coverage/
+.env.*
+!.env.example
+*.phase1.tmp
+.phase1-backup/
+.phase2-backup/
+
+.phase6-backup/

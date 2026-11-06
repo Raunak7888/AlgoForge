@@ -1,5 +1,7 @@
 import type { QueryScope } from "../ai/query-processor";
 
+export const EXPLANATION_PROMPT_VERSION = "explain-v1";
+
 export function buildExplanationPrompt(
   contextText: string,
   scope: QueryScope,

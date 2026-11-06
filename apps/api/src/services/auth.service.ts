@@ -1,11 +1,12 @@
 import { OAuth2Client } from "google-auth-library";
-import { Role } from "@algoforge/db";
-import { prisma } from "@algoforge/db";
+import { prisma, Role } from "@algoforge/db";
 import { env, googleOAuthConfig } from "../config/env";
 import { sessionRepository } from "../repositories/session.repository";
 import { userRepository } from "../repositories/user.repository";
 import { AppError } from "../utils/app-error";
 import { hashToken, randomToken, safeTokenEquals } from "../utils/crypto";
+import { logger, serializeError } from "../utils/logger";
+import { shouldTouchSession } from "../utils/session-activity";
 import {
   signAccessToken,
   signRefreshToken,
@@ -34,6 +35,15 @@ type SessionCookies = {
 };
 
 type AuthResult = SessionCookies & { user: AuthenticatedUser };
+
+const AUTH_USER_SELECT = {
+  id:       true,
+  email:    true,
+  username: true,
+  name:     true,
+  image:    true,
+  role:     true,
+} as const;
 
 const googleClient = new OAuth2Client(
   env.googleClientId,
@@ -77,7 +87,9 @@ class AuthService {
       image:             payload.picture ?? null,
     });
 
-    return this.createSessionForUser(user, metadata);
+    const result = await this.createSessionForUser(user, metadata);
+    await this.recordLogin(user.id);
+    return result;
   }
 
   async authenticateAccessToken(accessToken: string) {
@@ -89,6 +101,8 @@ class AuthService {
     );
 
     if (!session) throw AppError.unauthorized("Session is invalid.");
+
+    this.touchSession(session.id, session.lastUsedAt);
 
     return {
       user:    session.user,
@@ -143,14 +157,14 @@ class AuthService {
     if (!rotated) {
       // Distinguish a concurrent legitimate refresh from actual token theft.
       // If a successor session (rotatedFromId = session.id) already exists,
-      // this was a race between two simultaneous refresh attempts — fail this
+      // this was a race between two simultaneous refresh attempts: fail this
       // request gracefully without nuking all sessions.
       const successor = await sessionRepository.findRotatedFrom(session.id);
       if (successor) {
         throw AppError.unauthorized("Session already refreshed. Please retry.");
       }
 
-      // No successor found — this looks like genuine token reuse after theft.
+      // No successor found: this looks like genuine token reuse after theft.
       await this.revokeAllUserSessions(session.userId);
       throw AppError.unauthorized("Refresh token reuse detected.");
     }
@@ -180,6 +194,35 @@ class AuthService {
 
   async revokeAllUserSessions(userId: string): Promise<void> {
     await sessionRepository.revokeAllForUser(userId);
+  }
+
+  /** The devices currently signed in to this account. */
+  async listDeviceSessions(userId: string) {
+    return sessionRepository.listActiveForUser(userId, new Date());
+  }
+
+  /** Signs out one device. Returns false when the session does not belong to the user (or does not exist). */
+  async revokeDeviceSession(userId: string, sessionId: string): Promise<boolean> {
+    const result = await sessionRepository.revokeById(sessionId, userId);
+    return result.count > 0;
+  }
+
+  /** Records that the session is in use, at most once per throttle window. Never blocks or fails the request. */
+  private touchSession(sessionId: string, lastUsedAt: Date): void {
+    const now = new Date();
+    const minIntervalMs = env.session.lastUsedThrottleMinutes * 60_000;
+    if (!shouldTouchSession(lastUsedAt, now, minIntervalMs)) return;
+    void sessionRepository.touchLastUsed(sessionId, now, minIntervalMs).catch((error: unknown) => {
+      logger.warn("failed to update session activity", { sessionId, ...serializeError(error) });
+    });
+  }
+
+  private async recordLogin(userId: string): Promise<void> {
+    try {
+      await userRepository.touchLastLogin(userId, new Date());
+    } catch (error) {
+      logger.warn("failed to record last login", { userId, ...serializeError(error) });
+    }
   }
 
   private async createSessionForUser(
@@ -214,6 +257,10 @@ class AuthService {
     return d;
   }
 
+  /**
+   * Signing in refreshes the avatar from Google but never overwrites a name the person already has,
+   * so a name edited in the app is not lost at the next login.
+   */
   private async findOrCreateOAuthUser(input: {
     provider:          string;
     providerAccountId: string;
@@ -229,18 +276,7 @@ class AuthService {
             providerAccountId: input.providerAccountId,
           },
         },
-        include: {
-          user: {
-            select: {
-              id:       true,
-              email:    true,
-              username: true,
-              name:     true,
-              image:    true,
-              role:     true,
-            },
-          },
-        },
+        include: { user: { select: AUTH_USER_SELECT } },
       });
 
       if (existingAccount) {
@@ -248,17 +284,10 @@ class AuthService {
           where: { id: existingAccount.userId },
           data: {
             email: input.email ?? existingAccount.user.email,
-            name:  input.name,
+            name:  existingAccount.user.name ?? input.name,
             image: input.image,
           },
-          select: {
-            id:       true,
-            email:    true,
-            username: true,
-            name:     true,
-            image:    true,
-            role:     true,
-          },
+          select: AUTH_USER_SELECT,
         });
       }
 
@@ -266,14 +295,7 @@ class AuthService {
         input.email !== null
           ? await tx.user.findUnique({
               where: { email: input.email },
-              select: {
-                id:       true,
-                email:    true,
-                username: true,
-                name:     true,
-                image:    true,
-                role:     true,
-              },
+              select: AUTH_USER_SELECT,
             })
           : null;
 
@@ -286,14 +308,7 @@ class AuthService {
             name:  input.name,
             image: input.image,
           },
-          select: {
-            id:       true,
-            email:    true,
-            username: true,
-            name:     true,
-            image:    true,
-            role:     true,
-          },
+          select: AUTH_USER_SELECT,
         }));
 
       await tx.account.create({
@@ -307,15 +322,8 @@ class AuthService {
       if (existingUser) {
         return tx.user.update({
           where: { id: existingUser.id },
-          data:  { name: input.name, image: input.image },
-          select: {
-            id:       true,
-            email:    true,
-            username: true,
-            name:     true,
-            image:    true,
-            role:     true,
-          },
+          data:  { name: existingUser.name ?? input.name, image: input.image },
+          select: AUTH_USER_SELECT,
         });
       }
 

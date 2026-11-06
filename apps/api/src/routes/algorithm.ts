@@ -3,17 +3,18 @@
 import { Router } from "express";
 import { Role } from "@algoforge/db";
 import { algorithmController } from "../controllers/algorithm.controller";
-import { requireAuth, requireRoles } from "../middleware/auth";
+import { optionalAuth, requireAuth, requireRoles } from "../middleware/auth";
 import { requireCsrf } from "../middleware/csrf";
 import { validateIdParam, validateSlugParam } from "../validation/algorithm";
 
 const router = Router();
 
-// Public reads — optional ?lang=javascript|python query param
-router.get("/", algorithmController.list);
-router.get("/slug/:slug", validateSlugParam, algorithmController.getBySlug);
-router.get("/id/:id/visualize", validateIdParam, algorithmController.getVisualize);
-router.get("/id/:id", validateIdParam, algorithmController.getById);
+// Public reads: anonymous callers only ever see published algorithms.
+// optionalAuth lets admins see drafts. Optional ?lang=javascript|python query param.
+router.get("/", optionalAuth, algorithmController.list);
+router.get("/slug/:slug", optionalAuth, validateSlugParam, algorithmController.getBySlug);
+router.get("/id/:id/visualize", optionalAuth, validateIdParam, algorithmController.getVisualize);
+router.get("/id/:id", optionalAuth, validateIdParam, algorithmController.getById);
 
 // Admin writes
 router.post(

@@ -7,6 +7,9 @@ type AuthCookieValues = {
   csrfToken: string;
 };
 
+const OAUTH_COOKIE_PATH = "/api/auth/google";
+const OAUTH_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
+
 function buildCookieOptions(
   maxAgeMs: number,
   httpOnly: boolean,
@@ -34,7 +37,11 @@ export function getCookie(req: Request, name: string): string | null {
     const key = cookie.slice(0, separatorIndex);
     if (key !== name) continue;
 
-    return decodeURIComponent(cookie.slice(separatorIndex + 1));
+    try {
+      return decodeURIComponent(cookie.slice(separatorIndex + 1));
+    } catch {
+      return null;
+    }
   }
 
   return null;
@@ -75,13 +82,29 @@ export function setOAuthStateCookie(res: Response, state: string): void {
   res.cookie(
     authCookies.oauthState,
     state,
-    buildCookieOptions(10 * 60 * 1000, true, "/api/auth/google"),
+    buildCookieOptions(OAUTH_COOKIE_MAX_AGE_MS, true, OAUTH_COOKIE_PATH),
   );
 }
 
 export function clearOAuthStateCookie(res: Response): void {
   res.clearCookie(
     authCookies.oauthState,
-    buildCookieOptions(0, true, "/api/auth/google"),
+    buildCookieOptions(0, true, OAUTH_COOKIE_PATH),
+  );
+}
+
+/** The (already sanitized) path to return to after the OAuth round trip. */
+export function setReturnToCookie(res: Response, returnTo: string): void {
+  res.cookie(
+    authCookies.returnTo,
+    returnTo,
+    buildCookieOptions(OAUTH_COOKIE_MAX_AGE_MS, true, OAUTH_COOKIE_PATH),
+  );
+}
+
+export function clearReturnToCookie(res: Response): void {
+  res.clearCookie(
+    authCookies.returnTo,
+    buildCookieOptions(0, true, OAUTH_COOKIE_PATH),
   );
 }

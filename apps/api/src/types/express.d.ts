@@ -3,6 +3,8 @@ import { Role } from "@algoforge/db";
 declare global {
   namespace Express {
     interface Request {
+      /** Correlation id, also returned in the X-Request-Id response header. */
+      requestId?: string;
       auth?: {
         user: {
           id:       string;
@@ -17,9 +19,6 @@ declare global {
           expiresAt: Date;
         };
       };
-      // Set by requireAdminSecret middleware when the X-Admin-Secret header
-      // is valid. Allows the admin endpoint without a user JWT.
-      adminViaSecret?: true;
     }
   }
 }

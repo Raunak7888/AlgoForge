@@ -7,12 +7,15 @@ const listSelect = {
   id: true,
   slug: true,
   name: true,
+  description: true,
   categoryId: true,
+  category: { select: { label: true } },
   difficulty: true,
   timeBest: true,
   timeAverage: true,
   timeWorst: true,
   spaceComplexity: true,
+  tags: { select: { tag: { select: { id: true, label: true } } } },
 } as const;
 
 const detailSelect = {
@@ -22,37 +25,49 @@ const detailSelect = {
   description: true,
   difficulty: true,
   categoryId: true,
+  category: { select: { label: true } },
   isPublished: true,
+  publishedAt: true,
   timeBest: true,
   timeAverage: true,
   timeWorst: true,
   spaceComplexity: true,
+  script: true,
+  scriptVersion: true,
   displayCodes: { select: { language: true, code: true } },
-  forge: {
-    select: {
-      forgeCode: true,
-      inputSchema: true,
-      guardRanges: true,
-      version: true,
-    },
-  },
   tags: { select: { tag: { select: { id: true, label: true } } } },
 } as const;
 
-export type AlgorithmListRow = Awaited<
-  ReturnType<typeof algorithmRepository.findMany>
->[number];
-
-export type AlgorithmDetailRow = Awaited<
-  ReturnType<typeof algorithmRepository.findById>
->;
+export type AlgorithmListRow = Awaited<ReturnType<typeof algorithmRepository.findPage>>[number];
+export type AlgorithmDetailRow = Awaited<ReturnType<typeof algorithmRepository.findById>>;
 
 export const algorithmRepository = {
-  findMany(where: Prisma.AlgorithmWhereInput) {
+  /** Stable order (sortOrder, name, id). `take` should be limit + 1 to detect a next page. */
+  findPage(where: Prisma.AlgorithmWhereInput, opts: { take: number; cursor?: string }) {
     return prisma.algorithm.findMany({
       where,
       select: listSelect,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
+      take: opts.take,
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+    });
+  },
+
+  /** Published algorithms matching a search term (name, description or tag). Used by GET /api/search. */
+  searchPublished(term: string, take: number) {
+    const mode = Prisma.QueryMode.insensitive;
+    return prisma.algorithm.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { name: { contains: term, mode } },
+          { description: { contains: term, mode } },
+          { tags: { some: { tag: { label: { contains: term, mode } } } } },
+        ],
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
+      take,
+      select: { id: true, slug: true, name: true, description: true },
     });
   },
 
@@ -65,17 +80,7 @@ export const algorithmRepository = {
   },
 
   findBySlugExists(slug: string) {
-    return prisma.algorithm.findUnique({
-      where: { slug },
-      select: { id: true },
-    });
-  },
-
-  findByIdWithForge(id: string) {
-    return prisma.algorithm.findUnique({
-      where: { id },
-      include: { forge: true },
-    });
+    return prisma.algorithm.findUnique({ where: { slug }, select: { id: true } });
   },
 
   create(data: {
@@ -85,21 +90,22 @@ export const algorithmRepository = {
     categoryId: string;
     difficulty: Difficulty;
     isPublished: boolean;
+    publishedAt?: Date | null;
+    createdById?: string | null;
     timeBest: string | null;
     timeAverage: string | null;
     timeWorst: string | null;
     spaceComplexity: string | null;
     displayCodes: { language: string; code: string }[];
-    forge: {
-      forgeCode: Prisma.InputJsonValue;
-      inputSchema: Prisma.InputJsonValue;
-      guardRanges: Prisma.InputJsonValue;
-    };
+    script: string | null;
+    scriptVersion: number;
     tags: string[];
   }) {
     return prisma.algorithm.create({
       data: {
         slug: data.slug,
+        publishedAt: data.publishedAt ?? null,
+        createdById: data.createdById ?? null,
         name: data.name,
         description: data.description,
         categoryId: data.categoryId,
@@ -109,16 +115,12 @@ export const algorithmRepository = {
         timeAverage: data.timeAverage,
         timeWorst: data.timeWorst,
         spaceComplexity: data.spaceComplexity,
+        script: data.script,
+        scriptVersion: data.scriptVersion,
         displayCodes: { create: data.displayCodes },
-        forge: { create: data.forge },
         tags: {
           create: data.tags.map((label) => ({
-            tag: {
-              connectOrCreate: {
-                where: { label },
-                create: { label },
-              },
-            },
+            tag: { connectOrCreate: { where: { label }, create: { label } } },
           })),
         },
       },
@@ -146,41 +148,16 @@ export const algorithmRepository = {
       if (tags) {
         await tx.algorithmTag.deleteMany({ where: { algorithmId: id } });
         for (const label of tags) {
-          const tag = await tx.tag.upsert({
-            where: { label },
-            create: { label },
-            update: {},
-          });
-          await tx.algorithmTag.create({
-            data: { algorithmId: id, tagId: tag.id },
-          });
+          const tag = await tx.tag.upsert({ where: { label }, create: { label }, update: {} });
+          await tx.algorithmTag.create({ data: { algorithmId: id, tagId: tag.id } });
         }
       }
 
-      return tx.algorithm.update({
-        where: { id },
-        data: rest,
-        select: detailSelect,
-      });
+      return tx.algorithm.update({ where: { id }, data: rest, select: detailSelect });
     });
   },
 
   delete(id: string) {
     return prisma.algorithm.delete({ where: { id } });
-  },
-
-  upsertForge(
-    algorithmId: string,
-    forge: {
-      forgeCode: Prisma.InputJsonValue;
-      inputSchema: Prisma.InputJsonValue;
-      guardRanges: Prisma.InputJsonValue;
-    },
-  ) {
-    return prisma.forgeConfig.upsert({
-      where: { algorithmId },
-      create: { algorithmId, ...forge },
-      update: forge,
-    });
   },
 };

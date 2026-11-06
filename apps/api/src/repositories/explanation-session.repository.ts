@@ -1,5 +1,7 @@
-import { prisma } from "@algoforge/db";
+import { prisma, Prisma } from "@algoforge/db";
 import type { SessionMessage } from "../services/explanation-session.service";
+import { AppError } from "../utils/app-error";
+import { explanationMessageRepository } from "./explanation-message.repository";
 
 export const explanationSessionRepository = {
   // ─── Create ────────────────────────────────────────────────────────────────
@@ -51,29 +53,47 @@ export const explanationSessionRepository = {
 
   // ─── Update ────────────────────────────────────────────────────────────────
 
-  /** Replace the messages array and optionally update the title. */
-  appendMessages(id: string, messages: SessionMessage[], title?: string) {
-    return prisma.explanationSession.update({
-      where: { id },
-      data:  {
-        messages: messages as object[],
-        ...(title ? { title } : {}),
-      },
+  /**
+   * Replaces the messages array (and optionally the title) of a session the user owns, and mirrors the
+   * messages into explanation_messages in the same transaction. The JSON column stays authoritative until Phase 8.
+   */
+  appendMessages(id: string, userId: string, messages: SessionMessage[], title?: string) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.explanationSession.updateMany({
+        where: { id, userId },
+        data: {
+          messages: messages as unknown as Prisma.InputJsonValue,
+          ...(title ? { title } : {}),
+        },
+      });
+      if (updated.count === 0) throw AppError.notFound("Session not found.");
+      await explanationMessageRepository.replaceForSession(tx, id, messages);
     });
   },
 
-  /** Make the session public and set its shareId. */
-  share(id: string, shareId: string) {
-    return prisma.explanationSession.update({
-      where: { id },
-      data:  { shareId, isPublic: true },
+  /** Make the session public and set its shareId (mirrored into the shares table). The owner is part of the query. */
+  share(id: string, userId: string, shareId: string) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.explanationSession.updateMany({
+        where: { id, userId },
+        data: { shareId, isPublic: true },
+      });
+      if (updated.count === 0) throw AppError.notFound("Session not found.");
+      await tx.share.upsert({
+        where: { type_targetId: { type: "explain", targetId: id } },
+        create: { shareId, type: "explain", targetId: id, ownerId: userId },
+        update: { shareId, revokedAt: null },
+      });
     });
   },
 
   // ─── Delete ────────────────────────────────────────────────────────────────
 
-  /** Hard-delete — returns count so callers can detect not-found. */
+  /** Hard-delete — returns count so callers can detect not-found. Also removes the session's share row (no orphans). */
   delete(id: string, userId: string) {
-    return prisma.explanationSession.deleteMany({ where: { id, userId } });
+    return prisma.$transaction(async (tx) => {
+      await tx.share.deleteMany({ where: { type: "explain", targetId: id, ownerId: userId } });
+      return tx.explanationSession.deleteMany({ where: { id, userId } });
+    });
   },
 };

@@ -9,6 +9,10 @@ export type AIMessage = {
 export type AIGenerateRequest = {
   messages: AIMessage[];
   responseFormat?: "json" | "text";
+  /** Upper bound for the length of the answer. */
+  maxOutputTokens?: number;
+  /** Aborts the underlying HTTP request when it fires. */
+  signal?: AbortSignal;
 };
 
 export type AIGenerateResponse = {
