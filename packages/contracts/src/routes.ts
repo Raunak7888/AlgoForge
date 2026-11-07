@@ -5,7 +5,7 @@ import { AnalysisQuotaResponseSchema, AnalysisHistoryQuerySchema, AnalysisHistor
 import { AuthStartQuerySchema, MeResponseSchema, RefreshResponseSchema } from "./auth";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
 import { IdParamsSchema, ShareIdParamsSchema, SlugParamsSchema } from "./common";
-import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainResponseSchema, ExplainSessionDetailSchema, ExplainSessionListQuerySchema, ExplainSessionListResponseSchema, SendMessageRequestSchema, SendMessageResponseSchema, SharedExplainSessionResponseSchema } from "./explain";
+import { CreateExplainSessionRequestSchema, ExplainMessageListQuerySchema, ExplainMessageListResponseSchema, ExplainSessionDetailSchema, ExplainSessionListQuerySchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SharedExplainSessionResponseSchema, UpdateExplainSessionRequestSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CapabilitiesResponseSchema } from "./capabilities";
 import { DeviceSessionListResponseSchema, UpdateProfileRequestSchema } from "./users";
@@ -68,10 +68,11 @@ export const routes: readonly RouteDef[] = [
   { id: "analysisQuota", method: "get", path: "/api/analysis/quota", summary: "My remaining analysis quota (per minute and per day)", tag: "Analysis", auth: "user", csrf: false, rateLimit: "general", responses: { 200: AnalysisQuotaResponseSchema } },
   { id: "analysisDelete", method: "delete", path: "/api/analysis/{id}", summary: "Delete one analysis", tag: "Analysis", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 204: "empty" } },
 
-  { id: "explain", method: "post", path: "/api/explain", summary: "One-shot explanation", tag: "Explain", auth: "user", csrf: true, rateLimit: "ai", body: ExplainRequestSchema, responses: { 200: ExplainResponseSchema } },
   { id: "explainSessionsList", method: "get", path: "/api/explain-sessions", summary: "List chat sessions (cursor pagination)", tag: "Explain", auth: "user", csrf: false, query: ExplainSessionListQuerySchema, responses: { 200: ExplainSessionListResponseSchema } },
   { id: "explainSessionsCreate", method: "post", path: "/api/explain-sessions", summary: "Create a chat session", tag: "Explain", auth: "user", csrf: true, body: CreateExplainSessionRequestSchema, responses: { 201: ExplainSessionDetailSchema } },
   { id: "explainSessionsGet", method: "get", path: "/api/explain-sessions/{id}", summary: "One chat session", tag: "Explain", auth: "user", csrf: false, params: IdParamsSchema, responses: { 200: ExplainSessionDetailSchema } },
+  { id: "explainSessionsRename", method: "patch", path: "/api/explain-sessions/{id}", summary: "Rename a chat session", tag: "Explain", auth: "user", csrf: true, params: IdParamsSchema, body: UpdateExplainSessionRequestSchema, responses: { 200: ExplainSessionSummarySchema } },
+  { id: "explainMessagesList", method: "get", path: "/api/explain-sessions/{id}/messages", summary: "Messages of a chat session (cursor = last seq seen)", tag: "Explain", auth: "user", csrf: false, params: IdParamsSchema, query: ExplainMessageListQuerySchema, responses: { 200: ExplainMessageListResponseSchema } },
   { id: "explainSessionsDelete", method: "delete", path: "/api/explain-sessions/{id}", summary: "Delete a chat session", tag: "Explain", auth: "user", csrf: true, params: IdParamsSchema, responses: { 204: "empty" } },
   { id: "explainSessionsMessage", method: "post", path: "/api/explain-sessions/{id}/messages", summary: "Send a message", tag: "Explain", auth: "user", csrf: true, rateLimit: "ai", params: IdParamsSchema, body: SendMessageRequestSchema, responses: { 201: SendMessageResponseSchema } },
   { id: "explainSessionsShare", method: "post", path: "/api/explain-sessions/{id}/share", summary: "Make a chat session public", tag: "Explain", auth: "user", csrf: true, params: IdParamsSchema, responses: { 200: ShareUrlResponseSchema } },

@@ -100,6 +100,9 @@ export const env = {
     analysisTimeoutMs: parseInteger("AI_ANALYSIS_TIMEOUT_MS", 45000),
     analysisMaxOutputTokens: parseInteger("AI_ANALYSIS_MAX_OUTPUT_TOKENS", 4096),
     textMaxOutputTokens: parseInteger("AI_TEXT_MAX_OUTPUT_TOKENS", 1024),
+    /** The assistant writes explanations and code, so it gets more time and room than the generic text helper. */
+    assistantTimeoutMs: parseInteger("AI_ASSISTANT_TIMEOUT_MS", 30000),
+    assistantMaxOutputTokens: parseInteger("AI_ASSISTANT_MAX_OUTPUT_TOKENS", 2048),
   },
   openRouter: {
     baseUrl:
@@ -113,6 +116,9 @@ export const env = {
     /** Billable (uncached) analyses per user. Cache hits never use quota. */
     analysisPerMinute: parseInteger("AI_ANALYSIS_PER_MINUTE", 3),
     analysisPerDay: parseInteger("AI_ANALYSIS_PER_DAY", 30),
+    /** Assistant messages (AiUsage feature "session"). */
+    assistantPerMinute: parseInteger("AI_ASSISTANT_PER_MINUTE", 10),
+    assistantPerDay: parseInteger("AI_ASSISTANT_PER_DAY", 100),
   },
   session: {
     /** A session's lastUsedAt is written at most this often. */

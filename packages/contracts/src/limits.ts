@@ -13,9 +13,12 @@ export const LIMITS = {
     adminUsers: { defaultSize: 50, maxSize: 100 },
     algorithms: { defaultSize: 20, maxSize: 50 },
     visualizations: { defaultSize: 20, maxSize: 50 },
+    explainMessages: { defaultSize: 50, maxSize: 100 },
   },
   search: { maxQueryChars: 100, maxAlgorithmHits: 8, maxVisualizationHits: 5 },
   visualization: { maxPerUser: 100 },
+  /** Assistant: one chat holds at most maxMessagesPerSession rows; only the last historyMessages go to the model. */
+  assistant: { maxMessagesPerSession: 200, historyMessages: 10, scriptContextChars: 30_000 },
   /** Must stay >= 4x script.maxChars so an escaped script still fits in a JSON body. */
   body: { jsonMaxBytes: 1_048_576 },
 } as const;

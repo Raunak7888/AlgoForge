@@ -1,11 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/app-error";
-import type {
-  AIGenerateRequest,
-  AIGenerateResponse,
-  AIProvider,
-} from "./ai-provider";
+import type { AIGenerateRequest, AIGenerateResponse, AIProvider } from "./ai-provider";
+import { toGeminiRequest } from "./gemini-messages";
 
 export class GeminiProvider implements AIProvider {
   readonly name = "gemini";
@@ -25,13 +22,15 @@ export class GeminiProvider implements AIProvider {
 
   async generate(request: AIGenerateRequest): Promise<AIGenerateResponse> {
     try {
-      const prompt = request.messages.map((m) => m.content).join("\n\n");
+      const { systemInstruction, contents } = toGeminiRequest(request.messages);
+      if (contents.length === 0) throw AppError.badRequest("AI request must include at least one user message.");
       const isJson = request.responseFormat === "json";
 
       const response = await this.client.models.generateContent({
         model: this.config.model,
-        contents: prompt,
+        contents,
         config: {
+          ...(systemInstruction ? { systemInstruction } : {}),
           ...(isJson ? { responseMimeType: "application/json" } : {}),
           temperature: isJson ? 0.1 : 0.4,
           ...(request.maxOutputTokens ? { maxOutputTokens: request.maxOutputTokens } : {}),

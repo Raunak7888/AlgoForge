@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analysisCacheKey, deriveTitle, explainCacheKey, hashCode } from "./ai-cache-keys";
+import { analysisCacheKey, deriveTitle, hashCode } from "./ai-cache-keys";
 
 describe("analysisCacheKey", () => {
   const h = hashCode("code");
@@ -9,21 +9,6 @@ describe("analysisCacheKey", () => {
     expect(analysisCacheKey("javascript", h, "v1")).not.toBe(base);
     expect(analysisCacheKey("python", hashCode("other"), "v1")).not.toBe(base);
     expect(analysisCacheKey("python", h, "v1")).toBe(base);
-  });
-});
-
-describe("explainCacheKey", () => {
-  const input = { promptVersion: "p1", catalogVersion: 1, query: "how does bfs work", intent: "explain_flow", slugs: ["bfs"], routes: [] as string[] };
-  it("changes with every input that changes the answer", () => {
-    const base = explainCacheKey(input);
-    expect(explainCacheKey({ ...input, promptVersion: "p2" })).not.toBe(base);
-    expect(explainCacheKey({ ...input, catalogVersion: 2 })).not.toBe(base);
-    expect(explainCacheKey({ ...input, slugs: ["dfs"] })).not.toBe(base);
-    expect(explainCacheKey({ ...input, intent: "general" })).not.toBe(base);
-    expect(explainCacheKey({ ...input, query: "How does BFS work" })).not.toBe(base);
-  });
-  it("ignores the order of matched slugs", () => {
-    expect(explainCacheKey({ ...input, slugs: ["a", "b"] })).toBe(explainCacheKey({ ...input, slugs: ["b", "a"] }));
   });
 });
 

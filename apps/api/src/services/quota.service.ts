@@ -12,7 +12,7 @@ import { aiUsageService } from "./ai-usage.service";
  *    fallback when Redis is down. Minute counters fall back to process memory.
  *  - A reservation is released when the AI call fails, so provider problems never cost quota.
  */
-export type QuotaFeature = "analysis";
+export type QuotaFeature = "analysis" | "session";
 
 export interface QuotaWindow {
   limit: number;
@@ -98,8 +98,9 @@ interface TakeArgs {
 
 class QuotaService {
   private limits(feature: QuotaFeature): { minute: number; day: number } {
-    void feature;
-    return { minute: env.quotas.analysisPerMinute, day: env.quotas.analysisPerDay };
+    return feature === "session"
+      ? { minute: env.quotas.assistantPerMinute, day: env.quotas.assistantPerDay }
+      : { minute: env.quotas.analysisPerMinute, day: env.quotas.analysisPerDay };
   }
 
   private keys(feature: QuotaFeature, userId: string, now: Date) {
@@ -117,13 +118,14 @@ class QuotaService {
     return { limit, used, remaining: Math.max(0, limit - used), resetAt: new Date(resetAtMs).toISOString() };
   }
 
-  private exceeded(scope: "minute" | "day", limit: number, resetAtMs: number, now: Date): AppError {
+  private exceeded(scope: "minute" | "day", limit: number, resetAtMs: number, now: Date, feature: QuotaFeature = "analysis"): AppError {
     const retryAfterSeconds = Math.max(1, Math.ceil((resetAtMs - now.getTime()) / 1000));
     const quota: QuotaInfo = { scope, limit, remaining: 0, resetAt: new Date(resetAtMs).toISOString() };
+    const what = feature === "session" ? "assistant message" : "analysis";
     const message =
       scope === "day"
-        ? `Daily analysis limit reached (${limit} per day). You can analyze again at ${quota.resetAt}.`
-        : `Analysis limit reached (${limit} per minute). Try again in ${retryAfterSeconds}s.`;
+        ? `Daily ${what} limit reached (${limit} per day). You can try again at ${quota.resetAt}.`
+        : `${what[0].toUpperCase()}${what.slice(1)} limit reached (${limit} per minute). Try again in ${retryAfterSeconds}s.`;
     return AppError.quotaExceeded(message, quota, retryAfterSeconds);
   }
 
@@ -159,7 +161,7 @@ class QuotaService {
     const { mw, dw, minuteKey, dayKey } = this.keys(feature, userId, now);
 
     const minute = await this.take({ scope: "minute", key: minuteKey, limit: limit.minute, ttlSeconds: 120, resetAtMs: mw.resetAtMs, now, seed: async () => 0 });
-    if (!minute.granted) throw this.exceeded("minute", limit.minute, mw.resetAtMs, now);
+    if (!minute.granted) throw this.exceeded("minute", limit.minute, mw.resetAtMs, now, feature);
 
     let day: Taken;
     try {
@@ -178,7 +180,7 @@ class QuotaService {
     }
     if (!day.granted) {
       await minute.release();
-      throw this.exceeded("day", limit.day, dw.resetAtMs, now);
+      throw this.exceeded("day", limit.day, dw.resetAtMs, now, feature);
     }
 
     return {

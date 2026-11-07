@@ -1,177 +1,141 @@
 import { randomBytes } from "crypto";
-import { explanationSessionRepository } from "../repositories/explanation-session.repository";
-import { processQuery } from "../ai/query-processor";
-import { buildCodebaseContext, serializeContext } from "../ai/context-builder";
-import { buildExplanationPrompt } from "../prompts/explanation.prompt";
-import { aiService } from "./ai.service";
-import { AppError } from "../utils/app-error";
+import { LIMITS, type CreateExplainSessionRequest, type SendMessageRequest } from "@algoforge/contracts";
+import { buildAssistantContext, detectIntent } from "../ai/context-builder";
 import { env } from "../config/env";
-import type {
-  CreateSessionInput,
-  SendMessageInput,
-  ListSessionsQuery,
-} from "../validation/explanation-session";
-import { layeredCache } from "./lib/layered-cache";
+import { buildAssistantMessages } from "../prompts/assistant.prompt";
+import { explanationMessageRepository } from "../repositories/explanation-message.repository";
+import { explanationSessionRepository, toMessageRow } from "../repositories/explanation-session.repository";
+import { AppError } from "../utils/app-error";
+import { logger, serializeError } from "../utils/logger";
 import { paginate } from "../utils/pagination";
+import { encodeSessionCursor, type ListMessagesQuery, type ListSessionsQuery } from "../validation/explanation-session";
+import { aiService } from "./ai.service";
+import { aiUsageService } from "./ai-usage.service";
+import { layeredCache } from "./lib/layered-cache";
+import { quotaService } from "./quota.service";
 
-export type SessionMessage = {
-  id:        string;
-  role:      "user" | "assistant";
-  content:   string;
-  intent?:   string;
-  createdAt: string;
-};
-
-type SessionRecord = NonNullable<
-  Awaited<ReturnType<typeof explanationSessionRepository.findOneByUser>>
->;
-
-const SESSION_CACHE_TTL_SECONDS = 300;
-const MAX_STORED_MESSAGES       = 100; // 50 exchanges
-const AI_HISTORY_MESSAGES       = 10;  // last 5 exchanges sent to AI
-
-/** Private session cache entries are scoped to the owner, so one user can never be served another's session. */
-function sessionCacheKey(userId: string, id: string): string {
-  return `explain:session:${userId}:${id}`;
-}
+const PUBLIC_CACHE_TTL_SECONDS = 600;
 
 export function publicCacheKey(shareId: string): string {
   return `explain:public:${shareId}`;
 }
+const newShareId = (): string => randomBytes(9).toString("base64url");
+const buildShareUrl = (shareId: string): string => `${env.webAppUrl}/share/explain/${shareId}`;
 
-function newMessageId(): string {
-  return randomBytes(6).toString("hex");
-}
-
-function newShareId(): string {
-  return randomBytes(9).toString("base64url");
-}
-
-function buildShareUrl(shareId: string): string {
-  return `${env.webAppUrl}/share/explain/${shareId}`;
-}
-
+/**
+ * Private reads always go to the database with the owner in the query, so there is no private cache to leak
+ * (S-01) and no cached-vs-fresh shape difference (A-07). Only the public share view is cached.
+ */
 class ExplanationSessionService {
-  async createSession(userId: string, input: CreateSessionInput) {
+  createSession(userId: string, input: CreateExplainSessionRequest) {
     return explanationSessionRepository.create(userId, input.title);
   }
 
   async listSessions(userId: string, query: ListSessionsQuery) {
-    // One extra row proves whether another page exists.
     const rows = await explanationSessionRepository.findManyByUser(userId, {
-      take:   query.limit + 1,
-      cursor: query.cursor,
+      take: query.limit + 1,
+      cursorUpdatedAt: query.cursorUpdatedAt,
+      cursorId: query.cursorId,
     });
-    return paginate(rows, query.limit, (row) => row.id);
+    return paginate(rows, query.limit, (row) => encodeSessionCursor({ updatedAt: row.updatedAt.toISOString(), id: row.id }));
   }
 
   async getSession(userId: string, id: string) {
-    const key = sessionCacheKey(userId, id);
-    const cached = await layeredCache.get<SessionRecord>(key);
-
-    // Defense in depth: even under the owner-scoped key, verify ownership.
-    if (cached && cached.userId === userId) return cached;
-
-    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    const session = await explanationSessionRepository.findOwned(id, userId);
     if (!session) throw AppError.notFound("Session not found.");
+    const rows = await explanationMessageRepository.listBySession(id, userId, { take: LIMITS.assistant.maxMessagesPerSession });
+    return { session, messages: rows.map(toMessageRow) };
+  }
 
-    await layeredCache.set(key, session, SESSION_CACHE_TTL_SECONDS);
+  async listMessages(userId: string, id: string, query: ListMessagesQuery) {
+    const session = await explanationSessionRepository.findOwned(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+    const rows = await explanationMessageRepository.listBySession(id, userId, { take: query.limit + 1, afterSeq: query.afterSeq });
+    return paginate(rows.map(toMessageRow), query.limit, (row) => String(row.seq));
+  }
+
+  async renameSession(userId: string, id: string, title: string) {
+    const result = await explanationSessionRepository.rename(id, userId, title);
+    if (result.count === 0) throw AppError.notFound("Session not found.");
+    const session = await explanationSessionRepository.findOwned(id, userId);
+    if (!session) throw AppError.notFound("Session not found.");
+    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
     return session;
   }
 
-  async sendMessage(userId: string, sessionId: string, input: SendMessageInput) {
-    const session = await explanationSessionRepository.findOneByUser(sessionId, userId);
+  /**
+   * Order matters: validate and check capacity first (cheap), reserve quota only right before the paid call,
+   * give the quota back if the provider fails, and write the exchange in one transaction afterwards.
+   */
+  async sendMessage(userId: string, sessionId: string, input: SendMessageRequest, signal?: AbortSignal) {
+    const session = await explanationSessionRepository.findOwned(sessionId, userId);
     if (!session) throw AppError.notFound("Session not found.");
 
-    const existingMessages = (session.messages as unknown as SessionMessage[]) ?? [];
+    const max = LIMITS.assistant.maxMessagesPerSession;
+    const count = await explanationMessageRepository.countBySession(sessionId, userId);
+    if (count + 2 > max) throw AppError.conflict(`This chat is full (${max} messages). Start a new chat to continue.`);
 
-    const userMessage: SessionMessage = {
-      id:        newMessageId(),
-      role:      "user",
-      content:   input.query,
-      createdAt: new Date().toISOString(),
-    };
+    const history = await explanationSessionRepository.listRecentMessages(sessionId, userId, LIMITS.assistant.historyMessages);
+    const context = await buildAssistantContext(input.context);
+    const messages = buildAssistantMessages({ context, history, query: input.query });
 
-    const scope       = await processQuery(input.query);
-    const context     = await buildCodebaseContext(scope.targetSlugs);
-    const contextText = serializeContext(context);
-    const prompt      = buildExplanationPrompt(contextText, scope);
+    const reservation = await quotaService.reserve(userId, "session");
+    let answer: string;
+    try {
+      answer = (
+        await aiService.generateText(messages, {
+          timeoutMs: env.ai.assistantTimeoutMs,
+          maxOutputTokens: env.ai.assistantMaxOutputTokens,
+          ...(signal ? { signal } : {}),
+        })
+      ).trim();
+      if (answer === "") throw AppError.aiInvalidOutput();
+    } catch (error) {
+      await reservation.release();
+      throw error;
+    }
+    try {
+      await aiUsageService.record(userId, "session");
+    } catch (error) {
+      logger.warn("ai usage could not be recorded", { userId, ...serializeError(error) });
+    }
 
-    // Include prior conversation history so the AI has multi-turn context.
-    const history = existingMessages
-      .slice(-AI_HISTORY_MESSAGES)
-      .map((m) => ({
-        role:    m.role as "user" | "assistant",
-        content: m.content,
-      }));
-
-    const rawAnswer = await aiService.generateText([
-      ...history,
-      { role: "user", content: prompt },
-    ]);
-
-    const assistantMessage: SessionMessage = {
-      id:        newMessageId(),
-      role:      "assistant",
-      content:   rawAnswer.trim(),
-      intent:    scope.intent,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Cap stored history to MAX_STORED_MESSAGES (drop oldest when over limit)
-    const updatedMessages: SessionMessage[] = [
-      ...existingMessages.slice(-(MAX_STORED_MESSAGES - 2)),
-      userMessage,
-      assistantMessage,
-    ];
-
-    const title = session.title ?? input.query.slice(0, 80);
-    await explanationSessionRepository.appendMessages(sessionId, userId, updatedMessages, title);
-    await layeredCache.del(sessionCacheKey(userId, sessionId));
+    const exchange = await explanationSessionRepository.appendExchange(sessionId, userId, {
+      query: input.query,
+      answer,
+      intent: detectIntent(input.query),
+      title: input.query.replace(/\s+/g, " ").trim().slice(0, 80),
+      maxMessages: max,
+    });
     if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
-
-    return { userMessage, assistantMessage };
+    return exchange;
   }
 
   async deleteSession(userId: string, id: string): Promise<void> {
-    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    const session = await explanationSessionRepository.findOwned(id, userId);
     if (!session) throw AppError.notFound("Session not found.");
-
     const result = await explanationSessionRepository.delete(id, userId);
     if (result.count === 0) throw AppError.notFound("Session not found.");
-
-    await layeredCache.del(sessionCacheKey(userId, id));
     // A deleted public session must stop being readable immediately.
     if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
   }
 
   async shareSession(userId: string, id: string) {
-    const session = await explanationSessionRepository.findOneByUser(id, userId);
+    const session = await explanationSessionRepository.findOwned(id, userId);
     if (!session) throw AppError.notFound("Session not found.");
-
-    if (session.shareId && session.isPublic) {
-      return { shareUrl: buildShareUrl(session.shareId) };
-    }
-
+    if (session.shareId && session.isPublic) return { shareUrl: buildShareUrl(session.shareId) };
     const shareId = newShareId();
     await explanationSessionRepository.share(id, userId, shareId);
-    await layeredCache.del(sessionCacheKey(userId, id));
-
     return { shareUrl: buildShareUrl(shareId) };
   }
 
   async getPublicSession(shareId: string) {
-    const cacheKey = publicCacheKey(shareId);
-
-    const cached = await layeredCache.get<
-      Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>
-    >(cacheKey);
+    const key = publicCacheKey(shareId);
+    const cached = await layeredCache.get<Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>>(key);
     if (cached) return cached;
-
     const session = await explanationSessionRepository.findPublicByShareId(shareId);
     if (!session) throw AppError.notFound("Session not found or not public.");
-
-    await layeredCache.set(cacheKey, session, SESSION_CACHE_TTL_SECONDS * 2);
+    await layeredCache.set(key, session, PUBLIC_CACHE_TTL_SECONDS);
     return session;
   }
 }

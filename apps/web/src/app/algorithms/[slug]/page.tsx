@@ -7,6 +7,7 @@ import { PageShell } from "@/components/site/PageShell";
 import { visualizer } from "@/components/visualizers/engine/instance";
 import { compileScript } from "@/components/visualizers/script/compile";
 import { saveScript } from "@/components/visualizers/script/storage";
+import { rememberAlgorithm } from "@/lib/assistant/algorithmContext";
 import { btn, btnPrimary } from "@/components/visualizers/shared/styles";
 import { isApiError } from "@/lib/api/errors";
 import { QueryBoundary, useAlgorithm } from "@/lib/query";
@@ -35,6 +36,7 @@ export default function AlgorithmPage() {
     const open = () => {
         if (!a?.script) return;
         saveScript(a.script);
+        rememberAlgorithm(a.slug, a.script);
         visualizer.getState().load(compileScript(a.script));
         router.push("/dashboard?tab=visualizer");
     };

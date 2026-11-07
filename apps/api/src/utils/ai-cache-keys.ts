@@ -11,25 +11,6 @@ export function analysisCacheKey(language: string, codeHash: string, promptVersi
   return `ai:analysis:${promptVersion}:${language}:${codeHash.slice(0, 32)}`;
 }
 
-/**
- * Explanations depend on the query, the detected scope (intent, matched algorithms, routes),
- * the prompt version and the algorithm catalog (the context is built from it).
- */
-export function explainCacheKey(input: {
-  promptVersion: string;
-  catalogVersion: number;
-  query: string;
-  intent: string;
-  slugs: readonly string[];
-  routes: readonly string[];
-}): string {
-  const digest = createHash("sha256")
-    .update(JSON.stringify({ q: input.query, intent: input.intent, slugs: [...input.slugs].sort(), routes: [...input.routes].sort() }))
-    .digest("hex")
-    .slice(0, 32);
-  return `ai:explain:${input.promptVersion}:c${input.catalogVersion}:${digest}`;
-}
-
 const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s);
 
 /** A short title: the first sentence of the AI summary, else the first line of code. */

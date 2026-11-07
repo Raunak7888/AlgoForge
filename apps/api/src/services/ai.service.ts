@@ -21,6 +21,8 @@ export interface AnalysisOutput {
 interface GenerateOptions {
   timeoutMs: number;
   maxOutputTokens: number;
+  /** Aborts the provider request when the caller goes away (for example the HTTP client disconnected). */
+  signal?: AbortSignal;
 }
 
 class AIService {
@@ -49,10 +51,11 @@ class AIService {
     throw lastError ?? AppError.aiInvalidOutput();
   }
 
-  async generateText(messages: AIMessage[]): Promise<string> {
+  async generateText(messages: AIMessage[], options: Partial<GenerateOptions> = {}): Promise<string> {
     const { content } = await this.generate(messages, "text", {
-      timeoutMs: env.ai.timeoutMs,
-      maxOutputTokens: env.ai.textMaxOutputTokens,
+      timeoutMs: options.timeoutMs ?? env.ai.timeoutMs,
+      maxOutputTokens: options.maxOutputTokens ?? env.ai.textMaxOutputTokens,
+      ...(options.signal ? { signal: options.signal } : {}),
     });
     return content;
   }
@@ -64,7 +67,16 @@ class AIService {
   ): Promise<{ content: string; model: string }> {
     const provider = getAIProvider();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeoutMs);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, options.timeoutMs);
+    const onCallerAbort = () => controller.abort();
+    if (options.signal) {
+      if (options.signal.aborted) controller.abort();
+      else options.signal.addEventListener("abort", onCallerAbort, { once: true });
+    }
 
     try {
       const response = await provider.generate({
@@ -75,9 +87,10 @@ class AIService {
       });
       return { content: response.message.content, model: response.model };
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (timedOut) {
         throw AppError.aiTimeout(`The AI provider did not answer within ${Math.round(options.timeoutMs / 1000)} seconds.`);
       }
+      if (options.signal?.aborted) throw AppError.badRequest("The request was cancelled.");
       if (error instanceof AppError) {
         if (error.code === "BAD_GATEWAY") throw AppError.aiUnavailable(error.message);
         throw error;
@@ -85,6 +98,7 @@ class AIService {
       throw AppError.aiUnavailable("The AI request failed.");
     } finally {
       clearTimeout(timer);
+      options.signal?.removeEventListener("abort", onCallerAbort);
     }
   }
 }

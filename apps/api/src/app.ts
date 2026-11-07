@@ -20,7 +20,6 @@ import shareRouter              from "./routes/share";
 import userRouter               from "./routes/users";
 import visualizationRouter from "./routes/visualizations";
 import searchRouter from "./routes/search";
-import explanationRouter        from "./routes/explanation";
 import explanationSessionRouter from "./routes/explanation-session";
 
 const app = express();
@@ -56,9 +55,8 @@ app.use("/api/algorithms", generalRateLimiter({ scope: "catalog", limitPerMinute
 app.use("/api/categories", categoryRouter);
 app.use("/api/analysis",  generalRateLimiter({ scope: "analysis", limitPerMinute: env.redis.catalogRateLimitPerMinute }), analysisRouter);
 
-// Sessions mounted at a path that cannot be prefix-matched by the explain router.
+// Assistant chat sessions.
 app.use("/api/explain-sessions", explanationSessionRouter);
-app.use("/api/explain",          explanationRouter);
 
 app.use("/api/share", shareRouter);
 app.use("/api/admin", adminRouter);

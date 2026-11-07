@@ -7,7 +7,7 @@ import { CapabilitiesResponseSchema } from "./capabilities";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
 import { PageMetaSchema } from "./common";
 import { ErrorResponseSchema } from "./errors";
-import { CreateExplainSessionRequestSchema, ExplainRequestSchema, ExplainResponseSchema, ExplainSessionDetailSchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SessionMessageSchema, SharedExplainSessionResponseSchema } from "./explain";
+import { CreateExplainSessionRequestSchema, ExplainContextSchema, ExplainMessageListResponseSchema, ExplainSessionDetailSchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SessionMessageSchema, SharedExplainSessionResponseSchema, UpdateExplainSessionRequestSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CreateShareRequestSchema, PublicShareResponseSchema, ShareSchema } from "./shares";
 import { DeviceSessionListResponseSchema, DeviceSessionSchema, SafeUserSchema, UpdateProfileRequestSchema } from "./users";
@@ -49,8 +49,9 @@ export const SCHEMA_REGISTRY = {
   SendMessageRequest: SendMessageRequestSchema,
   SendMessageResponse: SendMessageResponseSchema,
   SharedExplainSessionResponse: SharedExplainSessionResponseSchema,
-  ExplainRequest: ExplainRequestSchema,
-  ExplainResponse: ExplainResponseSchema,
+  ExplainContext: ExplainContextSchema,
+  UpdateExplainSessionRequest: UpdateExplainSessionRequestSchema,
+  ExplainMessageListResponse: ExplainMessageListResponseSchema,
   Visualization: VisualizationSchema,
   CreateVisualizationRequest: CreateVisualizationRequestSchema,
   UpdateVisualizationRequest: UpdateVisualizationRequestSchema,

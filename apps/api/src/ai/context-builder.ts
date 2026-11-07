@@ -1,180 +1,82 @@
-import { prisma } from "@algoforge/db";
-import { layeredCache } from "../services/lib/layered-cache";
+import { LIMITS, type AnalysisLanguage, type ExplainContext } from "@algoforge/contracts";
+import { algorithmRepository } from "../repositories/algorithm.repository";
+import { logger, serializeError } from "../utils/logger";
 
-export type CodebaseContext = {
-  algorithms: AlgorithmContext[];
-  schema: SchemaContext;
-  apiRoutes: RouteContext[];
-};
-
-type AlgorithmContext = {
-  id: string;
+/**
+ * What the assistant knows. Built only from what the client sent plus one published catalog entry.
+ * It never contains internal schema, routes or other users' data. Everything here is DATA, never instructions.
+ */
+export interface AlgorithmContext {
   slug: string;
   name: string;
   description: string;
   difficulty: string;
   category: string;
-  displayCode: { language: string; code: string } | null;
-  complexity: {
-    timeBest: string | null;
-    timeAverage: string | null;
-    timeWorst: string | null;
-    space: string | null;
-  } | null;
-};
-
-type SchemaContext = {
-  models: ModelContext[];
-};
-
-type ModelContext = {
-  name: string;
-  fields: string[];
-};
-
-type RouteContext = {
-  method: string;
-  path: string;
-  description: string;
-};
-
-const STATIC_SCHEMA: SchemaContext = {
-  models: [
-    {
-      name: "User",
-      fields: ["id", "email", "username", "name", "image", "role", "createdAt", "updatedAt"],
-    },
-    {
-      name: "Session",
-      fields: ["id", "userId", "tokenHash", "expiresAt", "revokedAt", "ipAddress", "userAgent"],
-    },
-    {
-      name: "Analysis",
-      fields: ["id", "userId", "code", "language", "complexity", "suggestion", "result", "shareId", "isPublic", "createdAt"],
-    },
-    {
-      name: "Algorithm",
-      fields: ["id", "slug", "name", "description", "categoryId", "difficulty", "isPublished", "timeBest", "timeAverage", "timeWorst", "spaceComplexity"],
-    },
-    {
-      name: "Category",
-      fields: ["id", "label", "description", "iconName", "sortOrder"],
-    },
-    {
-      name: "ForgeConfig",
-      fields: ["id", "algorithmId", "forgeCode", "inputSchema", "guardRanges", "version"],
-    },
-    {
-      name: "DisplayCode",
-      fields: ["id", "algorithmId", "language", "code"],
-    },
-  ],
-};
-
-const STATIC_ROUTES: RouteContext[] = [
-  { method: "GET",  path: "/api/auth/me",                    description: "Returns authenticated user profile from JWT session" },
-  { method: "POST", path: "/api/auth/refresh",               description: "Rotates refresh token and issues new access token via cookie" },
-  { method: "POST", path: "/api/auth/logout",                description: "Revokes current session and clears auth cookies" },
-  { method: "GET",  path: "/api/algorithms",                 description: "Lists published algorithms with optional categoryId, difficulty, search filters" },
-  { method: "GET",  path: "/api/algorithms/id/:id",          description: "Fetches full algorithm detail by UUID" },
-  { method: "GET",  path: "/api/algorithms/slug/:slug",      description: "Fetches algorithm detail by slug" },
-  { method: "GET",  path: "/api/algorithms/id/:id/visualize",description: "Returns forge execution config for algorithm visualization" },
-  { method: "POST", path: "/api/analysis",                   description: "Runs AI code analysis and stores result for authenticated user" },
-  { method: "GET",  path: "/api/analysis",                   description: "Lists paginated analysis history for authenticated user" },
-  { method: "GET",  path: "/api/analysis/:id",               description: "Fetches a single analysis by ID for authenticated user" },
-  { method: "POST", path: "/api/analysis/:id/share",         description: "Makes an analysis public and returns a share URL" },
-  { method: "GET",  path: "/api/share/:shareId",             description: "Returns publicly shared analysis by shareId" },
-  { method: "GET",  path: "/api/categories",                 description: "Lists all categories sorted by sortOrder" },
-  { method: "POST", path: "/api/explain",                    description: "Accepts natural language query and returns AI explanation mapped to codebase" },
-  { method: "POST", path: "/api/explain-sessions",           description: "Creates a persistent AI explanation chat session" },
-  { method: "POST", path: "/api/explain-sessions/:id/messages", description: "Sends a message in a persistent explanation session" },
-];
-
-const CONTEXT_CACHE_TTL = 60; // seconds
-
-export async function buildCodebaseContext(slugs?: string[]): Promise<CodebaseContext> {
-  const cacheKey = `ctx:${(slugs ?? []).slice().sort().join(",")}`;
-
-  const cached = await layeredCache.get<CodebaseContext>(cacheKey);
-  if (cached) return cached;
-
-  const where = slugs?.length
-    ? { slug: { in: slugs }, isPublished: true }
-    : { isPublished: true };
-
-  const algorithms = await prisma.algorithm.findMany({
-    where,
-    take: 10,
-    include: {
-      category:     { select: { label: true } },
-      displayCodes: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const algorithmContexts: AlgorithmContext[] = algorithms.map((algo) => {
-    const jsCode    = algo.displayCodes.find((dc) => dc.language === "javascript");
-    const firstCode = algo.displayCodes[0] ?? null;
-
-    return {
-      id:          algo.id,
-      slug:        algo.slug,
-      name:        algo.name,
-      description: algo.description,
-      difficulty:  algo.difficulty,
-      category:    algo.category.label,
-      displayCode: jsCode ?? (firstCode ? { language: firstCode.language, code: firstCode.code } : null),
-      complexity:
-        algo.timeBest || algo.timeAverage || algo.timeWorst || algo.spaceComplexity
-          ? {
-              timeBest:    algo.timeBest,
-              timeAverage: algo.timeAverage,
-              timeWorst:   algo.timeWorst,
-              space:       algo.spaceComplexity,
-            }
-          : null,
-    };
-  });
-
-  const result: CodebaseContext = {
-    algorithms: algorithmContexts,
-    schema:     STATIC_SCHEMA,
-    apiRoutes:  STATIC_ROUTES,
-  };
-
-  await layeredCache.set(cacheKey, result, CONTEXT_CACHE_TTL);
-  return result;
+  complexity: { best: string | null; average: string | null; worst: string | null; space: string | null } | null;
+  code: { language: string; code: string } | null;
 }
 
-export function serializeContext(ctx: CodebaseContext): string {
-  const sections: string[] = [];
+export interface AssistantContext {
+  language: AnalysisLanguage | null;
+  code: string | null;
+  codeTruncated: boolean;
+  script: string | null;
+  scriptTruncated: boolean;
+  step: { position: number; total: number; call: string | null; narration: string | null } | null;
+  algorithm: AlgorithmContext | null;
+}
 
-  sections.push("=== DATABASE SCHEMA ===");
-  for (const model of ctx.schema.models) {
-    sections.push(`Model ${model.name}: [${model.fields.join(", ")}]`);
+const CATALOG_CODE_CHARS = 4_000;
+const NARRATION_CHARS = 1_000;
+
+function clip(value: string | undefined, max: number): { text: string | null; truncated: boolean } {
+  if (value === undefined || value.trim() === "") return { text: null, truncated: false };
+  return value.length > max ? { text: value.slice(0, max), truncated: true } : { text: value, truncated: false };
+}
+
+async function resolveAlgorithm(slug: string, language: AnalysisLanguage | null): Promise<AlgorithmContext | null> {
+  try {
+    const row = await algorithmRepository.findBySlug(slug);
+    if (!row || !row.isPublished) return null; // drafts are never visible to the assistant
+    const codes = row.displayCodes;
+    const pick = codes.find((c) => c.language === language) ?? codes.find((c) => c.language === "javascript") ?? codes[0] ?? null;
+    const hasComplexity = row.timeBest || row.timeAverage || row.timeWorst || row.spaceComplexity;
+    return {
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      difficulty: row.difficulty,
+      category: row.category.label,
+      complexity: hasComplexity ? { best: row.timeBest, average: row.timeAverage, worst: row.timeWorst, space: row.spaceComplexity } : null,
+      code: pick ? { language: pick.language, code: pick.code.slice(0, CATALOG_CODE_CHARS) } : null,
+    };
+  } catch (error) {
+    logger.warn("assistant: could not resolve algorithm context", { slug, ...serializeError(error) });
+    return null;
   }
+}
 
-  sections.push("\n=== API ROUTES ===");
-  for (const route of ctx.apiRoutes) {
-    sections.push(`${route.method} ${route.path} — ${route.description}`);
-  }
+export async function buildAssistantContext(input: ExplainContext | undefined): Promise<AssistantContext> {
+  const language = input?.language ?? null;
+  const code = clip(input?.code, LIMITS.code.maxChars);
+  const script = clip(input?.script, LIMITS.assistant.scriptContextChars);
+  const narration = clip(input?.step?.narration, NARRATION_CHARS);
+  return {
+    language,
+    code: code.text,
+    codeTruncated: code.truncated,
+    script: script.text,
+    scriptTruncated: script.truncated,
+    step: input?.step ? { position: input.step.position, total: input.step.total, call: input.step.call?.trim() || null, narration: narration.text } : null,
+    algorithm: input?.algorithmSlug ? await resolveAlgorithm(input.algorithmSlug, language) : null,
+  };
+}
 
-  if (ctx.algorithms.length > 0) {
-    sections.push("\n=== ALGORITHMS ===");
-    for (const algo of ctx.algorithms) {
-      sections.push(`[${algo.slug}] ${algo.name} (${algo.difficulty}, category: ${algo.category})`);
-      sections.push(`  Description: ${algo.description}`);
-      if (algo.complexity) {
-        sections.push(
-          `  Complexity: time=${algo.complexity.timeAverage ?? "?"}, space=${algo.complexity.space ?? "?"}`,
-        );
-      }
-      if (algo.displayCode) {
-        const snippet = algo.displayCode.code.slice(0, 600);
-        sections.push(`  Code (${algo.displayCode.language}):\n${snippet}${algo.displayCode.code.length > 600 ? "\n  [truncated]" : ""}`);
-      }
-    }
-  }
-
-  return sections.join("\n");
+/** A cheap, label-only classification stored with each answer. */
+export function detectIntent(query: string): string {
+  const q = query.toLowerCase();
+  if (/optimi[sz]|faster|speed up|improve|refactor|complexity/.test(q)) return "optimize";
+  if (/generate|write|implement|code for|give me (the )?code/.test(q)) return "generate_code";
+  if (/explain|why|how|what|walk me/.test(q)) return "explain";
+  return "general";
 }

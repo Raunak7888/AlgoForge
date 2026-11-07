@@ -7,7 +7,10 @@ import {
   CapabilitiesResponseSchema,
   CategoryListResponseSchema,
   DeviceSessionListResponseSchema,
+  ExplainSessionDetailSchema,
   ExplainSessionListResponseSchema,
+  ExplainSessionSummarySchema,
+  SendMessageResponseSchema,
   MeResponseSchema,
   SearchResponseSchema,
   ValidateScriptResponseSchema,
@@ -24,7 +27,13 @@ import {
   type CategoryListResponse,
   type CreateAnalysisRequest,
   type CreateVisualizationRequest,
+  type CreateExplainSessionRequest,
+  type ExplainSessionDetail,
   type ExplainSessionListResponse,
+  type ExplainSessionSummary,
+  type SendMessageRequest,
+  type SendMessageResponse,
+  type UpdateExplainSessionRequest,
   type MeResponse,
   type SearchResponse,
   type UpdateProfileRequest,
@@ -69,6 +78,14 @@ export function createEndpoints(client: ApiClient) {
     categories: (signal?: AbortSignal): Promise<CategoryListResponse> => client.get("/api/categories", CategoryListResponseSchema, opt(signal)),
     explainSessions: (params: PageParams = {}, signal?: AbortSignal): Promise<ExplainSessionListResponse> =>
       client.get("/api/explain-sessions", ExplainSessionListResponseSchema, { query: { ...params }, ...opt(signal) }),
+    explainSession: (id: string, signal?: AbortSignal): Promise<ExplainSessionDetail> =>
+      client.get(`/api/explain-sessions/${seg(id)}`, ExplainSessionDetailSchema, opt(signal)),
+    createExplainSession: (body: CreateExplainSessionRequest = {}): Promise<ExplainSessionDetail> => client.post("/api/explain-sessions", ExplainSessionDetailSchema, body),
+    renameExplainSession: (id: string, body: UpdateExplainSessionRequest): Promise<ExplainSessionSummary> =>
+      client.patch(`/api/explain-sessions/${seg(id)}`, ExplainSessionSummarySchema, body),
+    deleteExplainSession: (id: string): Promise<void> => client.delete(`/api/explain-sessions/${seg(id)}`),
+    sendExplainMessage: (id: string, body: SendMessageRequest): Promise<SendMessageResponse> =>
+      client.post(`/api/explain-sessions/${seg(id)}/messages`, SendMessageResponseSchema, body),
 
     algorithms: (params: AlgorithmListQuery = {}, signal?: AbortSignal): Promise<AlgorithmListResponse> =>
       client.get("/api/algorithms", AlgorithmListResponseSchema, { query: { ...params }, ...opt(signal) }),
