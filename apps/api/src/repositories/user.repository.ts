@@ -84,11 +84,7 @@ export const userRepository = {
   deleteById(id: string) {
     return prisma.user.delete({ where: { id }, select: { id: true } });
   },
-
-  listPublicExplainShareIds(userId: string) {
-    return prisma.explanationSession.findMany({
-      where: { userId, shareId: { not: null } },
-      select: { shareId: true },
-    });
+  listShareIds(userId: string) {
+    return prisma.share.findMany({ where: { ownerId: userId }, select: { shareId: true } });
   },
 };

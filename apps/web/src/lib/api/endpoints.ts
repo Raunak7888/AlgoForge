@@ -41,6 +41,13 @@ import {
   type ValidateScriptResponse,
   type Visualization,
   type VisualizationListResponse,
+  PublicShareResponseSchema,
+  ShareListResponseSchema,
+  ShareSchema,
+  type CreateShareRequest,
+  type PublicShareResponse,
+  type Share,
+  type ShareListResponse,
 } from "@algoforge/contracts";
 import { z } from "zod";
 import { apiClient, type ApiClient } from "./client";
@@ -103,6 +110,12 @@ export function createEndpoints(client: ApiClient) {
     deleteVisualization: (id: string): Promise<void> => client.delete(`/api/visualizations/${seg(id)}`),
     validateScript: (script: string, signal?: AbortSignal): Promise<ValidateScriptResponse> =>
       client.post("/api/visualizations/validate", ValidateScriptResponseSchema, { script }, opt(signal)),
+    shares: (target: { type: string; targetId: string }, signal?: AbortSignal): Promise<ShareListResponse> =>
+      client.get("/api/shares", ShareListResponseSchema, { query: { target: `${target.type}:${target.targetId}` }, ...opt(signal) }),
+    createShare: (body: CreateShareRequest): Promise<Share> => client.post("/api/shares", ShareSchema, body),
+    revokeShare: (shareId: string): Promise<void> => client.delete(`/api/shares/${seg(shareId)}`),
+    publicShare: (shareId: string, signal?: AbortSignal): Promise<PublicShareResponse> =>
+      client.get(`/api/share/${seg(shareId)}`, PublicShareResponseSchema, opt(signal)),
   };
 }
 

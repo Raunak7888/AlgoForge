@@ -12,6 +12,8 @@ import Toolbar from "./Toolbar";
 import ShareModal from "./ShareModal";
 import { SPLIT, loadSplit, saveSplit } from "@/lib/split";
 import { NAV_EVENT, readDashboardParams } from "@/lib/navEvents";
+import { shareHintFor, targetForFeature } from "@/lib/share/target";
+import { useWorkspace } from "@/lib/workspace/store";
 
 export type FeatureType = "analysis" | "visualizer" | "history";
 const FEATURE_LABEL: Record<FeatureType, string> = { analysis: "Analysis", visualizer: "Visualizer", history: "History" };
@@ -24,6 +26,11 @@ export default function AlgoforgeDashboard() {
     const [isShareOpen, setShareOpen] = useState(false);
 
     const containerRef = useRef<HTMLElement | null>(null);
+    const run = useWorkspace((s) => s.run);
+    const selectedAnalysisId = useWorkspace((s) => s.selectedAnalysisId);
+    const savedVisualization = useWorkspace((s) => s.savedVisualization);
+    // What "Share" means depends on the tab. Without a saved item there is nothing to share.
+    const shareTarget = targetForFeature(activeFeature, { run, selectedAnalysisId, savedVisualization });
 
     // ?tab=visualizer opens that tool; search results and the catalog use it.
     useEffect(() => {
@@ -31,7 +38,6 @@ export default function AlgoforgeDashboard() {
             const { tab } = readDashboardParams();
             if (tab) setActiveFeature(tab);
         };
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- the address only exists in the browser
         sync();
         window.addEventListener(NAV_EVENT, sync);
         window.addEventListener("popstate", sync);
@@ -88,7 +94,7 @@ export default function AlgoforgeDashboard() {
 
                 {/* Outside <main>: it is a side panel, not part of the main content. */}
                 <AIChatDrawer open={isExplainerOpen} onClose={() => setExplainerOpen(false)} />
-                <ShareModal isOpen={isShareOpen} onClose={() => setShareOpen(false)} />
+                <ShareModal isOpen={isShareOpen} onClose={() => setShareOpen(false)} target={shareTarget} emptyHint={shareHintFor(activeFeature)} />
             </TooltipProvider>
         </div>
     );

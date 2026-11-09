@@ -1,6 +1,7 @@
 import { prisma, type Prisma } from "@algoforge/db";
 import { AppError } from "../utils/app-error";
 import { explanationMessageRowId } from "./explanation-message.repository";
+import { LIMITS } from "@algoforge/contracts";
 
 export interface SessionSummaryRow {
   id: string;
@@ -108,32 +109,29 @@ export const explanationSessionRepository = {
     return prisma.explanationSession.updateMany({ where: { id, userId }, data: { title } });
   },
 
-  /** Public session by shareId (Phase 9 replaces this). */
-  findPublicByShareId(shareId: string) {
-    return prisma.explanationSession.findUnique({
-      where: { shareId, isPublic: true },
-      include: { user: { select: { id: true, name: true, username: true, image: true } } },
-    });
-  },
-
-  /** Make the session public and set its shareId (mirrored into the shares table). The owner is part of the query. */
-  share(id: string, userId: string, shareId: string) {
-    return prisma.$transaction(async (tx) => {
-      const updated = await tx.explanationSession.updateMany({ where: { id, userId }, data: { shareId, isPublic: true } });
-      if (updated.count === 0) throw AppError.notFound("Session not found.");
-      await tx.share.upsert({
-        where: { type_targetId: { type: "explain", targetId: id } },
-        create: { shareId, type: "explain", targetId: id, ownerId: userId },
-        update: { shareId, revokedAt: null },
-      });
-    });
-  },
-
   /** Hard-delete. Also removes the session's share row (no orphans). Messages cascade. */
   delete(id: string, userId: string) {
     return prisma.$transaction(async (tx) => {
       await tx.share.deleteMany({ where: { type: "explain", targetId: id, ownerId: userId } });
       return tx.explanationSession.deleteMany({ where: { id, userId } });
+    });
+  },
+  /** Public read. Only call after an ACTIVE share for this id was verified. */
+  findPublicById(id: string) {
+    return prisma.explanationSession.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { name: true, username: true, image: true } },
+        messageRows: {
+          orderBy: { seq: "asc" },
+          take: LIMITS.assistant.maxMessagesPerSession,
+          select: { id: true, seq: true, role: true, content: true, intent: true, createdAt: true },
+        },
+      },
     });
   },
 };

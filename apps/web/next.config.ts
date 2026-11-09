@@ -25,6 +25,12 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return apiUrl ? [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }] : [];
   },
+  async redirects() {
+    return [
+      { source: "/share/analysis/:id", destination: "/s/:id", permanent: false },
+      { source: "/share/explain/:id", destination: "/s/:id", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

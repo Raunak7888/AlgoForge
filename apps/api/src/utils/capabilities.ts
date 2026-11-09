@@ -13,7 +13,7 @@ export function buildCapabilities(input: CapabilityInputs): CapabilitiesResponse
   return {
     analysis: input.aiConfigured,
     assistant: input.aiConfigured,
-    sharing: input.aiConfigured,
+    sharing: true,
     savedWork: true,
     limits: { ...CAPABILITY_LIMITS },
   };

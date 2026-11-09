@@ -9,7 +9,7 @@ import { PageMetaSchema } from "./common";
 import { ErrorResponseSchema } from "./errors";
 import { CreateExplainSessionRequestSchema, ExplainContextSchema, ExplainMessageListResponseSchema, ExplainSessionDetailSchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SessionMessageSchema, SharedExplainSessionResponseSchema, UpdateExplainSessionRequestSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
-import { CreateShareRequestSchema, PublicShareResponseSchema, ShareSchema } from "./shares";
+import { CreateShareRequestSchema, PublicShareResponseSchema, ShareListResponseSchema, ShareSchema } from "./shares";
 import { DeviceSessionListResponseSchema, DeviceSessionSchema, SafeUserSchema, UpdateProfileRequestSchema } from "./users";
 import { CreateVisualizationRequestSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationSchema } from "./visualizations";
 
@@ -58,6 +58,7 @@ export const SCHEMA_REGISTRY = {
   ValidateScriptRequest: ValidateScriptRequestSchema,
   ValidateScriptResponse: ValidateScriptResponseSchema,
   Share: ShareSchema,
+  ShareListResponse: ShareListResponseSchema,
   CreateShareRequest: CreateShareRequestSchema,
   PublicShareResponse: PublicShareResponseSchema,
   CapabilitiesResponse: CapabilitiesResponseSchema,

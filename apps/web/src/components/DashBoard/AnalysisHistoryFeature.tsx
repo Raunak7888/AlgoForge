@@ -50,6 +50,7 @@ export default function RealHistory() {
                 <AnalysisHistory
                     items={items}
                     meta={meta}
+                    onSelect={(item) => useWorkspace.getState().selectAnalysis(item?.id ?? null)}
                     onLoadMore={() => void history.fetchNextPage()}
                     loading={history.isPending}
                     loadingMore={history.isFetchingNextPage}

@@ -1,7 +1,6 @@
 //# filename: apps/api/src/repositories/analysis.repository.ts
 
 import { prisma, Prisma } from "@algoforge/db";
-import { AppError } from "../utils/app-error";
 import { hashCode } from "../utils/ai-cache-keys";
 
 export { hashCode };
@@ -101,42 +100,17 @@ export const analysisRepository = {
       return result.count;
     });
   },
-
-  findForShare(analysisId: string, userId: string) {
-    return prisma.analysis.findFirst({ where: { id: analysisId, userId } });
-  },
-
-  /**
-   * Marks the analysis public AND mirrors that into the shares table in one transaction.
-   * The legacy columns stay authoritative until Phase 9. The owner is part of the query.
-   */
-  setPublic(analysisId: string, userId: string, shareId: string) {
-    return prisma.$transaction(async (tx) => {
-      const updated = await tx.analysis.updateMany({
-        where: { id: analysisId, userId },
-        data: { shareId, isPublic: true },
-      });
-      if (updated.count === 0) throw AppError.notFound("Analysis not found.");
-      await tx.share.upsert({
-        where: { type_targetId: { type: "analysis", targetId: analysisId } },
-        create: { shareId, type: "analysis", targetId: analysisId, ownerId: userId },
-        update: { shareId, revokedAt: null },
-      });
-      return { id: analysisId, shareId };
-    });
-  },
-
-  findPublicByShareId(shareId: string) {
+  /** Public read of one analysis. Only call after an ACTIVE share for this id was verified. */
+  findPublicById(id: string) {
     return prisma.analysis.findUnique({
-      where: { shareId, isPublic: true },
+      where: { id },
       select: {
         id: true,
         code: true,
         language: true,
         result: true,
         createdAt: true,
-        isPublic: true,
-        user: { select: { id: true, name: true, username: true, image: true } },
+        user: { select: { name: true, username: true, image: true } },
       },
     });
   },

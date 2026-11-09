@@ -593,7 +593,10 @@ export default function AnalysisHistory({
     const query = filters ? filters.q : localQuery;
     const language: LanguageFilter = filters ? filters.language : localLanguage;
     const sort: SortOrder = filters ? filters.sort : localSort;
-    const setQuery = (v: string) => (filters ? filters.onChange({ q: v }) : setLocalQuery(v));
+    const setQuery = useCallback(
+        (v: string) => (filters ? filters.onChange({ q: v }) : setLocalQuery(v)),
+        [filters],
+    );
     const setLanguage = (v: LanguageFilter) => (filters ? filters.onChange({ language: v }) : setLocalLanguage(v));
     const setSort = (v: SortOrder) => (filters ? filters.onChange({ sort: v }) : setLocalSort(v));
     const [page, setPage] = useState(1);

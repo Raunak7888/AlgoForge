@@ -11,6 +11,7 @@ import { rememberAlgorithm } from "@/lib/assistant/algorithmContext";
 import { btn, btnPrimary } from "@/components/visualizers/shared/styles";
 import { isApiError } from "@/lib/api/errors";
 import { QueryBoundary, useAlgorithm } from "@/lib/query";
+import { useWorkspace } from "@/lib/workspace/store";
 
 export default function AlgorithmPage() {
     const params = useParams<{ slug: string }>();
@@ -36,6 +37,7 @@ export default function AlgorithmPage() {
     const open = () => {
         if (!a?.script) return;
         saveScript(a.script);
+        useWorkspace.getState().setSavedVisualization(null);
         rememberAlgorithm(a.slug, a.script);
         visualizer.getState().load(compileScript(a.script));
         router.push("/dashboard?tab=visualizer");

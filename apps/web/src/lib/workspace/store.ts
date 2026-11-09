@@ -82,6 +82,10 @@ export interface WorkspaceStore {
   run: RunState;
   /** The analysis id that /dashboard/[id] last restored. Unlike run.analysisId it survives new runs. */
   lastOpenedId: string | null;
+  /** The history row the person selected (what Share targets on the History tab). */
+  selectedAnalysisId: string | null;
+  /** The saved visualization the editor is bound to (what Share targets on the Visualizer tab). */
+  savedVisualization: { id: string; title: string } | null;
 
   setCode: (code: string) => void;
   setLanguage: (language: AnalysisLanguage) => void;
@@ -91,6 +95,8 @@ export interface WorkspaceStore {
   failRun: (failure: RunFailure) => void;
   resetRun: () => void;
   forgetAnalysis: (id: string) => void;
+  selectAnalysis: (id: string | null) => void;
+  setSavedVisualization: (v: { id: string; title: string } | null) => void;
   reset: () => void;
 }
 
@@ -99,6 +105,8 @@ const initial = () => ({
   codes: { ...STARTER_CODE },
   run: IDLE_RUN,
   lastOpenedId: null as string | null,
+  selectedAnalysisId: null as string | null,
+  savedVisualization: null as { id: string; title: string } | null,
 });
 
 const completed = (a: Omit<OpenedAnalysis, "code">): RunState => ({
@@ -131,11 +139,14 @@ export const useWorkspace = create<WorkspaceStore>()((set) => ({
     set((s) => ({ run: { ...IDLE_RUN, status: "error", language: s.run.language, error: failure.message, errorCode: failure.code, retryAt: failure.retryAt } })),
   resetRun: () => set({ run: IDLE_RUN }),
 
+  selectAnalysis: (id) => set({ selectedAnalysisId: id }),
+  setSavedVisualization: (v) => set({ savedVisualization: v }),
   forgetAnalysis: (id) =>
     set((s) => {
       const patch: Partial<WorkspaceStore> = {};
       if (s.run.analysisId === id) patch.run = IDLE_RUN;
       if (s.lastOpenedId === id) patch.lastOpenedId = null;
+      if (s.selectedAnalysisId === id) patch.selectedAnalysisId = null;
       return patch;
     }),
 

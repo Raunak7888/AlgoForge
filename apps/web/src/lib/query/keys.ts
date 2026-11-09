@@ -14,4 +14,6 @@ export const queryKeys = {
   categories: () => ["categories", "list"] as const,
   explainSessions: () => ["explain", "sessions"] as const,
   visualizations: () => ["visualizations", "list"] as const,
+  shares: (type: string, targetId: string) => ["shares", type, targetId] as const,
+  publicShare: (shareId: string) => ["share", "public", shareId] as const,
 };

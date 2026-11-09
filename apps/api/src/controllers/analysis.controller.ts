@@ -48,11 +48,6 @@ class AnalysisController {
     res.json(result);
   });
 
-  getPublicAnalysis = asyncHandler(async (req: Request, res: Response) => {
-    const shareId = ensureString(req.params.shareId, "Share id is required.");
-    const result = await analysisService.getPublicAnalysis(shareId);
-    res.json(result);
-  });
 }
 
 export const analysisController = new AnalysisController();
