@@ -4,6 +4,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { LIMITS, type AlgorithmListQuery, type AnalysisLanguage } from "@algoforge/contracts";
 import { endpoints } from "../api/endpoints";
 import { queryKeys } from "./keys";
+import type { ShareTarget } from "../share/target";
 
 export interface AnalysisHistoryOptions {
   enabled?: boolean;
@@ -95,5 +96,25 @@ export function useCapabilities() {
     queryKey: queryKeys.capabilities(),
     queryFn: ({ signal }) => endpoints.capabilities(signal),
     staleTime: 5 * 60_000,
+  });
+}
+/** The active share of one of my items. Disabled until there is a target. */
+export function useTargetShares(target: ShareTarget | null, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.shares(target?.type ?? "", target?.id ?? ""),
+    queryFn: ({ signal }) => endpoints.shares({ type: target!.type, targetId: target!.id }, signal),
+    enabled: enabled && target !== null,
+    retry: false,
+  });
+}
+
+/** Anonymous. A 404 (revoked, unknown) is final, so no retry. */
+export function usePublicShare(shareId: string) {
+  return useQuery({
+    queryKey: queryKeys.publicShare(shareId),
+    queryFn: ({ signal }) => endpoints.publicShare(shareId, signal),
+    enabled: shareId !== "",
+    retry: false,
+    staleTime: 0,
   });
 }

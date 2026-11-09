@@ -136,6 +136,8 @@ export const env = {
     /** Catalog and search are cheap, cached reads: a dashboard plus a catalog page must not hit the analysis limit (A-13). */
     catalogRateLimitPerMinute: parseInteger("CATALOG_RATE_LIMIT_PER_MINUTE", 120),
     visualizationRateLimitPerMinute: parseInteger("VISUALIZATION_RATE_LIMIT_PER_MINUTE", 60),
+    shareRateLimitPerMinute: parseInteger("SHARE_RATE_LIMIT_PER_MINUTE", 30),
+    publicShareRateLimitPerMinute: parseInteger("PUBLIC_SHARE_RATE_LIMIT_PER_MINUTE", 60),
   },
 };
 

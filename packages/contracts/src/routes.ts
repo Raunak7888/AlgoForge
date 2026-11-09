@@ -5,6 +5,7 @@ import { AnalysisQuotaResponseSchema, AnalysisHistoryQuerySchema, AnalysisHistor
 import { AuthStartQuerySchema, MeResponseSchema, RefreshResponseSchema } from "./auth";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
 import { IdParamsSchema, ShareIdParamsSchema, SlugParamsSchema } from "./common";
+import { CreateShareRequestSchema, PublicShareResponseSchema, ShareListQuerySchema, ShareListResponseSchema, ShareSchema } from "./shares";
 import { CreateExplainSessionRequestSchema, ExplainMessageListQuerySchema, ExplainMessageListResponseSchema, ExplainSessionDetailSchema, ExplainSessionListQuerySchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SharedExplainSessionResponseSchema, UpdateExplainSessionRequestSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CapabilitiesResponseSchema } from "./capabilities";
@@ -77,9 +78,13 @@ export const routes: readonly RouteDef[] = [
   { id: "explainSessionsMessage", method: "post", path: "/api/explain-sessions/{id}/messages", summary: "Send a message", tag: "Explain", auth: "user", csrf: true, rateLimit: "ai", params: IdParamsSchema, body: SendMessageRequestSchema, responses: { 201: SendMessageResponseSchema } },
   { id: "explainSessionsShare", method: "post", path: "/api/explain-sessions/{id}/share", summary: "Make a chat session public", tag: "Explain", auth: "user", csrf: true, params: IdParamsSchema, responses: { 200: ShareUrlResponseSchema } },
 
-  { id: "shareAnalysis", method: "get", path: "/api/share/analysis/{shareId}", summary: "Public analysis", tag: "Share", auth: "none", csrf: false, params: ShareIdParamsSchema, responses: { 200: SharedAnalysisResponseSchema } },
-  { id: "shareExplain", method: "get", path: "/api/share/explain/{shareId}", summary: "Public chat session", tag: "Share", auth: "none", csrf: false, params: ShareIdParamsSchema, responses: { 200: SharedExplainSessionResponseSchema } },
-  { id: "shareLegacy", method: "get", path: "/api/share/{shareId}", summary: "Public analysis (legacy alias)", tag: "Share", auth: "none", csrf: false, params: ShareIdParamsSchema, responses: { 200: SharedAnalysisResponseSchema }, notes: "Legacy alias of /api/share/analysis/{shareId}; removed in Phase 9." },
+  { id: "shareResolve", method: "get", path: "/api/share/{shareId}", summary: "Resolve a public share: { type, data, creator }", tag: "Share", auth: "none", csrf: false, rateLimit: "general", params: ShareIdParamsSchema, responses: { 200: PublicShareResponseSchema }, notes: "Revoked, expired and unknown ids are all 404. Sent with Cache-Control: public, no-cache." },
+  { id: "shareAnalysis", method: "get", path: "/api/share/analysis/{shareId}", summary: "Public analysis (alias of /api/share/{shareId}, data only)", tag: "Share", auth: "none", csrf: false, rateLimit: "general", params: ShareIdParamsSchema, responses: { 200: SharedAnalysisResponseSchema }, notes: "Deprecated alias." },
+  { id: "shareExplain", method: "get", path: "/api/share/explain/{shareId}", summary: "Public chat (alias of /api/share/{shareId}, data only)", tag: "Share", auth: "none", csrf: false, rateLimit: "general", params: ShareIdParamsSchema, responses: { 200: SharedExplainSessionResponseSchema }, notes: "Deprecated alias." },
+
+  { id: "sharesList", method: "get", path: "/api/shares", summary: "Active share of one of my items (?target=<type>:<id>)", tag: "Share", auth: "user", csrf: false, rateLimit: "general", query: ShareListQuerySchema, responses: { 200: ShareListResponseSchema } },
+  { id: "sharesCreate", method: "post", path: "/api/shares", summary: "Create a share link (idempotent)", tag: "Share", auth: "user", csrf: true, rateLimit: "general", body: CreateShareRequestSchema, responses: { 200: ShareSchema } },
+  { id: "sharesRevoke", method: "delete", path: "/api/shares/{shareId}", summary: "Revoke a share link (idempotent)", tag: "Share", auth: "user", csrf: true, rateLimit: "general", params: ShareIdParamsSchema, responses: { 204: "empty" } },
 
   { id: "adminUsers", method: "get", path: "/api/admin/users", summary: "List users (cursor pagination)", tag: "Admin", auth: "admin", csrf: false, query: AdminUserListQuerySchema, responses: { 200: AdminUserListResponseSchema } },
   { id: "adminUpgrade", method: "post", path: "/api/admin/upgrade-user", summary: "Promote a user to ADMIN", tag: "Admin", auth: "admin", csrf: true, body: AdminRoleChangeRequestSchema, responses: { 200: AdminRoleChangeResponseSchema } },

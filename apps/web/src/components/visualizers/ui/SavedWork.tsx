@@ -9,11 +9,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { useVisualizations } from "@/lib/query/hooks";
 import { btn, inputCls } from "../shared/styles";
 import type { ScriptApi } from "./ScriptDrawer";
-
-interface Current {
-    id: string;
-    title: string;
-}
+import { useWorkspace } from "@/lib/workspace/store";
 
 /** Save, open, rename and delete visualizations. Signed-in only; guests keep the browser copy and get a sign-in nudge. */
 export function SavedWork({ api }: { api: ScriptApi }) {
@@ -27,7 +23,8 @@ export function SavedWork({ api }: { api: ScriptApi }) {
     });
 
     const [open, setOpen] = useState(false);
-    const [current, setCurrent] = useState<Current | null>(null);
+    const current = useWorkspace((s) => s.savedVisualization);
+    const setCurrent = useWorkspace((s) => s.setSavedVisualization);
     const [title, setTitle] = useState("");
     const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
     const list = useVisualizations({ enabled: ready && open });
@@ -43,7 +40,7 @@ export function SavedWork({ api }: { api: ScriptApi }) {
         } catch (error) {
             setNote({ ok: false, text: errorMessage(error) });
         }
-    }, []);
+    }, [setCurrent]);
 
     // ?viz=<id> (from search results or a link) opens that saved visualization once.
     useEffect(() => {

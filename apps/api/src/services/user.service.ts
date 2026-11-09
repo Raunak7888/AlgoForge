@@ -8,7 +8,7 @@ import { verifyAccessToken } from "../utils/token";
 import { sessionRepository } from "../repositories/session.repository";
 import { AppError } from "../utils/app-error";
 import { layeredCache } from "./lib/layered-cache";
-import { publicCacheKey } from "./explanation-session.service";
+import { publicShareCacheKey } from "./lib/share-cache";
 
 /** Names that would be confusing or impersonating if a person could claim them. */
 const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
@@ -80,12 +80,12 @@ class UserService {
       throw AppError.conflict("You are the only admin. Promote another admin before deleting this account.");
     }
 
-    const shared = await userRepository.listPublicExplainShareIds(userId);
+    const shared = await userRepository.listShareIds(userId);
     await userRepository.deleteById(userId);
 
     // Shared chat links must stop working at once, not when their cache entry expires.
     await Promise.all(
-      shared.flatMap((row) => (row.shareId ? [layeredCache.del(publicCacheKey(row.shareId))] : [])),
+      shared.map((row) => layeredCache.del(publicShareCacheKey(row.shareId))),
     );
   }
 }

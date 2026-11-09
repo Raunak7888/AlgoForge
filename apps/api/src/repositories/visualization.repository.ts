@@ -98,4 +98,17 @@ export const visualizationRepository = {
   countByUser(userId: string) {
     return prisma.visualization.count({ where: { userId } });
   },
+  /** Public read. Only call after an ACTIVE share for this id was verified. Never selects userId. */
+  findPublicById(id: string) {
+    return prisma.visualization.findUnique({
+      where: { id },
+      select: {
+        title: true,
+        description: true,
+        script: true,
+        structures: true,
+        user: { select: { name: true, username: true, image: true } },
+      },
+    });
+  },
 };

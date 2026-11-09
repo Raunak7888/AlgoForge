@@ -6,19 +6,15 @@
  * Only uncached (billable) calls use quota; the quota is returned when the AI call fails.
  * The DB record is always written.
  */
-import { randomBytes } from "crypto";
 import type { Prisma } from "@algoforge/db";
 import {
   ANALYSIS_RESULT_SCHEMA_VERSION,
   wrapStoredAnalysisResult,
   type AnalysisQuotaResponse,
   type AnalysisResult,
-  type SharedAnalysisResponse,
 } from "@algoforge/contracts";
-import { env } from "../config/env";
 import { ANALYSIS_PROMPT_VERSION } from "../prompts/analysis.prompt";
 import { analysisRepository } from "../repositories/analysis.repository";
-import { serializeSharedAnalysis } from "../serializers/analysis";
 import { AppError } from "../utils/app-error";
 import { analysisCacheKey, deriveTitle, hashCode } from "../utils/ai-cache-keys";
 import { logger, serializeError } from "../utils/logger";
@@ -28,14 +24,11 @@ import { aiService } from "./ai.service";
 import { aiUsageService } from "./ai-usage.service";
 import { layeredCache } from "./lib/layered-cache";
 import { quotaService } from "./quota.service";
+import { shareService } from "./share.service";
 
 interface CachedAnalysis {
   result: AnalysisResult;
   model: string;
-}
-
-function generateShareId(): string {
-  return randomBytes(9).toString("base64url");
 }
 
 class AnalysisService {
@@ -79,24 +72,21 @@ class AnalysisService {
   }
 
   async listUserAnalyses(userId: string, query: AnalysisHistoryQuery) {
-    // One extra row proves whether another page exists.
     const rows = await analysisRepository.findManyByUser(userId, {
-      take: query.limit + 1,
-      sort: query.sort,
-      cursorCreatedAt: query.cursorCreatedAt,
-      cursorId: query.cursorId,
-      q: query.q,
-      language: query.language,
+      take: query.limit + 1, sort: query.sort,
+      cursorCreatedAt: query.cursorCreatedAt, cursorId: query.cursorId, q: query.q, language: query.language,
     });
-    return paginate(rows, query.limit, (row) =>
+    const page = paginate(rows, query.limit, (row) =>
       encodeAnalysisCursor({ createdAt: row.createdAt.toISOString(), id: row.id, sort: query.sort }),
     );
+    return { ...page, items: await shareService.withShareState(userId, "analysis", page.items) };
   }
 
   async getUserAnalysisById(userId: string, analysisId: string) {
     const analysis = await analysisRepository.findOneByUser(userId, analysisId);
     if (!analysis) throw AppError.notFound("Analysis not found.");
-    return analysis;
+    const [row] = await shareService.withShareState(userId, "analysis", [analysis]);
+    return row;
   }
 
   async deleteAnalysis(userId: string, analysisId: string): Promise<void> {
@@ -109,25 +99,12 @@ class AnalysisService {
     return { minute: snapshot.minute, day: snapshot.day };
   }
 
+  /** Legacy endpoint kept for old clients: delegates to the unified share service. */
   async shareAnalysis(userId: string, analysisId: string) {
-    const analysis = await analysisRepository.findForShare(analysisId, userId);
-    if (!analysis) throw AppError.notFound("Analysis not found.");
-
-    // Idempotent: return the existing share URL if already public.
-    if (analysis.shareId && analysis.isPublic) {
-      return { shareUrl: `${env.webAppUrl}/share/analysis/${analysis.shareId}` };
-    }
-
-    const shareId = generateShareId();
-    await analysisRepository.setPublic(analysisId, userId, shareId);
-    return { shareUrl: `${env.webAppUrl}/share/analysis/${shareId}` };
+    const share = await shareService.create(userId, "analysis", analysisId);
+    return { shareUrl: shareService.urlFor(share.shareId) };
   }
 
-  async getPublicAnalysis(shareId: string): Promise<SharedAnalysisResponse> {
-    const analysis = await analysisRepository.findPublicByShareId(shareId);
-    if (!analysis) throw AppError.notFound("Analysis not found or not public.");
-    return serializeSharedAnalysis(analysis);
-  }
 }
 
 export const analysisService = new AnalysisService();

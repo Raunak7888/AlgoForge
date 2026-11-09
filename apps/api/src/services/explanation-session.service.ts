@@ -1,4 +1,3 @@
-import { randomBytes } from "crypto";
 import { LIMITS, type CreateExplainSessionRequest, type SendMessageRequest } from "@algoforge/contracts";
 import { buildAssistantContext, detectIntent } from "../ai/context-builder";
 import { env } from "../config/env";
@@ -13,14 +12,11 @@ import { aiService } from "./ai.service";
 import { aiUsageService } from "./ai-usage.service";
 import { layeredCache } from "./lib/layered-cache";
 import { quotaService } from "./quota.service";
+import { publicShareCacheKey } from "./lib/share-cache";
+import { shareService } from "./share.service";
 
-const PUBLIC_CACHE_TTL_SECONDS = 600;
-
-export function publicCacheKey(shareId: string): string {
-  return `explain:public:${shareId}`;
-}
-const newShareId = (): string => randomBytes(9).toString("base64url");
-const buildShareUrl = (shareId: string): string => `${env.webAppUrl}/share/explain/${shareId}`;
+/** Kept as an export for existing imports and tests; it is now the unified key. */
+export const publicCacheKey = publicShareCacheKey;
 
 /**
  * Private reads always go to the database with the owner in the query, so there is no private cache to leak
@@ -33,16 +29,16 @@ class ExplanationSessionService {
 
   async listSessions(userId: string, query: ListSessionsQuery) {
     const rows = await explanationSessionRepository.findManyByUser(userId, {
-      take: query.limit + 1,
-      cursorUpdatedAt: query.cursorUpdatedAt,
-      cursorId: query.cursorId,
+      take: query.limit + 1, cursorUpdatedAt: query.cursorUpdatedAt, cursorId: query.cursorId,
     });
-    return paginate(rows, query.limit, (row) => encodeSessionCursor({ updatedAt: row.updatedAt.toISOString(), id: row.id }));
+    const page = paginate(rows, query.limit, (row) => encodeSessionCursor({ updatedAt: row.updatedAt.toISOString(), id: row.id }));
+    return { ...page, items: await shareService.withShareState(userId, "explain", page.items) };
   }
 
   async getSession(userId: string, id: string) {
-    const session = await explanationSessionRepository.findOwned(id, userId);
-    if (!session) throw AppError.notFound("Session not found.");
+    const found = await explanationSessionRepository.findOwned(id, userId);
+    if (!found) throw AppError.notFound("Session not found.");
+    const [session] = await shareService.withShareState(userId, "explain", [found]);
     const rows = await explanationMessageRepository.listBySession(id, userId, { take: LIMITS.assistant.maxMessagesPerSession });
     return { session, messages: rows.map(toMessageRow) };
   }
@@ -57,9 +53,9 @@ class ExplanationSessionService {
   async renameSession(userId: string, id: string, title: string) {
     const result = await explanationSessionRepository.rename(id, userId, title);
     if (result.count === 0) throw AppError.notFound("Session not found.");
-    const session = await explanationSessionRepository.findOwned(id, userId);
-    if (!session) throw AppError.notFound("Session not found.");
-    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
+    const found = await explanationSessionRepository.findOwned(id, userId);
+    if (!found) throw AppError.notFound("Session not found.");
+    const [session] = await shareService.withShareState(userId, "explain", [found]);
     return session;
   }
 
@@ -68,8 +64,7 @@ class ExplanationSessionService {
    * give the quota back if the provider fails, and write the exchange in one transaction afterwards.
    */
   async sendMessage(userId: string, sessionId: string, input: SendMessageRequest, signal?: AbortSignal) {
-    const session = await explanationSessionRepository.findOwned(sessionId, userId);
-    if (!session) throw AppError.notFound("Session not found.");
+    if (!(await explanationSessionRepository.findOwned(sessionId, userId))) throw AppError.notFound("Session not found.");
 
     const max = LIMITS.assistant.maxMessagesPerSession;
     const count = await explanationMessageRepository.countBySession(sessionId, userId);
@@ -107,37 +102,23 @@ class ExplanationSessionService {
       title: input.query.replace(/\s+/g, " ").trim().slice(0, 80),
       maxMessages: max,
     });
-    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
     return exchange;
   }
 
   async deleteSession(userId: string, id: string): Promise<void> {
     const session = await explanationSessionRepository.findOwned(id, userId);
     if (!session) throw AppError.notFound("Session not found.");
-    const result = await explanationSessionRepository.delete(id, userId);
+    const shareId = (await shareService.activeShareMap(userId, "explain", [id])).get(id);
+    const result = await explanationSessionRepository.delete(id, userId); // also deletes the shares row
     if (result.count === 0) throw AppError.notFound("Session not found.");
-    // A deleted public session must stop being readable immediately.
-    if (session.shareId) await layeredCache.del(publicCacheKey(session.shareId));
+    if (shareId) await layeredCache.del(publicShareCacheKey(shareId));
   }
 
   async shareSession(userId: string, id: string) {
-    const session = await explanationSessionRepository.findOwned(id, userId);
-    if (!session) throw AppError.notFound("Session not found.");
-    if (session.shareId && session.isPublic) return { shareUrl: buildShareUrl(session.shareId) };
-    const shareId = newShareId();
-    await explanationSessionRepository.share(id, userId, shareId);
-    return { shareUrl: buildShareUrl(shareId) };
+    const share = await shareService.create(userId, "explain", id);
+    return { shareUrl: shareService.urlFor(share.shareId) };
   }
 
-  async getPublicSession(shareId: string) {
-    const key = publicCacheKey(shareId);
-    const cached = await layeredCache.get<Awaited<ReturnType<typeof explanationSessionRepository.findPublicByShareId>>>(key);
-    if (cached) return cached;
-    const session = await explanationSessionRepository.findPublicByShareId(shareId);
-    if (!session) throw AppError.notFound("Session not found or not public.");
-    await layeredCache.set(key, session, PUBLIC_CACHE_TTL_SECONDS);
-    return session;
-  }
 }
 
 export const explanationSessionService = new ExplanationSessionService();

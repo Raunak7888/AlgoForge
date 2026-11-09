@@ -1,13 +1,15 @@
 import { Router } from "express";
-import { analysisController } from "../controllers/analysis.controller";
-import { explanationSessionController } from "../controllers/explanation-session.controller";
+import { env } from "../config/env";
+import { publicShareController as c } from "../controllers/share.controller";
+import { generalRateLimiter } from "../middleware/rate-limit";
 
 const router = Router();
+const limit = generalRateLimiter({ scope: "share-public", limitPerMinute: env.redis.publicShareRateLimitPerMinute });
 
-router.get("/analysis/:shareId", analysisController.getPublicAnalysis);
-router.get("/explain/:shareId",  explanationSessionController.getPublic);
-
-// Legacy wildcard MUST be last — it would otherwise intercept /explain/:shareId
-router.get("/:shareId", analysisController.getPublicAnalysis);
+// Deprecated aliases: same resolver, data only.
+router.get("/analysis/:shareId", limit, c.resolveAnalysis);
+router.get("/explain/:shareId", limit, c.resolveExplain);
+// Unified resolver: { type, data, creator }.
+router.get("/:shareId", limit, c.resolve);
 
 export default router;

@@ -21,6 +21,7 @@ import userRouter               from "./routes/users";
 import visualizationRouter from "./routes/visualizations";
 import searchRouter from "./routes/search";
 import explanationSessionRouter from "./routes/explanation-session";
+import shareManageRouter from "./routes/shares";
 
 const app = express();
 
@@ -58,7 +59,8 @@ app.use("/api/analysis",  generalRateLimiter({ scope: "analysis", limitPerMinute
 // Assistant chat sessions.
 app.use("/api/explain-sessions", explanationSessionRouter);
 
-app.use("/api/share", shareRouter);
+app.use("/api/shares", shareManageRouter); // owner: create / revoke / list
+app.use("/api/share", shareRouter);        // public: resolve
 app.use("/api/admin", adminRouter);
 
 app.use(notFoundHandler);

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import type { ExplainMessageListResponse, ExplainSessionListResponse, SendMessageResponse } from "@algoforge/contracts";
-import { serializeMessage, serializeSessionDetail, serializeSessionSummary, serializeSharedSession } from "../serializers/explain";
+import { serializeMessage, serializeSessionDetail, serializeSessionSummary } from "../serializers/explain";
 import { explanationSessionService } from "../services/explanation-session.service";
 import { asyncHandler } from "../utils/async-handler";
 import { ensureString } from "../validation/common";
@@ -72,11 +72,6 @@ class ExplanationSessionController {
     res.json(result);
   });
 
-  getPublic = asyncHandler(async (req: Request, res: Response) => {
-    const shareId = ensureString(req.params.shareId, "Share id is required.");
-    const session = await explanationSessionService.getPublicSession(shareId);
-    res.json(serializeSharedSession(session));
-  });
 }
 
 export const explanationSessionController = new ExplanationSessionController();
