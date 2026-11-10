@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { checkRunnableCode } from "@algoforge/contracts";
 import { endpoints } from "../api/endpoints";
 import { queryKeys } from "../query/keys";
 import { failureFrom } from "./failure";
@@ -15,6 +16,12 @@ export async function runAnalysis(queryClient: QueryClient): Promise<void> {
   const language = state.language;
   const code = state.codes[language];
   if (code.trim() === "") return;
+  const sizeCheck = checkRunnableCode(code);
+  if (!sizeCheck.ok) {
+    state.startRun();
+    useWorkspace.getState().failRun({ message: sizeCheck.message, code: null, retryAt: null });
+    return;
+  }
 
   state.startRun();
   try {

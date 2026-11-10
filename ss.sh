@@ -1,202 +1,115 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# ==========================================
-# AlgoForge Lint Source Code Dumper
-# Git Bash / Windows compatible
-#
-# Output:
-#   lint-files-dump.sh
-#   ss-debug.log
-# ==========================================
+# Collect the AI-related source files listed in the AlgoForge project inventory.
+# Run this script from the repository root, or place it in the repository root
+# and execute it from anywhere.
 
-export MSYS_NO_PATHCONV=1
-export MSYS2_ARG_CONV_EXCL="*"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$SCRIPT_DIR"
+OUTPUT_FILE="${1:-$ROOT_DIR/ai-code-collection.txt}"
 
-OUT="lint-files-dump.sh"
-DEBUG_LOG="ss-debug.log"
-
-# ==========================================
-# DEBUG SYSTEM
-# ==========================================
-
-exec > >(tee -a "$DEBUG_LOG") 2>&1
-
-PS4='+ [${BASH_SOURCE##*/}:${LINENO}] '
-
-debug() {
-    echo "[DEBUG $(date '+%H:%M:%S')] $*"
-}
-
-debug "=========================================="
-debug "AlgoForge Lint Source Dumper started"
-debug "=========================================="
-
-debug "Current directory: $(pwd)"
-debug "Bash version: $BASH_VERSION"
-debug "Output file: $OUT"
-debug "Debug log: $DEBUG_LOG"
-
-# ==========================================
-# REPOSITORY CHECK
-# ==========================================
-
-debug "Checking repository directories..."
-
-if [[ ! -d "apps/web/src" || ! -d "packages" ]]; then
-    echo "[ERROR] Run this script from the AlgoForge repository root."
-    exit 1
+# Resolve relative output paths against the repository root.
+if [[ "$OUTPUT_FILE" != /* ]]; then
+  OUTPUT_FILE="$ROOT_DIR/$OUTPUT_FILE"
 fi
 
-debug "Repository structure verified."
+mkdir -p -- "$(dirname -- "$OUTPUT_FILE")"
+TMP_FILE="$(mktemp "${OUTPUT_FILE}.tmp.XXXXXX")"
+trap 'rm -f -- "$TMP_FILE"' EXIT
 
-# ==========================================
-# TARGET FILES
-# Exact paths prevent duplicate filename issues.
-# ==========================================
+FILES=(
+  # AI core and providers
+  "apps/api/src/ai/context-builder.ts"
+  "apps/api/src/prompts/analysis.prompt.ts"
+  "apps/api/src/prompts/assistant.prompt.ts"
+  "apps/api/src/services/ai.service.ts"
+  "apps/api/src/services/ai-usage.service.ts"
+  "apps/api/src/services/providers/ai-provider.ts"
+  "apps/api/src/services/providers/gemini.provider.ts"
+  "apps/api/src/services/providers/gemini-messages.ts"
+  "apps/api/src/services/providers/openrouter.provider.ts"
+  "apps/api/src/services/providers/provider-factory.ts"
+  "apps/api/src/services/lib/ai-output.ts"
+  "apps/api/src/utils/ai-cache-keys.ts"
+  "apps/api/src/services/quota.service.ts"
 
-TARGETS=(
-    "apps/web/src/components/CodeEditor/EditorToolbar.tsx"
-    "apps/web/src/components/DashBoard/DashBoard.tsx"
-    "apps/web/src/components/DashBoard/DashboardGate.tsx"
-    "apps/web/src/components/DashBoard/DesktopOnlyScreen.tsx"
-    "apps/web/src/components/DashBoard/Setting.tsx"
-    "apps/web/src/components/DashBoard/ShareModal.tsx"
-    "apps/web/src/components/DashBoard/TitleBar.tsx"
-    "apps/web/src/components/DashBoard/analysis-history.tsx"
-    "apps/web/src/components/LandingPage/WhatYouGet.tsx"
-    "apps/web/src/components/LandingPage/shared.tsx"
-    "apps/web/src/components/auth/GoogleLoginModal.tsx"
-    "apps/web/src/components/ui/FeaturePanel.tsx"
-    "apps/web/src/components/ui/card-hover-effect.tsx"
-    "apps/web/src/components/ui/glowing-effect.tsx"
-    "apps/web/src/components/ui/hover-border-gradient.tsx"
-    "apps/web/src/components/ui/resizable-navbar.tsx"
-    "apps/web/src/components/visualizers/canvas/CanvasViewport.tsx"
-    "apps/web/src/components/visualizers/canvas/Group.tsx"
-    "apps/web/src/components/visualizers/canvas/VisualizerCanvas.tsx"
-    "apps/web/src/components/visualizers/graph/GraphStage.tsx"
-    "apps/web/src/components/visualizers/graph/model.ts"
-    "apps/web/src/components/visualizers/linear/engine.ts"
-    "apps/web/src/components/visualizers/linkedlist/engine.ts"
-    "apps/web/src/components/visualizers/shared/animationSettings.ts"
-    "apps/web/src/components/visualizers/shared/stage/StageFrame.tsx"
-    "apps/web/src/components/visualizers/tree/TreeStage.tsx"
-    "apps/web/src/components/visualizers/tree/model.ts"
-    "apps/web/src/components/visualizers/ui/ScriptDrawer.tsx"
-    "apps/web/src/components/visualizers/ui/ScriptEditor.tsx"
+  # AI analysis and chat backend
+  "apps/api/src/services/analysis.service.ts"
+  "apps/api/src/services/explanation-session.service.ts"
+  "apps/api/src/services/script.service.ts"
+  "apps/api/src/repositories/ai-usage.repository.ts"
+  "apps/api/src/controllers/analysis.controller.ts"
+  "apps/api/src/controllers/explanation-session.controller.ts"
+  "apps/api/src/routes/analysis.ts"
+  "apps/api/src/routes/explanation-session.ts"
+  "apps/api/src/serializers/analysis.ts"
+  "apps/api/src/serializers/explain.ts"
+  "apps/api/src/validation/analysis.ts"
+  "apps/api/src/validation/explanation-session.ts"
+
+  # Frontend AI
+  "apps/web/src/components/DashBoard/AiChatDrawer.tsx"
+  "apps/web/src/components/DashBoard/Analysis.tsx"
+  "apps/web/src/components/DashBoard/AnalysisFeature.tsx"
+  "apps/web/src/components/DashBoard/analysis-history.tsx"
+  "apps/web/src/components/DashBoard/AnalysisHistoryFeature.tsx"
+  "apps/web/src/components/DashBoard/Markdown.tsx"
+  "apps/web/src/lib/assistant/algorithmContext.ts"
+  "apps/web/src/lib/assistant/context.ts"
+  "apps/web/src/lib/assistant/context-core.ts"
+  "apps/web/src/lib/assistant/suggestions.ts"
+  "apps/web/src/lib/analysisStatus.ts"
+  "apps/web/src/lib/workspace/analysis-run.ts"
+  "apps/web/src/lib/workspace/failure.ts"
+  "apps/web/src/data/samples/analysisHistory.ts"
+
+  # Shared packages and contracts
+  "packages/analysis/package.json"
+  "packages/analysis/src/index.ts"
+  "packages/analysis/src/schema.ts"
+  "packages/contracts/src/analysis.ts"
+  "packages/contracts/src/explain.ts"
+  "packages/contracts/src/limits.ts"
 )
 
-# ==========================================
-# FILE DISCOVERY
-# ==========================================
+FOUND=0
+MISSING=0
 
-debug "Starting file discovery..."
+{
+  printf '%s\n' "============================================================"
+  printf '%s\n' "ALGOFORGE AI CODE COLLECTION"
+  printf 'Generated: %s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')"
+  printf 'Project root: %s\n' "$ROOT_DIR"
+  printf '%s\n' "============================================================"
+  printf '\nIncluded files: %s\n' "${#FILES[@]}"
+  printf '%s\n\n' "============================================================"
 
-FILTERED=()
-MISSING=()
+  for relative_path in "${FILES[@]}"; do
+    absolute_path="$ROOT_DIR/$relative_path"
 
-for FILE in "${TARGETS[@]}"; do
-
-    debug "Checking: $FILE"
-
-    if [[ -f "$FILE" ]]; then
-        FILTERED+=("$FILE")
-        debug "FOUND: $FILE"
+    if [[ -f "$absolute_path" ]]; then
+      FOUND=$((FOUND + 1))
+      printf '\n\n%s\n' "################################################################"
+      printf 'FILE: %s\n' "$relative_path"
+      printf '%s\n\n' "################################################################"
+      cat -- "$absolute_path"
+      printf '\n'
     else
-        MISSING+=("$FILE")
-        debug "MISSING: $FILE"
+      MISSING=$((MISSING + 1))
+      printf '\n[ MISSING FILE: %s ]\n' "$relative_path"
     fi
+  done
 
-done
+  printf '\n\n%s\n' "============================================================"
+  printf '%s\n' "COLLECTION SUMMARY"
+  printf 'Found: %s\n' "$FOUND"
+  printf 'Missing: %s\n' "$MISSING"
+  printf '%s\n' "============================================================"
+} > "$TMP_FILE"
 
-debug "File discovery completed."
-debug "Found: ${#FILTERED[@]}"
-debug "Missing: ${#MISSING[@]}"
+mv -- "$TMP_FILE" "$OUTPUT_FILE"
+trap - EXIT
 
-# ==========================================
-# GENERATE RESTORATION SCRIPT
-# ==========================================
-
-debug "Starting restoration script generation..."
-
-: > "$OUT"
-
-cat >> "$OUT" <<'HEADER'
-#!/usr/bin/env bash
-set -Eeuo pipefail
-
-echo "Restoring AlgoForge lint files..."
-
-HEADER
-
-for FILE in "${FILTERED[@]}"; do
-
-    debug "Processing: $FILE"
-
-    DELIMITER="__ALGOFORGE_FILE_$(printf '%s' "$FILE" | sha256sum | cut -c1-16)__"
-
-    while grep -Fqx "$DELIMITER" "$FILE"; do
-        DELIMITER="${DELIMITER}_X"
-    done
-
-    {
-        printf 'mkdir -p %q\n' "$(dirname "$FILE")"
-        printf 'cat > %q <<'\''%s'\''\n' "$FILE" "$DELIMITER"
-        cat "$FILE"
-        printf '\n%s\n\n' "$DELIMITER"
-    } >> "$OUT"
-
-    debug "Added to output: $FILE"
-
-done
-
-cat >> "$OUT" <<'FOOTER'
-echo "All AlgoForge lint files restored successfully."
-FOOTER
-
-chmod +x "$OUT"
-
-debug "Restoration script generated successfully."
-
-# ==========================================
-# DISPLAY RESULTS
-# ==========================================
-
-echo ""
-echo "================================================"
-echo "          ALGOFORGE LINT SOURCE DUMP"
-echo "================================================"
-
-echo ""
-echo "[INCLUDED FILES]"
-
-for FILE in "${FILTERED[@]}"; do
-    printf "  %s\n" "$FILE"
-done
-
-echo ""
-echo "[MISSING FILES]"
-
-if [[ ${#MISSING[@]} -eq 0 ]]; then
-    echo "  None"
-else
-    for FILE in "${MISSING[@]}"; do
-        printf "  %s\n" "$FILE"
-    done
-fi
-
-echo ""
-echo "================================================"
-echo "Target files       : ${#TARGETS[@]}"
-echo "Files included     : ${#FILTERED[@]}"
-echo "Files missing      : ${#MISSING[@]}"
-echo "Generated file     : $OUT"
-echo "Debug log          : $DEBUG_LOG"
-echo "================================================"
-
-echo ""
-echo "To restore the collected files:"
-echo "  bash $OUT"
-
-debug "Script completed successfully."
+printf 'AI code collection created: %s\n' "$OUTPUT_FILE"
+printf 'Found: %s | Missing: %s | Total listed: %s\n' "$FOUND" "$MISSING" "${#FILES[@]}"

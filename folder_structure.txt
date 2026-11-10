@@ -1,0 +1,628 @@
+.
+├── .env
+├── .github
+│   ├── workflows
+│   │   ├── ci.yml
+├── .gitignore
+├── .npmrc
+├── .nvmrc
+├── .pnpmfile.cjs
+├── apps
+│   ├── api
+│   │   ├── .env
+│   │   ├── eslint.config.mjs
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── ai
+│   │   │   │   ├── context-builder.ts
+│   │   │   ├── app.ts
+│   │   │   ├── config
+│   │   │   │   ├── env.ts
+│   │   │   │   ├── redis.ts
+│   │   │   ├── contracts
+│   │   │   ├── controllers
+│   │   │   │   ├── admin.controller.ts
+│   │   │   │   ├── algorithm.controller.ts
+│   │   │   │   ├── analysis.controller.ts
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   ├── category.controller.ts
+│   │   │   │   ├── explanation-session.controller.ts
+│   │   │   │   ├── meta.controller.ts
+│   │   │   │   ├── search.controller.ts
+│   │   │   │   ├── share.controller.ts
+│   │   │   │   ├── user.controller.ts
+│   │   │   │   ├── visualization.controller.ts
+│   │   │   ├── db
+│   │   │   ├── middleware
+│   │   │   │   ├── auth.ts
+│   │   │   │   ├── csrf.ts
+│   │   │   │   ├── error-handler.ts
+│   │   │   │   ├── not-found.ts
+│   │   │   │   ├── rate-limit.ts
+│   │   │   │   ├── request-id.ts
+│   │   │   │   ├── security-headers.ts
+│   │   │   ├── prompts
+│   │   │   │   ├── analysis.prompt.ts
+│   │   │   │   ├── assistant.prompt.ts
+│   │   │   ├── repositories
+│   │   │   │   ├── ai-usage.repository.ts
+│   │   │   │   ├── algorithm.repository.ts
+│   │   │   │   ├── analysis.repository.ts
+│   │   │   │   ├── audit-log.repository.ts
+│   │   │   │   ├── category.repository.ts
+│   │   │   │   ├── explanation-message.repository.ts
+│   │   │   │   ├── explanation-session.repository.ts
+│   │   │   │   ├── session.repository.ts
+│   │   │   │   ├── share.repository.ts
+│   │   │   │   ├── user.repository.ts
+│   │   │   │   ├── visualization.repository.ts
+│   │   │   ├── routes
+│   │   │   │   ├── admin.ts
+│   │   │   │   ├── algorithm.ts
+│   │   │   │   ├── analysis.ts
+│   │   │   │   ├── auth.ts
+│   │   │   │   ├── category.ts
+│   │   │   │   ├── explanation-session.ts
+│   │   │   │   ├── health.ts
+│   │   │   │   ├── meta.ts
+│   │   │   │   ├── openapi.ts
+│   │   │   │   ├── search.ts
+│   │   │   │   ├── share.ts
+│   │   │   │   ├── shares.ts
+│   │   │   │   ├── users.ts
+│   │   │   │   ├── visualizations.ts
+│   │   │   ├── security
+│   │   │   ├── serializers
+│   │   │   │   ├── admin.ts
+│   │   │   │   ├── algorithm.ts
+│   │   │   │   ├── analysis.ts
+│   │   │   │   ├── auth.ts
+│   │   │   │   ├── dates.ts
+│   │   │   │   ├── explain.ts
+│   │   │   │   ├── share.ts
+│   │   │   │   ├── visualization.ts
+│   │   │   ├── server.ts
+│   │   │   ├── services
+│   │   │   │   ├── admin.service.ts
+│   │   │   │   ├── ai.service.ts
+│   │   │   │   ├── ai-usage.service.ts
+│   │   │   │   ├── algorithm
+│   │   │   │   ├── algorithm.service.ts
+│   │   │   │   │   ├── cache-keys.ts
+│   │   │   │   │   ├── detail.service.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── mutation.service.ts
+│   │   │   │   │   ├── query.service.ts
+│   │   │   │   │   ├── viz.service.ts
+│   │   │   │   ├── analysis.service.ts
+│   │   │   │   ├── audit.service.ts
+│   │   │   │   ├── auth.service.ts
+│   │   │   │   ├── capabilities.service.ts
+│   │   │   │   ├── category.service.ts
+│   │   │   │   ├── explanation-session.service.ts
+│   │   │   │   ├── lib
+│   │   │   │   │   ├── ai-output.ts
+│   │   │   │   │   ├── cache-version.ts
+│   │   │   │   │   ├── layered-cache.ts
+│   │   │   │   │   ├── lru.cache.ts
+│   │   │   │   │   ├── redis.cache.ts
+│   │   │   │   │   ├── share-cache.ts
+│   │   │   │   ├── providers
+│   │   │   │   │   ├── ai-provider.ts
+│   │   │   │   │   ├── gemini.provider.ts
+│   │   │   │   │   ├── gemini-messages.ts
+│   │   │   │   │   ├── openrouter.provider.ts
+│   │   │   │   │   ├── provider-factory.ts
+│   │   │   │   ├── public-share.service.ts
+│   │   │   │   ├── quota.service.ts
+│   │   │   │   ├── script.service.ts
+│   │   │   │   ├── search.service.ts
+│   │   │   │   ├── session-cleanup.service.ts
+│   │   │   │   ├── share.service.ts
+│   │   │   │   ├── user.service.ts
+│   │   │   │   ├── visualization.service.ts
+│   │   │   ├── types
+│   │   │   │   ├── algorithm.types.ts
+│   │   │   │   ├── express.d.ts
+│   │   │   ├── utils
+│   │   │   │   ├── ai-cache-keys.ts
+│   │   │   │   ├── app-error.ts
+│   │   │   │   ├── async-handler.ts
+│   │   │   │   ├── capabilities.ts
+│   │   │   │   ├── cookies.ts
+│   │   │   │   ├── crypto.ts
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── pagination.ts
+│   │   │   │   ├── session-activity.ts
+│   │   │   │   ├── token.ts
+│   │   │   ├── validation
+│   │   │   │   ├── algorithm.ts
+│   │   │   │   ├── analysis.ts
+│   │   │   │   ├── category.ts
+│   │   │   │   ├── common.ts
+│   │   │   │   ├── explanation-session.ts
+│   │   │   │   ├── share.ts
+│   │   │   │   ├── user.ts
+│   │   │   │   ├── visualization.ts
+│   │   ├── tsconfig.json
+│   │   ├── tsup.config.ts
+│   │   ├── vitest.config.ts
+│   ├── web
+│   │   ├── .env
+│   │   ├── .gitignore
+│   │   ├── components.json
+│   │   ├── eslint.config.mjs
+│   │   ├── next.config.ts
+│   │   ├── next-env.d.ts
+│   │   ├── package.json
+│   │   ├── package.json.bak
+│   │   ├── Plan.md
+│   │   ├── postcss.config.mjs
+│   │   ├── public
+│   │   │   ├── AlgoForgeLogo.png
+│   │   │   ├── AlgoforgeLogo.svg
+│   │   │   ├── demo
+│   │   │   │   ├── usage.mp4
+│   │   ├── README.md
+│   │   ├── sourcecode.txt
+│   │   ├── src
+│   │   │   ├── app
+│   │   │   │   ├── algorithms
+│   │   │   │   │   ├── [slug]
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   ├── dashboard
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   ├── globals.css
+│   │   │   │   ├── layout.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── privacy
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   ├── s
+│   │   │   │   │   ├── [shareId]
+│   │   │   │   │   │   ├── layout.tsx
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   ├── terms
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   ├── visualizer
+│   │   │   │   │   ├── page.tsx
+│   │   │   ├── components
+│   │   │   │   ├── account
+│   │   │   │   │   ├── deviceLabel.ts
+│   │   │   │   │   ├── DialogShell.tsx
+│   │   │   │   │   ├── ProfileDialog.tsx
+│   │   │   │   │   ├── SettingsDialog.tsx
+│   │   │   │   ├── auth
+│   │   │   │   │   ├── FeatureGate.tsx
+│   │   │   │   │   ├── GlassCard.tsx
+│   │   │   │   │   ├── GoogleButton.tsx
+│   │   │   │   │   ├── GoogleLoginModal.tsx
+│   │   │   │   │   ├── SignInPrompt.tsx
+│   │   │   │   ├── CodeEditor
+│   │   │   │   │   ├── CodeEditor.module.css
+│   │   │   │   │   ├── CodeEditor.tsx
+│   │   │   │   │   ├── constants.ts
+│   │   │   │   │   ├── EditorStatusBar.tsx
+│   │   │   │   │   ├── EditorToolbar.tsx
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── lib
+│   │   │   │   │   │   ├── formatters.ts
+│   │   │   │   │   │   ├── monacoTheme.ts
+│   │   │   │   │   │   ├── pythonProvider.ts
+│   │   │   │   │   ├── sourcecode.txt
+│   │   │   │   │   ├── types.ts
+│   │   │   │   ├── DashBoard
+│   │   │   │   │   ├── AccountAvatar.tsx
+│   │   │   │   │   ├── AiChatDrawer.tsx
+│   │   │   │   │   ├── Analysis.tsx
+│   │   │   │   │   ├── AnalysisFeature.tsx
+│   │   │   │   │   ├── analysis-history.tsx
+│   │   │   │   │   ├── AnalysisHistoryFeature.tsx
+│   │   │   │   │   ├── DashBoard.tsx
+│   │   │   │   │   ├── DashboardGate.tsx
+│   │   │   │   │   ├── DesktopOnlyScreen.tsx
+│   │   │   │   │   ├── FeaturePanel.tsx
+│   │   │   │   │   ├── Markdown.tsx
+│   │   │   │   │   ├── NotificationsPopover.tsx
+│   │   │   │   │   ├── Resize.tsx
+│   │   │   │   │   ├── Setting.tsx
+│   │   │   │   │   ├── ShareModal.tsx
+│   │   │   │   │   ├── TitleBar.tsx
+│   │   │   │   │   ├── Toolbar.tsx
+│   │   │   │   │   ├── WorkspaceEditor.tsx
+│   │   │   │   ├── LandingPage
+│   │   │   │   │   ├── DemoVideo.tsx
+│   │   │   │   │   ├── FinalCTA.tsx
+│   │   │   │   │   ├── Footer.tsx
+│   │   │   │   │   ├── Hero.tsx
+│   │   │   │   │   ├── HorizontalFeatureScroll.tsx
+│   │   │   │   │   ├── MobileTabletLandingPage.tsx
+│   │   │   │   │   ├── Navbar.tsx
+│   │   │   │   │   ├── ParticleField.tsx
+│   │   │   │   │   ├── particles.tsx
+│   │   │   │   │   ├── shared.tsx
+│   │   │   │   │   ├── UseCases.tsx
+│   │   │   │   │   ├── WhatYouGet.tsx
+│   │   │   │   ├── Logo.tsx
+│   │   │   │   ├── MotionProvider.tsx
+│   │   │   │   ├── share
+│   │   │   │   │   ├── SharedView.tsx
+│   │   │   │   ├── site
+│   │   │   │   │   ├── PageShell.tsx
+│   │   │   │   ├── SmoothScroll.tsx
+│   │   │   │   ├── ui
+│   │   │   │   │   ├── app-menu.tsx
+│   │   │   │   │   ├── badge.tsx
+│   │   │   │   │   ├── button.tsx
+│   │   │   │   │   ├── ButtonAnimated.tsx
+│   │   │   │   │   ├── card.tsx
+│   │   │   │   │   ├── card-hover-effect.tsx
+│   │   │   │   │   ├── comet-card.tsx
+│   │   │   │   │   ├── dialog.tsx
+│   │   │   │   │   ├── FeatureCard.tsx
+│   │   │   │   │   ├── FeaturePanel.tsx
+│   │   │   │   │   ├── field.tsx
+│   │   │   │   │   ├── glowing-effect.tsx
+│   │   │   │   │   ├── hover-border-gradient.tsx
+│   │   │   │   │   ├── hover-border-gradient-demo.tsx
+│   │   │   │   │   ├── input.tsx
+│   │   │   │   │   ├── interactive-hover-button.tsx
+│   │   │   │   │   ├── label.tsx
+│   │   │   │   │   ├── loader.tsx
+│   │   │   │   │   ├── resizable-navbar.tsx
+│   │   │   │   │   ├── SampleChip.tsx
+│   │   │   │   │   ├── scroll-area.tsx
+│   │   │   │   │   ├── separator.tsx
+│   │   │   │   │   ├── StatusChip.tsx
+│   │   │   │   │   ├── tabs.tsx
+│   │   │   │   │   ├── tooltip.tsx
+│   │   │   │   ├── visualizers
+│   │   │   │   │   ├── array
+│   │   │   │   │   │   ├── arrayEngine.ts
+│   │   │   │   │   │   ├── ArrayStage.tsx
+│   │   │   │   │   │   ├── complexity.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── canvas
+│   │   │   │   │   │   ├── canvasStyles.ts
+│   │   │   │   │   │   ├── CanvasViewport.tsx
+│   │   │   │   │   │   ├── Group.tsx
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── layout.ts
+│   │   │   │   │   │   ├── renderers.tsx
+│   │   │   │   │   │   ├── runtime.ts
+│   │   │   │   │   │   ├── viewport.ts
+│   │   │   │   │   │   ├── VisualizerCanvas.tsx
+│   │   │   │   │   ├── core
+│   │   │   │   │   │   ├── adapters
+│   │   │   │   │   │   │   ├── array.ts
+│   │   │   │   │   │   │   ├── graph.ts
+│   │   │   │   │   │   │   ├── hash.ts
+│   │   │   │   │   │   │   ├── linear.ts
+│   │   │   │   │   │   │   ├── linkedlist.ts
+│   │   │   │   │   │   │   ├── make.ts
+│   │   │   │   │   │   │   ├── tree.ts
+│   │   │   │   │   │   ├── ids.ts
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── opMeta.generated.ts
+│   │   │   │   │   │   ├── registry.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── engine
+│   │   │   │   │   │   ├── controller.ts
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── instance.ts
+│   │   │   │   │   │   ├── scheduler.ts
+│   │   │   │   │   │   ├── selectors.ts
+│   │   │   │   │   │   ├── store.ts
+│   │   │   │   │   │   ├── testing.ts
+│   │   │   │   │   │   ├── timer.ts
+│   │   │   │   │   │   ├── transport.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   ├── graph
+│   │   │   │   │   │   ├── complexity.ts
+│   │   │   │   │   │   ├── engine.ts
+│   │   │   │   │   │   ├── GraphStage.tsx
+│   │   │   │   │   │   ├── layout.ts
+│   │   │   │   │   │   ├── model.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── hash
+│   │   │   │   │   │   ├── complexity.ts
+│   │   │   │   │   │   ├── hashEngine.ts
+│   │   │   │   │   │   ├── hashing.ts
+│   │   │   │   │   │   ├── HashPipeline.tsx
+│   │   │   │   │   │   ├── HashStage.tsx
+│   │   │   │   │   │   ├── tableModel.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── linear
+│   │   │   │   │   │   ├── complexity.ts
+│   │   │   │   │   │   ├── engine.ts
+│   │   │   │   │   │   ├── geometry.ts
+│   │   │   │   │   │   ├── LinearStage.tsx
+│   │   │   │   │   │   ├── model.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── linkedlist
+│   │   │   │   │   │   ├── complexity.ts
+│   │   │   │   │   │   ├── engine.ts
+│   │   │   │   │   │   ├── layout.ts
+│   │   │   │   │   │   ├── ListStage.tsx
+│   │   │   │   │   │   ├── model.ts
+│   │   │   │   │   │   ├── steps.ts
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── script
+│   │   │   │   │   │   ├── compile.ts
+│   │   │   │   │   │   ├── examples.ts
+│   │   │   │   │   │   ├── fixes.ts
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── markers.ts
+│   │   │   │   │   │   ├── normalize.ts
+│   │   │   │   │   │   ├── parse.ts
+│   │   │   │   │   │   ├── schema.ts
+│   │   │   │   │   │   ├── storage.ts
+│   │   │   │   │   │   ├── suggest.ts
+│   │   │   │   │   ├── shared
+│   │   │   │   │   │   ├── animationSettings.ts
+│   │   │   │   │   │   ├── edges.ts
+│   │   │   │   │   │   ├── ids.ts
+│   │   │   │   │   │   ├── stage
+│   │   │   │   │   │   │   ├── Caption.tsx
+│   │   │   │   │   │   │   ├── EdgeG.tsx
+│   │   │   │   │   │   │   ├── geometry.ts
+│   │   │   │   │   │   │   ├── motion.ts
+│   │   │   │   │   │   │   ├── NodeDisc.tsx
+│   │   │   │   │   │   │   ├── StageBoard.tsx
+│   │   │   │   │   │   │   ├── StageEnv.tsx
+│   │   │   │   │   │   │   ├── StageFrame.tsx
+│   │   │   │   │   │   │   ├── tokens.ts
+│   │   │   │   │   │   │   ├── useStageAnimator.ts
+│   │   │   │   │   │   ├── styles.ts
+│   │   │   │   │   ├── tree
+│   │   │   │   │   │   ├── bst.ts
+│   │   │   │   │   │   ├── complexity.ts
+│   │   │   │   │   │   ├── engine.ts
+│   │   │   │   │   │   ├── layout.ts
+│   │   │   │   │   │   ├── model.ts
+│   │   │   │   │   │   ├── steps.ts
+│   │   │   │   │   │   ├── TreeStage.tsx
+│   │   │   │   │   │   ├── types.ts
+│   │   │   │   │   │   ├── validate.ts
+│   │   │   │   │   ├── ui
+│   │   │   │   │   │   ├── describe.ts
+│   │   │   │   │   │   ├── hotkeys.ts
+│   │   │   │   │   │   ├── icons.tsx
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── inlineCode.ts
+│   │   │   │   │   │   ├── LazyScriptEditor.tsx
+│   │   │   │   │   │   ├── MessageDock.tsx
+│   │   │   │   │   │   ├── PlayerChrome.tsx
+│   │   │   │   │   │   ├── SavedWork.tsx
+│   │   │   │   │   │   ├── ScriptDrawer.tsx
+│   │   │   │   │   │   ├── ScriptEditor.tsx
+│   │   │   │   │   │   ├── theme.ts
+│   │   │   │   │   │   ├── ThemeToggle.tsx
+│   │   │   │   │   │   ├── TransportBar.tsx
+│   │   │   │   │   │   ├── useTransportHotkeys.ts
+│   │   │   │   │   │   ├── VisualizerPanel.tsx
+│   │   │   ├── data
+│   │   │   │   ├── samples
+│   │   │   │   │   ├── analysisHistory.ts
+│   │   │   ├── hooks
+│   │   │   │   ├── useDebouncedValue.ts
+│   │   │   │   ├── useIsClient.ts
+│   │   │   │   ├── useIsMobile.ts
+│   │   │   ├── lib
+│   │   │   │   ├── analysisStatus.ts
+│   │   │   │   ├── api
+│   │   │   │   │   ├── client.ts
+│   │   │   │   │   ├── config.ts
+│   │   │   │   │   ├── csrf.ts
+│   │   │   │   │   ├── endpoints.ts
+│   │   │   │   │   ├── errors.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   ├── assistant
+│   │   │   │   │   ├── algorithmContext.ts
+│   │   │   │   │   ├── context.ts
+│   │   │   │   │   ├── context-core.ts
+│   │   │   │   │   ├── suggestions.ts
+│   │   │   │   ├── async.ts
+│   │   │   │   ├── auth
+│   │   │   │   │   ├── AuthProvider.tsx
+│   │   │   │   │   ├── featureState.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── loginUrl.ts
+│   │   │   │   │   ├── sessionEvents.ts
+│   │   │   │   │   ├── useFeatureState.ts
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── device.ts
+│   │   │   │   ├── featureFlags.ts
+│   │   │   │   ├── featureStatus.ts
+│   │   │   │   ├── fonts.ts
+│   │   │   │   ├── lenis.ts
+│   │   │   │   ├── markdown
+│   │   │   │   │   ├── markdown.ts
+│   │   │   │   ├── navEvents.ts
+│   │   │   │   ├── productFacts.ts
+│   │   │   │   ├── query
+│   │   │   │   │   ├── hooks.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── keys.ts
+│   │   │   │   │   ├── QueryBoundary.tsx
+│   │   │   │   │   ├── queryClient.ts
+│   │   │   │   │   ├── QueryProvider.tsx
+│   │   │   │   ├── reducedMotion.ts
+│   │   │   │   ├── search
+│   │   │   │   │   ├── items.ts
+│   │   │   │   │   ├── useSearch.ts
+│   │   │   │   ├── share
+│   │   │   │   │   ├── target.ts
+│   │   │   │   ├── site.ts
+│   │   │   │   ├── split.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── utils.ts
+│   │   │   │   ├── workspace
+│   │   │   │   │   ├── analysis-run.ts
+│   │   │   │   │   ├── failure.ts
+│   │   │   │   │   ├── store.ts
+│   │   ├── tailwind.config.ts
+│   │   ├── tsconfig.json
+│   │   ├── tsconfig.tsbuildinfo
+├── docker-compose.yml
+├── env_dump.txt
+├── fahh.sh
+├── folder_structure.txt
+├── images
+│   ├── image1.png
+│   ├── image2.png
+│   ├── image3.png
+├── package.json
+├── packages
+│   ├── analysis
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── index.ts
+│   │   │   ├── schema.ts
+│   │   ├── tsconfig.json
+│   ├── contracts
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── admin.ts
+│   │   │   ├── algorithms.ts
+│   │   │   ├── analysis.ts
+│   │   │   ├── auth.ts
+│   │   │   ├── capabilities.ts
+│   │   │   ├── categories.ts
+│   │   │   ├── common.ts
+│   │   │   ├── errors.ts
+│   │   │   ├── explain.ts
+│   │   │   ├── health.ts
+│   │   │   ├── index.ts
+│   │   │   ├── limits.ts
+│   │   │   ├── openapi.ts
+│   │   │   ├── registry.ts
+│   │   │   ├── return-to.ts
+│   │   │   ├── routes.ts
+│   │   │   ├── search.ts
+│   │   │   ├── shares.ts
+│   │   │   ├── stored-results.ts
+│   │   │   ├── users.ts
+│   │   │   ├── visualizations.ts
+│   │   ├── tsconfig.json
+│   ├── db
+│   │   ├── .env
+│   │   ├── package.json
+│   │   ├── prisma
+│   │   │   ├── backfills
+│   │   │   │   ├── phase5_backfill.sql
+│   │   │   ├── make-admin.ts
+│   │   │   ├── migrations
+│   │   │   │   ├── 20260501175040_init
+│   │   │   │   │   ├── migration.sql
+│   │   │   │   ├── 20261104120000_phase4_auth_sessions
+│   │   │   │   │   ├── migration.sql
+│   │   │   │   ├── 20261104144224_phase5_data_model
+│   │   │   │   │   ├── migration.sql
+│   │   │   │   ├── migration_lock.toml
+│   │   │   ├── run-backfill.ts
+│   │   │   ├── schema.prisma
+│   │   │   ├── seed.ts
+│   │   │   ├── verify-phase5.ts
+│   │   ├── src
+│   │   │   ├── index.ts
+│   │   ├── tsconfig.json
+│   ├── forge
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── index.ts
+│   │   │   ├── recorder.ts
+│   │   │   ├── schemas.ts
+│   │   │   ├── types.ts
+│   │   ├── tsconfig.json
+│   ├── visualizer-core
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── analyze.ts
+│   │   │   ├── array
+│   │   │   │   ├── arrayEngine.ts
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   │   ├── catalog-scripts.ts
+│   │   │   ├── core
+│   │   │   │   ├── adapters
+│   │   │   │   │   ├── array.ts
+│   │   │   │   │   ├── graph.ts
+│   │   │   │   │   ├── hash.ts
+│   │   │   │   │   ├── linear.ts
+│   │   │   │   │   ├── linkedlist.ts
+│   │   │   │   │   ├── make.ts
+│   │   │   │   │   ├── tree.ts
+│   │   │   │   ├── ids.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── opMeta.generated.ts
+│   │   │   │   ├── registry.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   │   ├── graph
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── engine.ts
+│   │   │   │   ├── layout.ts
+│   │   │   │   ├── model.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   │   ├── hash
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── hashEngine.ts
+│   │   │   │   ├── hashing.ts
+│   │   │   │   ├── tableModel.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   │   ├── index.ts
+│   │   │   ├── linear
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── engine.ts
+│   │   │   │   ├── model.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   │   ├── linkedlist
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── engine.ts
+│   │   │   │   ├── model.ts
+│   │   │   │   ├── steps.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   │   ├── script
+│   │   │   │   ├── compile.ts
+│   │   │   │   ├── normalize.ts
+│   │   │   │   ├── parse.ts
+│   │   │   │   ├── schema.ts
+│   │   │   │   ├── suggest.ts
+│   │   │   ├── shared
+│   │   │   │   ├── edges.ts
+│   │   │   │   ├── ids.ts
+│   │   │   │   ├── stage
+│   │   │   │   │   ├── geometry.ts
+│   │   │   │   │   ├── tokens.ts
+│   │   │   ├── tree
+│   │   │   │   ├── bst.ts
+│   │   │   │   ├── complexity.ts
+│   │   │   │   ├── engine.ts
+│   │   │   │   ├── model.ts
+│   │   │   │   ├── steps.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── validate.ts
+│   │   ├── tsconfig.json
+│   │   ├── vitest.config.ts
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── README.md
+├── s.sh
+├── ss.sh
+├── sss.sh
+├── ssss.sh
+├── sssss.sh

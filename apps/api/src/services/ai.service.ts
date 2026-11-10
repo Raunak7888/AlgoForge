@@ -1,6 +1,6 @@
 import type { AnalysisLanguage, AnalysisResult } from "@algoforge/analysis";
 import { env } from "../config/env";
-import { ANALYSIS_PROMPT_VERSION, buildAnalysisPrompt } from "../prompts/analysis.prompt";
+import { ANALYSIS_PROMPT_VERSION, buildAnalysisMessages } from "../prompts/analysis.prompt";
 import { AppError } from "../utils/app-error";
 import { logger } from "../utils/logger";
 import { parseAnalysisOutput } from "./lib/ai-output";
@@ -21,8 +21,18 @@ export interface AnalysisOutput {
 interface GenerateOptions {
   timeoutMs: number;
   maxOutputTokens: number;
+  /** Budget for one provider attempt (one key on one model). Defaults to half of timeoutMs. */
+  attemptTimeoutMs?: number;
   /** Aborts the provider request when the caller goes away (for example the HTTP client disconnected). */
   signal?: AbortSignal;
+}
+
+/** A retry is only worth starting when at least this much of the analysis budget is left. */
+const MIN_RETRY_MS = 10_000;
+
+/** One provider attempt gets half of the call budget, so rotation can still reach a second model. */
+function defaultAttemptTimeout(totalMs: number): number {
+  return Math.max(15_000, Math.floor(totalMs / 2));
 }
 
 class AIService {
@@ -33,12 +43,16 @@ class AIService {
   async analyzeCode(input: AnalyzeCodeInput): Promise<AnalysisOutput> {
     const attempts = 1 + Math.max(0, env.ai.maxRetries);
     let lastError: AppError | null = null;
+    // One analysis never takes longer than twice the per-call timeout, however many retries are configured.
+    const deadline = Date.now() + env.ai.analysisTimeoutMs * 2;
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
+      const remainingMs = deadline - Date.now();
+      if (attempt > 1 && remainingMs < MIN_RETRY_MS) break;
       const { content, model } = await this.generate(
-        [{ role: "user", content: buildAnalysisPrompt(input) }],
+        buildAnalysisMessages(input),
         "json",
-        { timeoutMs: env.ai.analysisTimeoutMs, maxOutputTokens: env.ai.analysisMaxOutputTokens },
+        { timeoutMs: Math.min(env.ai.analysisTimeoutMs, remainingMs), maxOutputTokens: env.ai.analysisMaxOutputTokens },
       );
       try {
         return { result: parseAnalysisOutput(content), model, promptVersion: ANALYSIS_PROMPT_VERSION };
@@ -84,6 +98,7 @@ class AIService {
         responseFormat,
         maxOutputTokens: options.maxOutputTokens,
         signal: controller.signal,
+        attemptTimeoutMs: options.attemptTimeoutMs ?? defaultAttemptTimeout(options.timeoutMs),
       });
       return { content: response.message.content, model: response.model };
     } catch (error) {

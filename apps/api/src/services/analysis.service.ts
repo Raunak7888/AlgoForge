@@ -9,6 +9,7 @@
 import type { Prisma } from "@algoforge/db";
 import {
   ANALYSIS_RESULT_SCHEMA_VERSION,
+  checkRunnableCode,
   wrapStoredAnalysisResult,
   type AnalysisQuotaResponse,
   type AnalysisResult,
@@ -16,7 +17,7 @@ import {
 import { ANALYSIS_PROMPT_VERSION } from "../prompts/analysis.prompt";
 import { analysisRepository } from "../repositories/analysis.repository";
 import { AppError } from "../utils/app-error";
-import { analysisCacheKey, deriveTitle, hashCode } from "../utils/ai-cache-keys";
+import { analysisCacheKey, deriveTitle, hashNormalizedCode } from "../utils/ai-cache-keys";
 import { logger, serializeError } from "../utils/logger";
 import { paginate } from "../utils/pagination";
 import { encodeAnalysisCursor, type AnalysisHistoryQuery, type AnalysisInput } from "../validation/analysis";
@@ -33,8 +34,10 @@ interface CachedAnalysis {
 
 class AnalysisService {
   async createAnalysis(userId: string, input: AnalysisInput) {
+    const sizeCheck = checkRunnableCode(input.code);
+    if (!sizeCheck.ok) throw AppError.badRequest(sizeCheck.message, [{ path: "code", message: sizeCheck.message }]);
     const started = Date.now();
-    const key = analysisCacheKey(input.language, hashCode(input.code), ANALYSIS_PROMPT_VERSION);
+    const key = analysisCacheKey(input.language, hashNormalizedCode(input.code), ANALYSIS_PROMPT_VERSION);
 
     let entry = await layeredCache.get<CachedAnalysis>(key);
 

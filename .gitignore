@@ -21,4 +21,4 @@ coverage/
 .phase1-backup/
 .phase2-backup/
 
-.phase6-backup/
+.phase6-backup/env_dump.txt

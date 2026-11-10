@@ -11,6 +11,8 @@ export type AIGenerateRequest = {
   responseFormat?: "json" | "text";
   /** Upper bound for the length of the answer. */
   maxOutputTokens?: number;
+  /** Budget in ms for one attempt (one key on one model). Providers that rotate use it per attempt. */
+  attemptTimeoutMs?: number;
   /** Aborts the underlying HTTP request when it fires. */
   signal?: AbortSignal;
 };

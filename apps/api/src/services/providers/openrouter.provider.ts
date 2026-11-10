@@ -23,11 +23,51 @@ type OpenRouterCompletionResponse = {
   choices?: Array<{ message?: OpenRouterChoiceMessage }>;
 };
 
-// type OpenRouterChatRequest = {
-//   model: string;
-//   messages: OpenRouterMessage[];
-//   reasoning: { enabled: boolean };
-// };
+/**
+ * What a failed attempt means for the rotation:
+ *  - "key":   this key is the problem (throttled, unpaid, rejected). Try the next key on the same model.
+ *  - "model": this model is the problem (timeout, 5xx, removed, rejects the request, empty answer). Skip to the next model.
+ *  - "fatal": trying elsewhere cannot help. Surface the error.
+ */
+export type FailureScope = "key" | "model" | "fatal";
+
+export function classifyFailure(error: unknown, attemptTimedOut: boolean): FailureScope {
+  if (attemptTimedOut) return "model";
+  const status = getStatusCode(error);
+  if (status === undefined) return error instanceof OpenAI.APIConnectionError ? "model" : "fatal";
+  if (status === 401 || status === 402 || status === 403 || status === 429) return "key";
+  if (status === 400 || status === 404 || status === 408 || status === 422 || status >= 500) return "model";
+  return "fatal";
+}
+
+/**
+ * One signal per provider attempt. It fires when the caller aborts (total deadline, client gone)
+ * or when this attempt alone has used up its slice of the budget.
+ */
+function createAttemptSignal(parent: AbortSignal | undefined, timeoutMs: number | undefined) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer =
+    timeoutMs !== undefined
+      ? setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, timeoutMs)
+      : undefined;
+  const onParentAbort = () => controller.abort();
+  if (parent) {
+    if (parent.aborted) controller.abort();
+    else parent.addEventListener("abort", onParentAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    timedOut: () => timedOut,
+    dispose: () => {
+      if (timer !== undefined) clearTimeout(timer);
+      parent?.removeEventListener("abort", onParentAbort);
+    },
+  };
+}
 
 export class OpenRouterProvider implements AIProvider {
   readonly name = "openrouter";
@@ -65,22 +105,11 @@ export class OpenRouterProvider implements AIProvider {
 
       for (let keyOffset = 0; keyOffset < this.config.apiKeys.length; keyOffset++) {
         const keyState = this.getKeyState(modelState.model, keyOffset);
+        const attempt = createAttemptSignal(request.signal, request.attemptTimeoutMs);
 
         try {
-          const client = this.getClient(keyState.apiKey);
-          const completion = await client.chat.completions.create(
-            {
-              model: modelState.model,
-              messages: this.toOpenRouterMessages(request.messages),
-              reasoning: { enabled: true },
-              ...(request.maxOutputTokens ? { max_tokens: request.maxOutputTokens } : {}),
-            } as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
-            request.signal ? { signal: request.signal } : undefined,
-          );
-
-          const assistantMessage = this.toAssistantMessage(
-            completion as unknown as OpenRouterCompletionResponse,
-          );
+          const completion = await this.complete(keyState.apiKey, modelState.model, request, attempt.signal);
+          const assistantMessage = this.toAssistantMessage(completion);
 
           this.modelIndex = modelState.actualIndex;
           this.keyIndexByModel.set(
@@ -94,36 +123,79 @@ export class OpenRouterProvider implements AIProvider {
             history: [...request.messages, assistantMessage],
           };
         } catch (error) {
-          // An abort is a timeout decided by the caller: never rotate keys or models because of it.
+          // The caller aborted (total deadline or the client went away): never rotate because of that.
           if (request.signal?.aborted) throw this.normalizeFatalError(error);
 
-          const statusCode = getStatusCode(error);
+          const scope = classifyFailure(error, attempt.timedOut());
+          if (scope === "fatal") throw this.normalizeFatalError(error);
 
-          if (statusCode === 429 || statusCode === 503) {
-            lastRetriableError = error;
+          lastRetriableError = error;
+          if (!env.isProduction) {
+            console.warn(
+              `[AI][openrouter] ${scope}-level failure (status ${String(getStatusCode(error) ?? "none")}) on model "${modelState.model}", key ${keyState.actualIndex}. Rotating.`,
+            );
+          }
+
+          if (scope === "key") {
             this.keyIndexByModel.set(
               modelState.model,
               (keyState.actualIndex + 1) % this.config.apiKeys.length,
             );
-            if (!env.isProduction) {
-              console.warn(
-                `[AI][openrouter] Key ${keyState.actualIndex} throttled for model "${modelState.model}". Rotating.`,
-              );
-            }
             continue;
           }
-
-          throw this.normalizeFatalError(error);
+          break; // "model": other keys will not help, move to the next model
+        } finally {
+          attempt.dispose();
         }
       }
 
-      if (!env.isProduction) {
-        console.warn(`[AI][openrouter] All keys exhausted for model "${modelState.model}". Rotating model.`);
-      }
       this.modelIndex = (modelState.actualIndex + 1) % this.config.freeModels.length;
     }
 
     throw this.normalizeRetriableError(lastRetriableError);
+  }
+
+  /**
+   * One provider call. JSON calls ask for JSON mode and skip reasoning (reasoning tokens count against
+   * max_tokens and can truncate the JSON). Chat calls keep reasoning on. A 400 usually means the model
+   * rejects one of those optional parameters, so it is retried once without them.
+   */
+  private async complete(
+    apiKey: string,
+    model: string,
+    request: AIGenerateRequest,
+    signal: AbortSignal,
+  ): Promise<OpenRouterCompletionResponse> {
+    const client = this.getClient(apiKey);
+    const isJson = request.responseFormat === "json";
+
+    const base = {
+      model,
+      messages: this.toOpenRouterMessages(request.messages),
+      temperature: isJson ? 0.1 : 0.4,
+      ...(request.maxOutputTokens ? { max_tokens: request.maxOutputTokens } : {}),
+    };
+    const preferred = {
+      ...base,
+      ...(isJson ? { response_format: { type: "json_object" } } : { reasoning: { enabled: true } }),
+    };
+
+    try {
+      const completion = await client.chat.completions.create(
+        preferred as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+        { signal },
+      );
+      return completion as unknown as OpenRouterCompletionResponse;
+    } catch (error) {
+      if (getStatusCode(error) === 400 && !signal.aborted) {
+        const completion = await client.chat.completions.create(
+          base as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+          { signal },
+        );
+        return completion as unknown as OpenRouterCompletionResponse;
+      }
+      throw error;
+    }
   }
 
   private getModelState(offset: number): { actualIndex: number; model: string } {
@@ -144,6 +216,8 @@ export class OpenRouterProvider implements AIProvider {
     const client = new OpenAI({
       apiKey,
       baseURL: this.config.baseUrl,
+      // The rotation loop above is the retry policy. The SDK's own retries would stack on top of it.
+      maxRetries: 0,
       defaultHeaders: {
         ...(this.config.siteUrl ? { "HTTP-Referer": this.config.siteUrl } : {}),
         ...(this.config.appName ? { "X-Title": this.config.appName } : {}),

@@ -75,8 +75,8 @@ export async function buildAssistantContext(input: ExplainContext | undefined): 
 /** A cheap, label-only classification stored with each answer. */
 export function detectIntent(query: string): string {
   const q = query.toLowerCase();
-  if (/optimi[sz]|faster|speed up|improve|refactor|complexity/.test(q)) return "optimize";
-  if (/generate|write|implement|code for|give me (the )?code/.test(q)) return "generate_code";
-  if (/explain|why|how|what|walk me/.test(q)) return "explain";
+  if (/\b(optimi[sz]\w*|faster|speed up|improve|refactor)\b/.test(q)) return "optimize";
+  if (/\b(generate|write|implement|code for)\b|give me (the )?code/.test(q)) return "generate_code";
+  if (/\b(explain|why|how|what|walk me|complexity)\b/.test(q)) return "explain";
   return "general";
 }

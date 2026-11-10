@@ -13,7 +13,7 @@ import {
 } from "@algoforge/analysis";
 import { IsoDateTimeSchema, pageQuerySchema } from "./common";
 import { QuotaWindowSchema } from "./errors";
-import { LIMITS } from "./limits";
+import { checkRunnableCode, LIMITS } from "./limits";
 import { SafeUserSchema } from "./users";
 
 export {
@@ -37,7 +37,11 @@ export type Improvement = z.infer<typeof ImprovementSchema>;
 export type Comparison = z.infer<typeof ComparisonSchema>;
 
 export const CreateAnalysisRequestSchema = z.object({
-  code: z.string().trim().min(1, "Code must be a non-empty string.").max(LIMITS.code.maxChars, "Code payload is too large."),
+  code: z.string().trim().min(1, "Code must be a non-empty string.").max(LIMITS.code.maxChars, "Code payload is too large.").superRefine((code, ctx) => {
+    if (code.length > LIMITS.code.maxChars) return; // already reported by max()
+    const check = checkRunnableCode(code);
+    if (!check.ok) ctx.addIssue({ code: "custom", message: check.message });
+  }),
   language: AnalysisLanguageSchema,
 });
 export type CreateAnalysisRequest = z.infer<typeof CreateAnalysisRequestSchema>;

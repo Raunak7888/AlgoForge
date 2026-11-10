@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Zap } from "lucide-react";
 import { useEffect, useState } from "react";
-import { LIMITS } from "@algoforge/contracts";
+import { checkRunnableCode, countLines, LIMITS } from "@algoforge/contracts";
 import { FeatureGate } from "@/components/auth/FeatureGate";
 import { btn, btnPrimary } from "@/components/visualizers/shared/styles";
 import { useAnalysisQuota, useCapabilities } from "@/lib/query";
@@ -61,10 +61,11 @@ function RealAnalysisPanel() {
     }
 
     const maxChars = capabilities.data?.limits.codeMaxChars ?? LIMITS.code.maxChars;
-    const lines = code.trim() === "" ? 0 : code.split("\n").length;
+    const lines = countLines(code);
 
+    const runCheck = checkRunnableCode(code);
     let blocked: string | null = null;
-    if (code.trim() === "") blocked = "Write or paste some code in the editor first.";
+    if (!runCheck.ok) blocked = runCheck.message;
     else if (code.length > maxChars) blocked = `The code is ${code.length.toLocaleString()} characters; the limit is ${maxChars.toLocaleString()}.`;
     else if (quota.data && quota.data.day.remaining <= 0) blocked = `Daily limit reached. You can analyze again at ${timeOf(quota.data.day.resetAt)}.`;
     else if (quota.data && minuteUsedUp && Date.parse(quota.data.minute.resetAt) > now)
@@ -82,7 +83,7 @@ function RealAnalysisPanel() {
                     </span>
                     <h2 className="text-xl font-semibold tracking-tight">Analyze your code</h2>
                     <p className="font-mono text-xs text-zinc-400">
-                        {LANGUAGE_LABEL[language]} · {lines} {lines === 1 ? "line" : "lines"} · {code.length.toLocaleString()} / {maxChars.toLocaleString()} characters
+                        {LANGUAGE_LABEL[language]} · {lines} / {LIMITS.code.runMaxLines} lines · {runCheck.chars.toLocaleString()} / {LIMITS.code.runMaxChars.toLocaleString()} characters
                     </p>
                 </div>
 

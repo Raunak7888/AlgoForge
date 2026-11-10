@@ -3,7 +3,7 @@
  * The API validators, the Express body parser, the shared visualizer compiler and the frontend read these.
  */
 export const LIMITS = {
-  code: { maxChars: 20_000 },
+  code: { maxChars: 20_000, runMaxLines: 100, runMaxChars: 8_000 },
   script: { maxChars: 200_000 },
   message: { minChars: 5, maxChars: 2_000 },
   title: { maxChars: 200 },
@@ -29,6 +29,53 @@ export interface PageSizeLimits {
 }
 
 export const JSON_BODY_LIMIT_BYTES: number = LIMITS.body.jsonMaxBytes;
+
+/**
+ * Lines in the code, counted the same way in the browser and in the API:
+ * line endings normalized, surrounding blank space trimmed.
+ */
+export function countLines(code: string): number {
+  const text = code.replace(/\r\n?/g, "\n").trim();
+  return text === "" ? 0 : text.split("\n").length;
+}
+
+export type CodeCheck =
+  | { ok: true; lines: number; chars: number }
+  | { ok: false; reason: "empty" | "too_many_lines" | "too_long"; lines: number; chars: number; message: string };
+
+/**
+ * Gate for everything that starts real work on the code in the editor (analysis, visualizer).
+ * The browser and the API call this same function, so they cannot disagree.
+ */
+export function checkRunnableCode(
+  code: string,
+  limits: { maxLines: number; maxChars: number } = { maxLines: LIMITS.code.runMaxLines, maxChars: LIMITS.code.runMaxChars },
+): CodeCheck {
+  const lines = countLines(code);
+  const chars = code.trim().length;
+  if (lines === 0) {
+    return { ok: false, reason: "empty", lines, chars, message: "Write or paste some code in the editor first." };
+  }
+  if (lines > limits.maxLines) {
+    return {
+      ok: false,
+      reason: "too_many_lines",
+      lines,
+      chars,
+      message: `Your code is ${lines} lines. Code analysis and the visualizer support up to ${limits.maxLines} lines. Shorten it to continue.`,
+    };
+  }
+  if (chars > limits.maxChars) {
+    return {
+      ok: false,
+      reason: "too_long",
+      lines,
+      chars,
+      message: `Your code is ${chars.toLocaleString()} characters. Code analysis and the visualizer support up to ${limits.maxChars.toLocaleString()}. Shorten it to continue.`,
+    };
+  }
+  return { ok: true, lines, chars };
+}
 
 export const CAPABILITY_LIMITS = {
   codeMaxChars: LIMITS.code.maxChars,

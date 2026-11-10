@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, History, Maximize2, Minimize2, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
-import type { ExplainSessionDetail } from "@algoforge/contracts";
+import { countLines, LIMITS, type ExplainSessionDetail } from "@algoforge/contracts";
 import { LoaderOne } from "../ui/loader";
 import { endpoints } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/errors";
@@ -227,7 +227,12 @@ function AIChatDrawer({ open, onClose }: { open: boolean; onClose: VoidFunction 
 
     // "Insert into editor" replaces the code of that language. It asks first because it overwrites.
     const insertIntoEditor = (code: string, lang: "javascript" | "python") => {
-        if (!window.confirm(`Replace the ${lang} code in the editor with this snippet?`)) return;
+        const lines = countLines(code);
+        const oversize =
+            lines > LIMITS.code.runMaxLines
+                ? ` It is ${lines} lines: code analysis and the visualizer support up to ${LIMITS.code.runMaxLines}, so they will not run on it.`
+                : "";
+        if (!window.confirm(`Replace the ${lang} code in the editor with this snippet?${oversize}`)) return;
         useWorkspace.getState().setLanguage(lang);
         useWorkspace.getState().setCode(code);
     };

@@ -4,6 +4,17 @@ import { createHash } from "crypto";
 export const hashCode = (code: string): string => createHash("sha256").update(code, "utf8").digest("hex");
 
 /**
+ * Makes cosmetic differences irrelevant to the analysis cache: line endings and trailing whitespace.
+ * Leading indentation is kept because it is meaningful (Python).
+ */
+export function normalizeCodeForCache(code: string): string {
+  return code.replace(/\r\n?/g, "\n").replace(/[ \t]+$/gm, "").replace(/\n+$/, "");
+}
+
+/** Hash used in analysis cache keys. hashCode() itself is unchanged so it keeps matching the Phase 5 backfill. */
+export const hashNormalizedCode = (code: string): string => hashCode(normalizeCodeForCache(code));
+
+/**
  * Analysis results depend on exactly three inputs: the language, the code and the prompt.
  * All three are in the key, so a prompt change can never serve a stale result.
  */
