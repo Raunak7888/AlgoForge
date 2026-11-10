@@ -2,9 +2,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const AI_PROVIDERS = ["gemini", "openrouter"] as const;
-type AIProvider = (typeof AI_PROVIDERS)[number];
-
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
@@ -23,20 +20,6 @@ function parseInteger(name: string, fallback: number): number {
   return parsed;
 }
 
-function parseStringEnum<T extends string>(
-  name: string,
-  allowedValues: readonly T[],
-  fallback: T,
-): T {
-  const rawValue = process.env[name];
-  if (!rawValue) return fallback;
-  if (!allowedValues.includes(rawValue as T))
-    throw new Error(
-      `Environment variable ${name} must be one of: ${allowedValues.join(", ")}.`,
-    );
-  return rawValue as T;
-}
-
 function parseBoolean(name: string, fallback: boolean): boolean {
   const rawValue = process.env[name];
   if (rawValue === undefined || rawValue.trim() === "") return fallback;
@@ -46,34 +29,14 @@ function parseBoolean(name: string, fallback: boolean): boolean {
   throw new Error(`Environment variable ${name} must be true or false (got "${rawValue}").`);
 }
 
-function parseList(name: string): string[] {
-  const rawValue = process.env[name];
-  if (!rawValue) return [];
-  return rawValue
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-}
-
 const port = parseInteger("PORT", 4000);
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
 const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
-const aiProvider = parseStringEnum("AI_PROVIDER", AI_PROVIDERS, "gemini");
 
-// Provider-specific validation: only the selected provider's settings are required.
-const openRouterApiKeys = parseList("OPENROUTER_API_KEYS");
-const openRouterFreeModels = parseList("OPENROUTER_FREE_MODELS");
-if (aiProvider === "openrouter") {
-  if (openRouterApiKeys.length === 0)
-    throw new Error("OPENROUTER_API_KEYS must be set when AI_PROVIDER=openrouter.");
-  if (openRouterFreeModels.length === 0)
-    throw new Error("OPENROUTER_FREE_MODELS must be set when AI_PROVIDER=openrouter.");
-}
-const geminiApiKey =
-  aiProvider === "gemini" ? requireEnv("GEMINI_API_KEY") : (process.env.GEMINI_API_KEY ?? "");
-// No hard-coded model: it must be chosen explicitly when Gemini is the provider.
-const aiModel = aiProvider === "gemini" ? requireEnv("AI_MODEL") : (process.env.AI_MODEL ?? "");
+const geminiApiKey = requireEnv("GEMINI_API_KEY");
+// No hard-coded model: it must be chosen explicitly.
+const aiModel = requireEnv("AI_MODEL");
 
 export const env = {
   nodeEnv,
@@ -92,7 +55,6 @@ export const env = {
   authAudience: process.env.AUTH_AUDIENCE ?? "algoforge-web",
   geminiApiKey,
   ai: {
-    provider: aiProvider as AIProvider,
     model: aiModel,
     timeoutMs: parseInteger("AI_TIMEOUT_MS", 15000),
     maxRetries: parseInteger("AI_MAX_RETRIES", 1),
@@ -103,14 +65,6 @@ export const env = {
     /** The assistant writes explanations and code, so it gets more time and room than the generic text helper. */
     assistantTimeoutMs: parseInteger("AI_ASSISTANT_TIMEOUT_MS", 30000),
     assistantMaxOutputTokens: parseInteger("AI_ASSISTANT_MAX_OUTPUT_TOKENS", 2048),
-  },
-  openRouter: {
-    baseUrl:
-      process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-    apiKeys: openRouterApiKeys,
-    freeModels: openRouterFreeModels,
-    appName: process.env.OPENROUTER_APP_NAME ?? "AlgoForge",
-    siteUrl: process.env.OPENROUTER_SITE_URL ?? process.env.WEB_APP_URL,
   },
   quotas: {
     /** Billable (uncached) analyses per user. Cache hits never use quota. */
