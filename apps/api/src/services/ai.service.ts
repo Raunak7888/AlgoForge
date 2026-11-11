@@ -65,8 +65,8 @@ class AIService {
     throw lastError ?? AppError.aiInvalidOutput();
   }
 
-  async generateText(messages: AIMessage[], options: Partial<GenerateOptions> = {}): Promise<string> {
-    const { content } = await this.generate(messages, "text", {
+  async generateText(messages: AIMessage[], options: Partial<GenerateOptions> & { responseFormat?: "json" | "text" } = {}): Promise<string> {
+    const { content } = await this.generate(messages, options.responseFormat ?? "text", {
       timeoutMs: options.timeoutMs ?? env.ai.timeoutMs,
       maxOutputTokens: options.maxOutputTokens ?? env.ai.textMaxOutputTokens,
       ...(options.signal ? { signal: options.signal } : {}),

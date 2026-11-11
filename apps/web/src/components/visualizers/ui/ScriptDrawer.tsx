@@ -6,7 +6,6 @@ import type { Diagnostic } from "../core/types";
 import { visualizer } from "../engine/instance";
 import type { VisualizerStore } from "../engine/store";
 import { compileScript } from "../script/compile";
-import { EXAMPLES } from "../script/examples";
 import { applyFix } from "../script/fixes";
 import { countBySeverity } from "../script/markers";
 import { loadScript, saveScript } from "../script/storage";
@@ -100,12 +99,6 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
         return () => window.removeEventListener("keydown", onKey);
     }, [open, run]);
 
-    const loadExample = (id: string) => {
-        const ex = EXAMPLES.find((x) => x.id === id);
-        if (!ex) return;
-        setText(ex.script);
-        runText(ex.script);
-    };
     const fix = (d: Diagnostic) => {
         const next = applyFix(textRef.current, d);
         if (next !== null) setText(next);
@@ -116,7 +109,6 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
         runText(t);
     };
     const { errors, warnings } = countBySeverity(diagnostics);
-    const blank = text.trim() === "";
 
     return (
         <section aria-label="Script" className="flex flex-col gap-3 rounded-2xl border border-primary-foreground/10 bg-card/50 p-3">
@@ -124,17 +116,6 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
                 <button type="button" className={cn(btn, "font-semibold")} aria-expanded={open} aria-controls="script-body" onClick={() => setOpen((o) => !o)}>
                     Script {open ? "▾" : "▸"}
                 </button>
-                <label className="sr-only" htmlFor="script-examples">
-                    Examples
-                </label>
-                <select id="script-examples" className={cn(inputCls, "h-8 w-auto py-0")} value="" onChange={(e) => loadExample(e.target.value)}>
-                    <option value="">Examples…</option>
-                    {EXAMPLES.map((x) => (
-                        <option key={x.id} value={x.id} title={x.description}>
-                            {x.title}
-                        </option>
-                    ))}
-                </select>
                 <button type="button" className={btnPrimary} onClick={run} aria-keyshortcuts="Control+Enter Meta+Enter" title="Run (Ctrl/Cmd+Enter)">
                     Run
                 </button>
@@ -147,14 +128,6 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
 
             {open && (
                 <div id="script-body" className="flex flex-col gap-3">
-                    {blank && (
-                        <div data-empty className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-primary-foreground/20 p-3 text-sm text-muted-foreground">
-                            <span>No script yet. Pick an example, or start from a sample.</span>
-                            <button type="button" className={btn} onClick={() => loadExample(EXAMPLES[0].id)}>
-                                Load sample
-                            </button>
-                        </div>
-                    )}
                     <div className="h-72 overflow-hidden rounded-xl border border-primary-foreground/10">
                         <Editor value={text} onChange={setText} onRun={run} diagnostics={diagnostics} dark={dark} onReady={onReady} />
                     </div>

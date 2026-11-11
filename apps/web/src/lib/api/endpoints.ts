@@ -13,6 +13,7 @@ import {
   SendMessageResponseSchema,
   MeResponseSchema,
   SearchResponseSchema,
+  GenerateVisualizationResponseSchema,
   ValidateScriptResponseSchema,
   VisualizationListResponseSchema,
   VisualizationSchema,
@@ -27,6 +28,8 @@ import {
   type CategoryListResponse,
   type CreateAnalysisRequest,
   type CreateVisualizationRequest,
+  type GenerateVisualizationRequest,
+  type GenerateVisualizationResponse,
   type CreateExplainSessionRequest,
   type ExplainSessionDetail,
   type ExplainSessionListResponse,
@@ -103,8 +106,8 @@ export function createEndpoints(client: ApiClient) {
 
     visualizations: (params: PageParams = {}, signal?: AbortSignal): Promise<VisualizationListResponse> =>
       client.get("/api/visualizations", VisualizationListResponseSchema, { query: { ...params }, ...opt(signal) }),
-    generateVisualization: (body: { code: string; language: string }, signal?: AbortSignal): Promise<unknown> =>
-      client.post("/visualize", z.unknown(), body, opt(signal)),
+    generateVisualization: (body: GenerateVisualizationRequest, signal?: AbortSignal): Promise<GenerateVisualizationResponse> =>
+      client.post("/api/visualizations/generate", GenerateVisualizationResponseSchema, body, opt(signal)),
     visualization: (id: string, signal?: AbortSignal): Promise<Visualization> => client.get(`/api/visualizations/${seg(id)}`, VisualizationSchema, opt(signal)),
     createVisualization: (body: CreateVisualizationRequest): Promise<Visualization> => client.post("/api/visualizations", VisualizationSchema, body),
     updateVisualization: (id: string, body: UpdateVisualizationRequest): Promise<Visualization> =>

@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
-import type { ValidateScriptResponse, VisualizationListResponse } from "@algoforge/contracts";
+import type { GenerateVisualizationResponse, ValidateScriptResponse, VisualizationListResponse } from "@algoforge/contracts";
+import { visualizationGenerateService } from "../services/visualization-generate.service";
 import { serializeVisualization, serializeVisualizationSummary } from "../serializers/visualization";
 import { checkScript } from "../services/script.service";
 import { visualizationService } from "../services/visualization.service";
 import { asyncHandler } from "../utils/async-handler";
 import {
   parseCreateVisualization,
+  parseGenerateVisualization,
   parseListVisualizationsQuery,
   parseUpdateVisualization,
   parseValidateScript,
@@ -43,6 +45,18 @@ class VisualizationController {
     const id = parseVisualizationId(req.params.id);
     await visualizationService.remove(req.auth!.user.id, id);
     res.status(204).send();
+  });
+
+  generate = asyncHandler(async (req: Request, res: Response) => {
+    const input = parseGenerateVisualization(req.body);
+    // If the browser goes away mid-generation, stop paying for the provider call.
+    const controller = new AbortController();
+    res.on("close", () => {
+      if (!res.writableFinished) controller.abort();
+    });
+    const body: GenerateVisualizationResponse = await visualizationGenerateService.generate(req.auth!.user.id, input, controller.signal);
+    res.setHeader("Cache-Control", "no-store");
+    res.json(body);
   });
 
   validate = asyncHandler(async (req: Request, res: Response) => {

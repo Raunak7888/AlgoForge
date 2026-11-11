@@ -7,12 +7,8 @@ import { MessageDock } from "./MessageDock";
 import { ShortcutsHelp, TransportBar } from "./TransportBar";
 import { useTransportHotkeys } from "./useTransportHotkeys";
 
-/** Everything under the canvas: narration, transport (with display options), and shortcut help. Phase 6 mounts this inside the panel. */
-export function PlayerChrome({
-    store = visualizer,
-}: {
-    store?: StoreApi<VisualizerStore>;
-}) {
+/** Everything under the canvas, kept compact so the canvas gets the space: narration (only when present), one transport row, shortcut help. */
+export function PlayerChrome({ store = visualizer }: { store?: StoreApi<VisualizerStore> }) {
     const [details, setDetails] = useState(false);
     const [persist, setPersist] = useState(true);
     const [help, setHelp] = useState(false);
@@ -23,7 +19,7 @@ export function PlayerChrome({
     useTransportHotkeys(store, { messages: toggleDetails, help: toggleHelp });
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
             <MessageDock store={store} details={details} persist={persist} />
             <TransportBar
                 store={store}

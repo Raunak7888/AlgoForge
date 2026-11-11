@@ -36,16 +36,18 @@ export function VisualizerPanel({ store = visualizer }: Props) {
     }, [store]);
 
     return (
-        <div data-visualizer-panel className="flex h-full min-h-0 w-full flex-col gap-3 overflow-y-auto p-2">
-            <div className="relative flex min-h-65 flex-1 flex-col">
+        <div data-visualizer-panel className="flex h-full min-h-0 w-full flex-col gap-1.5 overflow-hidden p-1.5">
+            <div className="relative flex min-h-0 flex-1 flex-col">
                 <VisualizerCanvas store={store} className={CANVAS_CLASS} />
                 {compiled === null && (
                     <p className="pointer-events-none absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted-foreground">
-                        Write your algorithm in the editor, then press “Visualize algorithm”.
+                        Write your algorithm in the editor, then press “Visualize”.
                     </p>
                 )}
             </div>
-            <PlayerChrome store={store} />
+            <div className="shrink-0">
+                <PlayerChrome store={store} />
+            </div>
         </div>
     );
 }

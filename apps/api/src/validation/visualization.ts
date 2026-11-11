@@ -1,10 +1,12 @@
 import { z } from "zod";
 import {
   CreateVisualizationRequestSchema,
+  GenerateVisualizationRequestSchema,
   LIMITS,
   UpdateVisualizationRequestSchema,
   ValidateScriptRequestSchema,
   type CreateVisualizationRequest,
+  type GenerateVisualizationRequest,
   type UpdateVisualizationRequest,
 } from "@algoforge/contracts";
 import { AppError } from "../utils/app-error";
@@ -58,4 +60,10 @@ export function parseListVisualizationsQuery(value: unknown): VisualizationListQ
   const r = ListQuerySchema.safeParse(raw);
   if (!r.success) throw badRequestFromZod(r.error, "Invalid query.");
   return { limit: r.data.limit, ...(r.data.cursor ? { cursor: r.data.cursor } : {}) };
+}
+
+export function parseGenerateVisualization(value: unknown): GenerateVisualizationRequest {
+  const r = GenerateVisualizationRequestSchema.safeParse(value);
+  if (!r.success) throw badRequestFromZod(r.error, "Invalid code.");
+  return r.data;
 }

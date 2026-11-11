@@ -11,7 +11,7 @@ import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CapabilitiesResponseSchema } from "./capabilities";
 import { DeviceSessionListResponseSchema, UpdateProfileRequestSchema } from "./users";
 import { SearchQuerySchema, SearchResponseSchema } from "./search";
-import { CreateVisualizationRequestSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationListQuerySchema, VisualizationListResponseSchema, VisualizationSchema } from "./visualizations";
+import { CreateVisualizationRequestSchema, GenerateVisualizationRequestSchema, GenerateVisualizationResponseSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationListQuerySchema, VisualizationListResponseSchema, VisualizationSchema } from "./visualizations";
 
 export type HttpMethod = "get" | "post" | "patch" | "delete";
 export type AuthLevel = "none" | "optional" | "user" | "admin";
@@ -98,6 +98,7 @@ export const routes: readonly RouteDef[] = [
 
   { id: "visualizationsList", method: "get", path: "/api/visualizations", summary: "List my saved visualizations (cursor pagination)", tag: "Visualizations", auth: "user", csrf: false, rateLimit: "general", query: VisualizationListQuerySchema, responses: { 200: VisualizationListResponseSchema } },
   { id: "visualizationsValidate", method: "post", path: "/api/visualizations/validate", summary: "Compile a script on the server and return diagnostics", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", body: ValidateScriptRequestSchema, responses: { 200: ValidateScriptResponseSchema } },
+  { id: "visualizationsGenerate", method: "post", path: "/api/visualizations/generate", summary: "Turn code into a visualizer script with AI", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "ai", body: GenerateVisualizationRequestSchema, responses: { 200: GenerateVisualizationResponseSchema }, notes: "Uses the analysis quota. Repeating the same code is served from cache." },
   { id: "visualizationsCreate", method: "post", path: "/api/visualizations", summary: "Save a visualization (the script must compile without errors)", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", body: CreateVisualizationRequestSchema, responses: { 201: VisualizationSchema } },
   { id: "visualizationsGet", method: "get", path: "/api/visualizations/{id}", summary: "One of my visualizations", tag: "Visualizations", auth: "user", csrf: false, rateLimit: "general", params: IdParamsSchema, responses: { 200: VisualizationSchema } },
   { id: "visualizationsUpdate", method: "patch", path: "/api/visualizations/{id}", summary: "Update one of my visualizations", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, body: UpdateVisualizationRequestSchema, responses: { 200: VisualizationSchema } },

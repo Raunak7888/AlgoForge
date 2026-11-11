@@ -47,7 +47,7 @@ function Btn({ label, icon, onClick, keys, disabled, pressed, expanded, controls
     return (
         <button
             type="button"
-            className={cn(btn, "w-8 px-0", (pressed || expanded) && on)}
+            className={cn(btn, "h-7 w-7 px-0", (pressed || expanded) && on)}
             aria-label={label}
             aria-pressed={pressed}
             aria-expanded={expanded}
@@ -100,94 +100,88 @@ export function TransportBar({ store = visualizer, options }: { store?: StoreApi
         window.addEventListener("pointercancel", end);
     };
 
+    const cycleSpeed = () => {
+        const i = SPEEDS.findIndex((x) => x === t.speed);
+        act().setSpeed(SPEEDS[(i + 1) % SPEEDS.length]);
+    };
+
     return (
-        <div role="group" aria-label="Playback controls" className="flex flex-col gap-3 rounded-2xl border border-primary-foreground/10 bg-card/50 p-3">
-            <div className="flex flex-wrap items-center gap-1.5">
-                <Btn label="Restart" keys="Home" icon={PreviousIcon} onClick={() => act().restart()} disabled={!enabled} />
-                <Btn label="Step back" keys="ArrowLeft" icon={Backward01Icon} onClick={() => act().stepBack()} disabled={!canStepBack(t)} />
-                <Btn label={playing ? "Pause" : "Play"} keys="Space" icon={playing ? PauseIcon : PlayIcon} onClick={() => act().toggle()} disabled={!enabled} pressed={playing} />
-                <Btn label="Step forward" keys="ArrowRight" icon={Forward01Icon} onClick={() => act().stepForward()} disabled={!canStepForward(t)} />
-                <Btn label="Replay step" keys="R" icon={ReloadIcon} onClick={() => act().replayStep()} disabled={!enabled || currentIndex(t) < 0} />
-                <Btn label="Jump to end" keys="End" icon={NextIcon} onClick={() => act().jumpToEnd()} disabled={!enabled} />
-                <Btn label="Loop" keys="L" icon={RepeatIcon} onClick={() => act().setLoop(!t.loop)} pressed={t.loop} />
-                
-                <div className="ml-auto flex items-center gap-2">
-                    <button
-                        type="button"
-                        className={cn(btnPrimary, "h-8 whitespace-nowrap px-3")}
-                        onClick={visualize}
-                        disabled={loading}
-                        aria-busy={loading}
-                        title="Convert the code in the editor into an animation"
-                    >
-                        {loading ? "Visualizing…" : "Visualize algorithm"}
-                    </button>
+        <div role="group" aria-label="Playback controls" className="flex flex-wrap items-center gap-x-1 gap-y-1.5 rounded-xl border border-primary-foreground/10 bg-card/50 px-2 py-1.5">
+            <Btn label="Restart" keys="Home" icon={PreviousIcon} onClick={() => act().restart()} disabled={!enabled} />
+            <Btn label="Step back" keys="ArrowLeft" icon={Backward01Icon} onClick={() => act().stepBack()} disabled={!canStepBack(t)} />
+            <Btn label={playing ? "Pause" : "Play"} keys="Space" icon={playing ? PauseIcon : PlayIcon} onClick={() => act().toggle()} disabled={!enabled} pressed={playing} />
+            <Btn label="Step forward" keys="ArrowRight" icon={Forward01Icon} onClick={() => act().stepForward()} disabled={!canStepForward(t)} />
+            <Btn label="Replay step" keys="R" icon={ReloadIcon} onClick={() => act().replayStep()} disabled={!enabled || currentIndex(t) < 0} />
+            <Btn label="Jump to end" keys="End" icon={NextIcon} onClick={() => act().jumpToEnd()} disabled={!enabled} />
+            <Btn label="Loop" keys="L" icon={RepeatIcon} onClick={() => act().setLoop(!t.loop)} pressed={t.loop} />
 
-                  
-                    <div role="group" aria-label="Playback speed" className="inline-flex rounded-lg border border-primary-foreground/15 p-0.5">
-                        {SPEEDS.map((x) => (
-                            <button
-                                key={x}
-                                type="button"
-                                aria-label={`Speed ${x}×`}
-                                aria-pressed={t.speed === x}
-                                onClick={() => act().setSpeed(x)}
-                                className={cn("h-7 min-w-9 rounded-md px-2 font-mono text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-primary-foreground/20", t.speed === x ? on : "text-muted-foreground hover:text-primary-foreground")}
-                            >
-                                {x}×
-                            </button>
-                        ))}
-                    </div>
+            <span data-counter className="ml-1 shrink-0 font-mono text-[11px] tabular-nums">
+                {position} / {total}
+            </span>
 
-                    <div role="group" aria-label="Display options" className="flex items-center gap-1.5">
-                        <Btn label="Details: show the operation call under the narration" keys="M" icon={CodeIcon} onClick={options.onDetails} pressed={options.details} />
-                        <Btn label="Keep narration: stay visible on steps that have none" icon={PinIcon} onClick={options.onPersist} pressed={options.persist} />
-                        <Btn label="Keyboard shortcuts" keys="?" icon={KeyboardIcon} onClick={options.onHelp} expanded={options.help} controls="player-keys" />
-                    </div>
+            <div className="relative min-w-24 flex-1 basis-32">
+                <input
+                    type="range"
+                    aria-label="Step"
+                    aria-valuetext={valueText(compiled, t)}
+                    min={0}
+                    max={Math.max(total, 1)}
+                    step={1}
+                    value={position}
+                    disabled={!enabled && t.status !== "seeking"}
+                    className="relative z-10 block h-4 w-full cursor-pointer accent-[#FF430F] disabled:cursor-not-allowed"
+                    onPointerDown={startDrag}
+                    onChange={(e) => {
+                        const to = Number(e.target.value) - 1;
+                        if (dragging.current) act().seekTo(to);
+                        else act().seek(to); // keyboard: arrows, PageUp / PageDown
+                    }}
+                />
+                <div aria-hidden className="pointer-events-none absolute inset-x-0 top-full -mt-1 h-1.5">
+                    {ticks.map((i) => (
+                        <span
+                            key={i}
+                            data-tick={i}
+                            data-failed={failed.has(i - 1) ? "true" : undefined}
+                            className={cn("absolute top-0 w-px -translate-x-1/2", failed.has(i - 1) ? "h-1.5 bg-destructive" : "h-1 bg-primary-foreground/25")}
+                            style={{ left: `calc(8px + (100% - 16px) * ${i / total})` }}
+                        />
+                    ))}
                 </div>
-                
             </div>
 
-            <div className="flex items-center gap-3">
-                <span data-counter className="shrink-0 font-mono text-xs tabular-nums">
-                    {position} / {total}
-                </span>
-                <div className="relative min-w-0 flex-1">
-                    <input
-                        type="range"
-                        aria-label="Step"
-                        aria-valuetext={valueText(compiled, t)}
-                        min={0}
-                        max={Math.max(total, 1)}
-                        step={1}
-                        value={position}
-                        disabled={!enabled && t.status !== "seeking"}
-                        className="relative z-10 block w-full cursor-pointer accent-[#FF430F] disabled:cursor-not-allowed"
-                        onPointerDown={startDrag}
-                        onChange={(e) => {
-                            const to = Number(e.target.value) - 1;
-                            if (dragging.current) act().seekTo(to);
-                            else act().seek(to); // keyboard: arrows, PageUp / PageDown
-                        }}
-                    />
-                    <div aria-hidden className="pointer-events-none absolute inset-x-0 top-full -mt-1 h-2">
-                        {ticks.map((i) => (
-                            <span
-                                key={i}
-                                data-tick={i}
-                                data-failed={failed.has(i - 1) ? "true" : undefined}
-                                className={cn("absolute top-0 w-px -translate-x-1/2", failed.has(i - 1) ? "h-2 bg-destructive" : "h-1 bg-primary-foreground/25")}
-                                style={{ left: `calc(8px + (100% - 16px) * ${i / total})` }}
-                            />
-                        ))}
-                    </div>
-                </div>
-                <span className={cn("hidden min-w-0 max-w-[40%] shrink truncate font-mono text-xs sm:block", info.failed ? "text-destructive" : "text-muted-foreground")} title={info.call ?? undefined}>
-                    {info.call ?? ""}
-                </span>
+            <span className={cn("hidden min-w-0 max-w-36 shrink truncate font-mono text-[11px] lg:block", info.failed ? "text-destructive" : "text-muted-foreground")} title={info.call ?? undefined}>
+                {info.call ?? ""}
+            </span>
+
+            <div className="ml-auto flex items-center gap-1">
+                <button
+                    type="button"
+                    onClick={cycleSpeed}
+                    aria-label={`Playback speed ${t.speed}×. Click to change`}
+                    title="Playback speed (click to cycle, [ and ] also work)"
+                    className="h-7 min-w-10 rounded-md border border-primary-foreground/15 px-1.5 font-mono text-[11px] outline-none transition hover:bg-primary-foreground/5 focus-visible:ring-2 focus-visible:ring-primary-foreground/20"
+                >
+                    {t.speed}×
+                </button>
+                <Btn label="Details: show the operation call under the narration" keys="M" icon={CodeIcon} onClick={options.onDetails} pressed={options.details} />
+                <Btn label="Keep narration: stay visible on steps that have none" icon={PinIcon} onClick={options.onPersist} pressed={options.persist} />
+                <Btn label="Keyboard shortcuts" keys="?" icon={KeyboardIcon} onClick={options.onHelp} expanded={options.help} controls="player-keys" />
+                <button
+                    type="button"
+                    className={cn(btnPrimary, "h-7 whitespace-nowrap px-2.5 text-xs")}
+                    onClick={visualize}
+                    disabled={loading}
+                    aria-busy={loading}
+                    aria-label="Visualize algorithm"
+                    title="Convert the code in the editor into an animation"
+                >
+                    {loading ? "Visualizing…" : "Visualize"}
+                </button>
             </div>
+
             {error && (
-                <p role="alert" className="text-xs text-destructive">
+                <p role="alert" className="basis-full text-xs text-destructive">
                     {error}
                 </p>
             )}

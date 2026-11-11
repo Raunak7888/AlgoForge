@@ -4,7 +4,7 @@ set -Eeuo pipefail
 echo "Restoring AlgoForge files..."
 
 mkdir -p ./apps/api
-cat > ./apps/api/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "api",
   "version": "1.0.0",
@@ -49,10 +49,10 @@ cat > ./apps/api/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/ai
-cat > ./apps/api/src/ai/context-builder.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/ai/context-builder.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS, type AnalysisLanguage, type ExplainContext } from "@algoforge/contracts";
 import { algorithmRepository } from "../repositories/algorithm.repository";
 import { logger, serializeError } from "../utils/logger";
@@ -136,10 +136,10 @@ export function detectIntent(query: string): string {
   return "general";
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src
-cat > ./apps/api/src/app.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/app.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import cors from "cors";
 import { JSON_BODY_LIMIT_BYTES } from "@algoforge/contracts";
 import express from "express";
@@ -210,10 +210,10 @@ app.use(errorHandler);
 
 export { app };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/config
-cat > ./apps/api/src/config/env.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/config/env.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -324,10 +324,10 @@ export const googleOAuthConfig = {
   scopes: ["openid", "email", "profile"],
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/config
-cat > ./apps/api/src/config/redis.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/config/redis.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import Redis from "ioredis";
 import { env } from "./env";
 
@@ -388,10 +388,10 @@ export async function closeRedis(): Promise<void> {
     _healthy = false;
   }
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/admin.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/admin.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/controllers/admin.controller.ts
 
 import { Request, Response } from "express";
@@ -454,10 +454,10 @@ class AdminController {
 
 export const adminController = new AdminController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/algorithm.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/algorithm.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import { Role } from "@algoforge/db";
 import type { AlgorithmListResponse } from "@algoforge/contracts";
@@ -522,10 +522,10 @@ class AlgorithmController {
 
 export const algorithmController = new AlgorithmController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/analysis.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/analysis.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { AnalysisHistoryResponse, AnalysisQuotaResponse } from "@algoforge/contracts";
 import { serializeAnalysisRecord, serializeHistoryItem } from "../serializers/analysis";
@@ -580,10 +580,10 @@ class AnalysisController {
 
 export const analysisController = new AnalysisController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/auth.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/auth.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import {
   RETURN_TO_PARAM,
@@ -731,10 +731,10 @@ class AuthController {
 
 export const authController = new AuthController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/category.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/category.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { CategoryListResponse } from "@algoforge/contracts";
 import { categoryService } from "../services/category.service";
@@ -781,10 +781,10 @@ class CategoryController {
 
 export const categoryController = new CategoryController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/explanation-session.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/explanation-session.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { ExplainMessageListResponse, ExplainSessionListResponse, SendMessageResponse } from "@algoforge/contracts";
 import { serializeMessage, serializeSessionDetail, serializeSessionSummary } from "../serializers/explain";
@@ -863,10 +863,10 @@ class ExplanationSessionController {
 
 export const explanationSessionController = new ExplanationSessionController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/meta.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/meta.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { CapabilitiesResponse } from "@algoforge/contracts";
 import { capabilitiesService } from "../services/capabilities.service";
@@ -883,10 +883,10 @@ class MetaController {
 
 export const metaController = new MetaController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/search.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/search.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import { SearchQuerySchema, type SearchResponse } from "@algoforge/contracts";
 import { searchService } from "../services/search.service";
@@ -904,10 +904,10 @@ class SearchController {
 
 export const searchController = new SearchController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/share.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/share.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { ShareListResponse, ShareType } from "@algoforge/contracts";
 import { serializeShare } from "../serializers/share";
@@ -971,10 +971,10 @@ class PublicShareController {
 export const shareController = new ShareController();
 export const publicShareController = new PublicShareController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/user.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/user.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { MeResponse } from "@algoforge/contracts";
 import { serializeAuthUser } from "../serializers/auth";
@@ -1002,10 +1002,10 @@ class UserController {
 
 export const userController = new UserController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/controllers
-cat > ./apps/api/src/controllers/visualization.controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/controllers/visualization.controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import type { ValidateScriptResponse, VisualizationListResponse } from "@algoforge/contracts";
 import { serializeVisualization, serializeVisualizationSummary } from "../serializers/visualization";
@@ -1067,10 +1067,10 @@ class VisualizationController {
 
 export const visualizationController = new VisualizationController();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/auth.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/auth.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/middleware/auth.ts
 
 import { NextFunction, Request, Response } from "express";
@@ -1141,10 +1141,10 @@ export function requireRoles(...roles: Role[]) {
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/csrf.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/csrf.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { NextFunction, Request, Response } from "express";
 import { authCookies } from "../config/env";
 import { AppError } from "../utils/app-error";
@@ -1164,10 +1164,10 @@ export function requireCsrf(
 
   next();
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/error-handler.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/error-handler.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { NextFunction, Request, Response } from "express";
 import type { ErrorCode, ErrorDetail, ErrorResponse } from "@algoforge/contracts";
 import { Prisma } from "@algoforge/db";
@@ -1262,10 +1262,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
   res.status(mapped.statusCode).json(body);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/not-found.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/not-found.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 
 export function notFoundHandler(_req: Request, res: Response): void {
@@ -1274,10 +1274,10 @@ export function notFoundHandler(_req: Request, res: Response): void {
   });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/rate-limit.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/rate-limit.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { NextFunction, Request, Response } from "express";
 import { getRedisClient } from "../config/redis";
 import { env } from "../config/env";
@@ -1435,10 +1435,10 @@ export function generalRateLimiter(options: { scope?: string; limitPerMinute?: n
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/request-id.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/request-id.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { randomUUID } from "crypto";
 import { NextFunction, Request, Response } from "express";
 import { REQUEST_ID_HEADER } from "@algoforge/contracts";
@@ -1453,10 +1453,10 @@ export function requestId(req: Request, res: Response, next: NextFunction): void
   next();
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/middleware
-cat > ./apps/api/src/middleware/security-headers.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/middleware/security-headers.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
 
@@ -1485,10 +1485,10 @@ export function securityHeaders(
   next();
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/prompts
-cat > ./apps/api/src/prompts/analysis.prompt.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/prompts/analysis.prompt.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { randomBytes } from "crypto";
 import type { AnalysisLanguage } from "@algoforge/analysis";
 import type { AIMessage } from "../services/providers/ai-provider";
@@ -1676,10 +1676,10 @@ export function buildAnalysisPrompt(
   return `${rules}\n\n${data}`;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/prompts
-cat > ./apps/api/src/prompts/assistant.prompt.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/prompts/assistant.prompt.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { randomBytes } from "crypto";
 import type { AssistantContext } from "../ai/context-builder";
 import type { AIMessage } from "../services/providers/ai-provider";
@@ -1748,10 +1748,10 @@ export function buildAssistantMessages(input: AssistantPromptInput): AIMessage[]
   ];
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/ai-usage.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/ai-usage.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { prisma, type AiFeature } from "@algoforge/db";
 
 export interface UsageDelta {
@@ -1791,10 +1791,10 @@ export const aiUsageRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/algorithm.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/algorithm.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/repositories/algorithm.repository.ts
 
 import { prisma, Prisma } from "@algoforge/db";
@@ -1959,10 +1959,10 @@ export const algorithmRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/analysis.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/analysis.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/repositories/analysis.repository.ts
 
 import { prisma, Prisma } from "@algoforge/db";
@@ -2081,10 +2081,10 @@ export const analysisRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/audit-log.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/audit-log.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { prisma, Prisma } from "@algoforge/db";
 
 export const auditLogRepository = {
@@ -2113,10 +2113,10 @@ export const auditLogRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/category.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/category.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/repositories/category.repository.ts
 
 import { prisma } from "@algoforge/db";
@@ -2172,10 +2172,10 @@ export const categoryRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/explanation-message.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/explanation-message.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { createHash } from "crypto";
 import { prisma, type Prisma } from "@algoforge/db";
 
@@ -2232,10 +2232,10 @@ export const explanationMessageRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/explanation-session.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/explanation-session.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { prisma, type Prisma } from "@algoforge/db";
 import { AppError } from "../utils/app-error";
 import { explanationMessageRowId } from "./explanation-message.repository";
@@ -2374,10 +2374,10 @@ export const explanationSessionRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/session.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/session.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { prisma } from "@algoforge/db";
 
 const userSelect = {
@@ -2531,10 +2531,10 @@ export const sessionRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/share.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/share.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { prisma, Prisma, type ShareType } from "@algoforge/db";
 
 const activeWhere = (now: Date): Prisma.ShareWhereInput => ({
@@ -2615,10 +2615,10 @@ export const shareRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/user.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/user.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/repositories/user.repository.ts
 
 import { prisma, Role } from "@algoforge/db";
@@ -2710,10 +2710,10 @@ export const userRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/repositories
-cat > ./apps/api/src/repositories/visualization.repository.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/repositories/visualization.repository.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { prisma, Prisma } from "@algoforge/db";
 
 const summarySelect = {
@@ -2829,10 +2829,10 @@ export const visualizationRepository = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/admin.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/admin.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/routes/admin.ts
 
 import { Router } from "express";
@@ -2867,10 +2867,10 @@ router.post(
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/algorithm.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/algorithm.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/routes/algorithm.ts
 
 import { Router } from "express";
@@ -2918,10 +2918,10 @@ router.delete(
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/analysis.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/analysis.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { analysisController } from "../controllers/analysis.controller";
 import { requireAuth } from "../middleware/auth";
@@ -2941,10 +2941,10 @@ router.delete("/:id", requireAuth, requireCsrf, analysisController.deleteAnalysi
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/auth.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/auth.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { authController } from "../controllers/auth.controller";
 import { requireAuth } from "../middleware/auth";
@@ -2970,10 +2970,10 @@ router.post("/logout-all", requireAuth, requireCsrf, authController.logoutAll);
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/category.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/category.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { Role } from "@algoforge/db";
 import { categoryController } from "../controllers/category.controller";
@@ -3007,10 +3007,10 @@ router.delete(
 );
 
 export default router;
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/explanation-session.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/explanation-session.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { explanationSessionController } from "../controllers/explanation-session.controller";
 import { requireAuth } from "../middleware/auth";
@@ -3031,10 +3031,10 @@ router.post("/:id/share", requireAuth, requireCsrf, explanationSessionController
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/health.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/health.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { prisma } from "@algoforge/db";
 import { getRedisClient } from "../config/redis";
@@ -3085,10 +3085,10 @@ router.get("/ready", async (_req, res) => {
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/meta.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/meta.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { metaController } from "../controllers/meta.controller";
 
@@ -3098,10 +3098,10 @@ router.get("/capabilities", metaController.capabilities);
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/openapi.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/openapi.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { buildOpenApiDocument, type OpenApiDocument } from "@algoforge/contracts";
 
@@ -3116,10 +3116,10 @@ router.get("/openapi.json", (req, res) => {
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/search.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/search.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { searchController } from "../controllers/search.controller";
 import { env } from "../config/env";
@@ -3137,10 +3137,10 @@ router.get(
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/share.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/share.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { env } from "../config/env";
 import { publicShareController as c } from "../controllers/share.controller";
@@ -3157,10 +3157,10 @@ router.get("/:shareId", limit, c.resolve);
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/shares.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/shares.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { env } from "../config/env";
 import { shareController as c } from "../controllers/share.controller";
@@ -3177,10 +3177,10 @@ router.delete("/:shareId", requireAuth, requireCsrf, limit, c.revoke);
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/users.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/users.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { userController } from "../controllers/user.controller";
 import { requireAuth } from "../middleware/auth";
@@ -3194,10 +3194,10 @@ router.delete("/me", requireAuth, requireCsrf, generalRateLimiter(), userControl
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/routes
-cat > ./apps/api/src/routes/visualizations.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/routes/visualizations.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Router } from "express";
 import { visualizationController as c } from "../controllers/visualization.controller";
 import { env } from "../config/env";
@@ -3218,10 +3218,10 @@ router.delete("/:id", requireAuth, requireCsrf, limit, c.remove);
 
 export default router;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/admin.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/admin.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { AdminUser, UserRole } from "@algoforge/contracts";
 import { toIso } from "./dates";
 
@@ -3237,10 +3237,10 @@ export function serializeAdminUser(row: AdminUserRow): AdminUser {
   return { id: row.id, email: row.email, name: row.name, role: row.role, createdAt: toIso(row.createdAt) };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/algorithm.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/algorithm.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   AlgorithmDetailResponseSchema,
   AlgorithmSummarySchema,
@@ -3305,10 +3305,10 @@ export function serializeAlgorithmDetail(row: NonNullable<AlgorithmDetailRow>, l
   });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/analysis.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/analysis.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   AnalysisLanguageSchema,
   parseStoredAnalysisResult,
@@ -3418,10 +3418,10 @@ export function serializeSharedAnalysis(row: SharedAnalysisRow): SharedAnalysisR
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/auth.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/auth.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { AuthUser, DeviceSession, UserRole } from "@algoforge/contracts";
 import { toIso } from "./dates";
 
@@ -3465,10 +3465,10 @@ export function serializeDeviceSession(row: DeviceSessionRow, currentSessionId: 
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/dates.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/dates.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** Every date leaves the API as an ISO 8601 UTC string. Cached rows already hold strings, so both are accepted. */
 export function toIso(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
@@ -3476,10 +3476,10 @@ export function toIso(value: Date | string): string {
   return date.toISOString();
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/explain.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/explain.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   SessionMessageSchema,
   type ExplainSessionDetail,
@@ -3543,10 +3543,10 @@ export function serializeSharedSession(row: SharedSessionRow): SharedExplainSess
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/share.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/share.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Share } from "@algoforge/contracts";
 import { toIso } from "./dates";
 
@@ -3571,10 +3571,10 @@ export function serializeShare(row: ShareRow, url: string): Share {
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/serializers
-cat > ./apps/api/src/serializers/visualization.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/serializers/visualization.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import {
   AnalysisLanguageSchema,
@@ -3626,10 +3626,10 @@ export function serializeVisualization(row: VisualizationRow): Visualization {
   return { ...serializeVisualizationSummary(row), script: row.script, code: row.code };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src
-cat > ./apps/api/src/server.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/server.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { app } from "./app";
 import { env } from "./config/env";
 import { connectRedis, closeRedis } from "./config/redis";
@@ -3684,10 +3684,10 @@ bootstrap().catch((err) => {
   process.exit(1);
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/admin.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/admin.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/services/admin.service.ts
 
 import { Role } from "@algoforge/db";
@@ -3736,10 +3736,10 @@ class AdminService {
 
 export const adminService = new AdminService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/ai-usage.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/ai-usage.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Prisma, type AiFeature } from "@algoforge/db";
 import { aiUsageRepository } from "../repositories/ai-usage.repository";
 
@@ -3780,10 +3780,10 @@ class AiUsageService {
 
 export const aiUsageService = new AiUsageService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/ai.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/ai.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { AnalysisLanguage, AnalysisResult } from "@algoforge/analysis";
 import { env } from "../config/env";
 import { ANALYSIS_PROMPT_VERSION, buildAnalysisMessages } from "../prompts/analysis.prompt";
@@ -3906,10 +3906,10 @@ class AIService {
 
 export const aiService = new AIService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/algorithm
-cat > ./apps/api/src/services/algorithm/cache-keys.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm/cache-keys.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * All cache key builders for algorithms in one place.
  *
@@ -3928,10 +3928,10 @@ export const algorithmCacheKeys = {
   viz:    (v: number, scope: CacheScope, id: string)                   => `viz:v${v}:${scope}:${id}`,
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/algorithm
-cat > ./apps/api/src/services/algorithm/detail.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm/detail.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Fetches a single algorithm by id or slug.
  * Unpublished algorithms are invisible (404) to everyone but admins.
@@ -3988,10 +3988,10 @@ export async function getAlgorithmBySlug(
   return result;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/algorithm
-cat > ./apps/api/src/services/algorithm/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Public surface of the algorithm service.
  * Controllers and other services import from here only.
@@ -4018,10 +4018,10 @@ export const algorithmService = {
   updateAlgorithm,
   deleteAlgorithm,
 };
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/algorithm
-cat > ./apps/api/src/services/algorithm/mutation.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm/mutation.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Prisma, Difficulty } from "@algoforge/db";
 import type { AlgorithmDetailResponse, CreateAlgorithmRequest, UpdateAlgorithmRequest } from "@algoforge/contracts";
 import { SCRIPT_SCHEMA_VERSION } from "@algoforge/visualizer-core";
@@ -4154,10 +4154,10 @@ async function resolveCategory(categoryIdOrLabel: string) {
   return category;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/algorithm
-cat > ./apps/api/src/services/algorithm/query.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm/query.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Lists and searches algorithms (cursor pagination).
  * Non-admins only ever see published algorithms, whatever filters they send.
@@ -4218,10 +4218,10 @@ function buildWhere(query: AlgorithmQuery): Prisma.AlgorithmWhereInput {
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/algorithm
-cat > ./apps/api/src/services/algorithm/viz.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm/viz.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Returns the visualizer script of an algorithm.
  * Unpublished algorithms are invisible (404) to everyone but admins.
@@ -4261,19 +4261,19 @@ export async function getAlgorithmVisualization(
   return result;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/algorithm.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/algorithm.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // Backward-compatible re-export.
 // Implementation has been split into services/algorithm/ sub-modules.
 // Any file that previously imported from this path continues to work.
 export { algorithmService } from "./algorithm/index";
 export type { AlgorithmQuery } from "../types/algorithm.types";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/analysis.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/analysis.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Analysis service.
  *
@@ -4388,10 +4388,10 @@ class AnalysisService {
 
 export const analysisService = new AnalysisService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/audit.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/audit.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Request } from "express";
 import type { Prisma } from "@algoforge/db";
 import { auditLogRepository } from "../repositories/audit-log.repository";
@@ -4489,10 +4489,10 @@ class AuditService {
 
 export const auditService = new AuditService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/auth.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/auth.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { OAuth2Client } from "google-auth-library";
 import { prisma, Role } from "@algoforge/db";
 import { env, googleOAuthConfig } from "../config/env";
@@ -4829,10 +4829,10 @@ class AuthService {
 
 export const authService = new AuthService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/capabilities.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/capabilities.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { CapabilitiesResponse } from "@algoforge/contracts";
 import { env } from "../config/env";
 import { buildCapabilities } from "../utils/capabilities";
@@ -4847,10 +4847,10 @@ export const capabilitiesService = {
   },
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/category.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/category.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/services/category.service.ts
 
 import {
@@ -4944,10 +4944,10 @@ class CategoryService {
 
 export const categoryService = new CategoryService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/explanation-session.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/explanation-session.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS, type CreateExplainSessionRequest, type SendMessageRequest } from "@algoforge/contracts";
 import { buildAssistantContext, detectIntent } from "../ai/context-builder";
 import { env } from "../config/env";
@@ -5073,10 +5073,10 @@ class ExplanationSessionService {
 
 export const explanationSessionService = new ExplanationSessionService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/ai-output.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/lib/ai-output.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { AnalysisResultSchema, type AnalysisResult } from "@algoforge/analysis";
 import { AppError } from "../../utils/app-error";
 
@@ -5108,10 +5108,10 @@ export function parseAnalysisOutput(raw: string): AnalysisResult {
   return result.data;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/cache-version.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/lib/cache-version.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Namespace version counters for cache invalidation.
  *
@@ -5147,10 +5147,10 @@ export async function bumpCacheVersion(namespace: string): Promise<void> {
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/layered-cache.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/lib/layered-cache.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Layered cache — L1 (LRU) + L2 (Redis).
  *
@@ -5202,10 +5202,10 @@ export const layeredCache = {
     await redisCache.del(key);
   },
 };
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/lru.cache.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/lib/lru.cache.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * L1 — In-process LRU cache.
  *
@@ -5238,10 +5238,10 @@ export const lruCache = {
     store.delete(key);
   },
 };
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/redis.cache.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/lib/redis.cache.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * L2 — Redis cache.
  *
@@ -5289,16 +5289,16 @@ export const redisCache = {
     }
   },
 };
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/lib
-cat > ./apps/api/src/services/lib/share-cache.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/lib/share-cache.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export const publicShareCacheKey = (shareId: string): string => `share:public:${shareId}`;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/providers
-cat > ./apps/api/src/services/providers/ai-provider.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/providers/ai-provider.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export type AIMessageRole = "system" | "user" | "assistant";
 
 export type AIMessage = {
@@ -5328,10 +5328,10 @@ export interface AIProvider {
   generate(request: AIGenerateRequest): Promise<AIGenerateResponse>;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/providers
-cat > ./apps/api/src/services/providers/gemini-messages.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/providers/gemini-messages.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { AIMessage } from "./ai-provider";
 
 export interface GeminiContent {
@@ -5358,10 +5358,10 @@ export function toGeminiRequest(messages: readonly AIMessage[]): { systemInstruc
   return { ...(system ? { systemInstruction: system } : {}), contents };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/providers
-cat > ./apps/api/src/services/providers/gemini.provider.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/providers/gemini.provider.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { GoogleGenAI } from "@google/genai";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/app-error";
@@ -5424,10 +5424,10 @@ export class GeminiProvider implements AIProvider {
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/providers
-cat > ./apps/api/src/services/providers/provider-factory.test.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/providers/provider-factory.test.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -5477,10 +5477,10 @@ describe("AI provider", () => {
   });
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services/providers
-cat > ./apps/api/src/services/providers/provider-factory.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/providers/provider-factory.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { env } from "../../config/env";
 import type { AIProvider } from "./ai-provider";
 import { GeminiProvider } from "./gemini.provider";
@@ -5496,10 +5496,10 @@ export function getAIProvider(): AIProvider {
   return _instance;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/public-share.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/public-share.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { ShareIdSchema, VisualizationStructureSchema, type PublicShareResponse, type ShareType } from "@algoforge/contracts";
 import { analysisRepository } from "../repositories/analysis.repository";
@@ -5594,10 +5594,10 @@ class PublicShareService {
 
 export const publicShareService = new PublicShareService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/quota.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/quota.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { QuotaInfo } from "@algoforge/contracts";
 import { env } from "../config/env";
 import { getRedisClient } from "../config/redis";
@@ -5819,10 +5819,10 @@ class QuotaService {
 
 export const quotaService = new QuotaService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/script.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/script.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ErrorDetail } from "@algoforge/contracts";
 import { analyzeScript, type ScriptAnalysis } from "@algoforge/visualizer-core";
 import { AppError } from "../utils/app-error";
@@ -5847,10 +5847,10 @@ export function assertValidScript(text: string): ScriptAnalysis {
   throw AppError.badRequest(first ? `Invalid script: ${first.message}` : "Invalid script.", details);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/search.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/search.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS, type SearchResult } from "@algoforge/contracts";
 import { algorithmRepository } from "../repositories/algorithm.repository";
 import { visualizationRepository } from "../repositories/visualization.repository";
@@ -5883,10 +5883,10 @@ class SearchService {
 
 export const searchService = new SearchService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/session-cleanup.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/session-cleanup.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { env } from "../config/env";
 import { sessionRepository } from "../repositories/session.repository";
 import { logger, serializeError } from "../utils/logger";
@@ -5932,10 +5932,10 @@ export function startSessionCleanup(): () => void {
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/share.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/share.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { randomBytes } from "crypto";
 import { Prisma, type ShareType } from "@algoforge/db";
 import { env } from "../config/env";
@@ -6015,10 +6015,10 @@ class ShareService {
 
 export const shareService = new ShareService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/user.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/user.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 //# filename: apps/api/src/services/user.service.ts
 
 import { type SafeUser } from "@algoforge/analysis";
@@ -6113,10 +6113,10 @@ class UserService {
 
 export const userService = new UserService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/services
-cat > ./apps/api/src/services/visualization.service.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/services/visualization.service.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS, type CreateVisualizationRequest, type UpdateVisualizationRequest } from "@algoforge/contracts";
 import type { Prisma } from "@algoforge/db";
 import { SCRIPT_SCHEMA_VERSION } from "@algoforge/visualizer-core";
@@ -6197,10 +6197,10 @@ class VisualizationService {
 
 export const visualizationService = new VisualizationService();
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/types
-cat > ./apps/api/src/types/algorithm.types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/types/algorithm.types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // Shared types for the algorithm service modules.
 
 export type AlgorithmQuery = {
@@ -6220,10 +6220,10 @@ export type AlgorithmVisibility = {
   isAdmin: boolean;
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/types
-cat > ./apps/api/src/types/express.d.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/types/express.d.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Role } from "@algoforge/db";
 
 declare global {
@@ -6251,10 +6251,10 @@ declare global {
 
 export {};
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/ai-cache-keys.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/ai-cache-keys.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { createHash } from "crypto";
 
 /** SHA-256 (hex) of the submitted code. Same formula as the Phase 5 backfill. */
@@ -6289,10 +6289,10 @@ export function deriveTitle(summary: string | null | undefined, code: string): s
   return line ? clip(line, 60) : "Untitled analysis";
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/app-error.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/app-error.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ErrorCode, ErrorDetail, QuotaInfo } from "@algoforge/contracts";
 
 export interface ErrorExtras {
@@ -6366,10 +6366,10 @@ export class AppError extends Error {
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/async-handler.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/async-handler.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { NextFunction, Request, Response } from "express";
 
 type AsyncRouteHandler = (
@@ -6383,10 +6383,10 @@ export function asyncHandler(handler: AsyncRouteHandler) {
     void handler(req, res, next).catch(next);
   };
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/capabilities.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/capabilities.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { CAPABILITY_LIMITS, type CapabilitiesResponse } from "@algoforge/contracts";
 
 export interface CapabilityInputs {
@@ -6408,10 +6408,10 @@ export function buildCapabilities(input: CapabilityInputs): CapabilitiesResponse
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/cookies.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/cookies.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response } from "express";
 import { authCookies, env } from "../config/env";
 
@@ -6523,10 +6523,10 @@ export function clearReturnToCookie(res: Response): void {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/crypto.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/crypto.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 export function randomToken(bytes = 32): string {
@@ -6547,10 +6547,10 @@ export function safeTokenEquals(left: string, right: string): boolean {
 
   return timingSafeEqual(leftBuffer, rightBuffer);
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/logger.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/logger.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 type Level = "info" | "warn" | "error";
 type Fields = Record<string, unknown>;
 
@@ -6579,10 +6579,10 @@ export function serializeError(err: unknown): Fields {
   return { errorValue: String(err) };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/pagination.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/pagination.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { PageMeta } from "@algoforge/contracts";
 
 /**
@@ -6596,19 +6596,19 @@ export function paginate<T>(rows: readonly T[], limit: number, cursorOf: (row: T
   return { items, meta: { hasMore, nextCursor: hasMore && last !== undefined ? cursorOf(last) : null } };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/session-activity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/session-activity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** True when the stored lastUsedAt is old enough that it is worth writing a new one. */
 export function shouldTouchSession(lastUsedAt: Date, now: Date, minIntervalMs: number): boolean {
   return now.getTime() - lastUsedAt.getTime() >= minIntervalMs;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/utils
-cat > ./apps/api/src/utils/token.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/utils/token.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 import { Role } from "@algoforge/db";
 import { env } from "../config/env";
@@ -6686,10 +6686,10 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 
   return payload;
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/algorithm.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/algorithm.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import {
@@ -6770,10 +6770,10 @@ export function validateSlugParam(req: Request, _res: Response, next: NextFuncti
   next();
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/analysis.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/analysis.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Validation for analysis endpoints.
  *
@@ -6869,10 +6869,10 @@ export function decodeAnalysisCursor(cursor: string): AnalysisCursor {
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/category.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/category.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   CreateCategoryRequestSchema,
   UpdateCategoryRequestSchema,
@@ -6893,10 +6893,10 @@ export function parseUpdateCategory(value: unknown): UpdateCategoryRequest {
   return result.data;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/code-limits.test.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/code-limits.test.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // Phase 0b: the shared size gate behaves the same wherever it is used.
 import { describe, expect, it } from "vitest";
 import { checkRunnableCode, countLines, LIMITS } from "@algoforge/contracts";
@@ -6942,10 +6942,10 @@ describe("runnable code gate", () => {
   });
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/common.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/common.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ZodError } from "zod";
 import type { ErrorDetail } from "@algoforge/contracts";
 import { AppError } from "../utils/app-error";
@@ -6966,10 +6966,10 @@ export function badRequestFromZod(error: ZodError, fallback: string): AppError {
   return AppError.badRequest(error.issues[0]?.message ?? fallback, zodDetails(error));
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/explanation-session.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/explanation-session.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import {
   CreateExplainSessionRequestSchema,
@@ -7058,10 +7058,10 @@ export function parseListMessagesQuery(value: unknown): ListMessagesQuery {
   return { limit: r.data.limit, ...(r.data.cursor ? { afterSeq: Number(r.data.cursor) } : {}) };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/share.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/share.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   CreateShareRequestSchema,
   ShareIdSchema,
@@ -7093,10 +7093,10 @@ export function parseShareTargetQuery(value: unknown): { type: ShareType; target
   return target;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/user.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/user.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { UpdateProfileRequestSchema, type UpdateProfileRequest } from "@algoforge/contracts";
 import { AppError } from "../utils/app-error";
 import { badRequestFromZod } from "./common";
@@ -7110,10 +7110,10 @@ export function parseUpdateProfile(value: unknown): UpdateProfileRequest {
   return result.data;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api/src/validation
-cat > ./apps/api/src/validation/visualization.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/src/validation/visualization.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import {
   CreateVisualizationRequestSchema,
@@ -7176,10 +7176,10 @@ export function parseListVisualizationsQuery(value: unknown): VisualizationListQ
   return { limit: r.data.limit, ...(r.data.cursor ? { cursor: r.data.cursor } : {}) };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api
-cat > ./apps/api/tsup.config.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/tsup.config.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { defineConfig } from "tsup";
 
 // The API is bundled into one file. Workspace packages (@algoforge/*) export
@@ -7199,10 +7199,10 @@ export default defineConfig({
   noExternal: [/^@algoforge\//],
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/api
-cat > ./apps/api/vitest.config.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/api/vitest.config.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -7212,22 +7212,22 @@ export default defineConfig({
   },
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web
-cat > ./apps/web/next-env.d.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/next-env.d.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
-import "./.next/dev/types/routes.d.ts";
-import "./.next/dev/types/root-params.d.ts";
+import "./.next/types/routes.d.ts";
+import "./.next/types/root-params.d.ts";
 
 // NOTE: This file should not be edited
 // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web
-cat > ./apps/web/next.config.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/next.config.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import path from "node:path";
 import type { NextConfig } from "next";
 
@@ -7265,10 +7265,10 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web
-cat > ./apps/web/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "@algoforge/web",
   "version": "0.1.0",
@@ -7345,10 +7345,10 @@ cat > ./apps/web/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/algorithms
-cat > ./apps/web/src/app/algorithms/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/algorithms/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import Link from "next/link";
@@ -7436,10 +7436,10 @@ export default function AlgorithmsPage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/algorithms/\[slug\]
-cat > ./apps/web/src/app/algorithms/\[slug\]/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/algorithms/\[slug\]/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import Link from "next/link";
@@ -7537,10 +7537,10 @@ export default function AlgorithmPage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/dashboard
-cat > ./apps/web/src/app/dashboard/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/dashboard/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import AlgoforgeDashboard from "@/components/DashBoard/DashBoard";
@@ -7553,10 +7553,10 @@ export default function DashboardPage() {
         </DashboardGate>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/dashboard/\[id\]
-cat > ./apps/web/src/app/dashboard/\[id\]/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/dashboard/\[id\]/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import Link from "next/link";
@@ -7631,10 +7631,10 @@ export default function ReopenAnalysisPage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app
-cat > ./apps/web/src/app/layout.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/layout.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Metadata } from "next";
 import "./globals.css";
 import {
@@ -7714,10 +7714,10 @@ export default function RootLayout({
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app
-cat > ./apps/web/src/app/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -7765,10 +7765,10 @@ export default function Home() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/privacy
-cat > ./apps/web/src/app/privacy/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/privacy/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Metadata } from "next";
 import { PageShell } from "@/components/site/PageShell";
 
@@ -7801,10 +7801,10 @@ export default function PrivacyPage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/s/\[shareId\]
-cat > ./apps/web/src/app/s/\[shareId\]/layout.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/s/\[shareId\]/layout.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -7835,10 +7835,10 @@ export default function ShareLayout({ children }: { children: ReactNode }) {
     return children;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/s/\[shareId\]
-cat > ./apps/web/src/app/s/\[shareId\]/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/s/\[shareId\]/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import Link from "next/link";
@@ -7883,10 +7883,10 @@ export default function PublicSharePage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/terms
-cat > ./apps/web/src/app/terms/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/terms/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Metadata } from "next";
 import { PageShell } from "@/components/site/PageShell";
 
@@ -7919,10 +7919,10 @@ export default function TermsPage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/app/visualizer
-cat > ./apps/web/src/app/visualizer/page.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/app/visualizer/page.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import dynamic from "next/dynamic";
 import { ThemeToggle, useTheme } from "@/components/visualizers/ui";
@@ -7946,10 +7946,10 @@ export default function VisualizerPage() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/account
-cat > ./apps/web/src/components/account/deviceLabel.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/account/deviceLabel.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** A short, human label for a browser user-agent: "Chrome on Windows". Best effort, never throws. */
 export function describeDevice(userAgent: string | null): string {
     if (!userAgent) return "Unknown device";
@@ -7983,10 +7983,10 @@ export function describeDevice(userAgent: string | null): string {
     return browser ?? os ?? "Unknown device";
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/account
-cat > ./apps/web/src/components/account/DialogShell.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/account/DialogShell.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
@@ -8026,10 +8026,10 @@ export function DialogShell({ open, onClose, title, description, children }: Dia
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/account
-cat > ./apps/web/src/components/account/ProfileDialog.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/account/ProfileDialog.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -8138,10 +8138,10 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/account
-cat > ./apps/web/src/components/account/SettingsDialog.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/account/SettingsDialog.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useState } from "react";
@@ -8285,10 +8285,10 @@ export default function SettingsDialog({ open, onClose }: { open: boolean; onClo
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/auth
-cat > ./apps/web/src/components/auth/FeatureGate.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/auth/FeatureGate.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import type { ReactNode } from "react";
@@ -8343,10 +8343,10 @@ export function FeatureGate({ feature, copy, preview, ready }: FeatureGateProps)
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/auth
-cat > ./apps/web/src/components/auth/GlassCard.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/auth/GlassCard.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { motion } from "framer-motion";
@@ -8393,10 +8393,10 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
 );
 
 GlassCard.displayName = "GlassCard";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/auth
-cat > ./apps/web/src/components/auth/GoogleButton.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/auth/GoogleButton.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useState, useRef } from "react";
@@ -8517,10 +8517,10 @@ export function GoogleButton({ onLogin }: GoogleButtonProps) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/auth
-cat > ./apps/web/src/components/auth/GoogleLoginModal.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/auth/GoogleLoginModal.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
@@ -8606,10 +8606,10 @@ export function GoogleLoginModal({ isOpen, onClose, onGoogleLogin, error = null,
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/auth
-cat > ./apps/web/src/components/auth/SignInPrompt.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/auth/SignInPrompt.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { LogIn } from "lucide-react";
@@ -8642,10 +8642,10 @@ export function SignInPrompt({ title, description, className = "" }: SignInPromp
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor
-cat > ./apps/web/src/components/CodeEditor/CodeEditor.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/CodeEditor.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/CodeEditor.tsx
 "use client";
 
@@ -9073,10 +9073,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor
-cat > ./apps/web/src/components/CodeEditor/constants.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/constants.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/constants.ts
 import { Language } from './types';
 
@@ -9089,10 +9089,10 @@ export const LANGUAGE_EXTENSIONS: Record<Language, string> = {
   javascript: '.js',
   python: '.py',
 };
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor
-cat > ./apps/web/src/components/CodeEditor/EditorStatusBar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/EditorStatusBar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import styles from "./CodeEditor.module.css";
 import { LANGUAGE_LABELS } from "./constants";
 import type { Language } from "./types";
@@ -9114,10 +9114,10 @@ export function EditorStatusBar({ language, readOnly }: { language: Language; re
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor
-cat > ./apps/web/src/components/CodeEditor/EditorToolbar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/EditorToolbar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/EditorToolbar.tsx
 "use client";
 
@@ -9471,17 +9471,17 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor
-cat > ./apps/web/src/components/CodeEditor/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/index.ts
 export { CodeEditor } from './CodeEditor';
 export type { CodeEditorProps, Language } from './types';
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor/lib
-cat > ./apps/web/src/components/CodeEditor/lib/formatters.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/lib/formatters.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/lib/formatters.ts
 //
 // IMPORTANT: This module is a FORMATTER ONLY — it does NOT compile, execute,
@@ -9599,10 +9599,10 @@ export async function formatCode(code: string, language: Language): Promise<stri
       return code;
   }
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor/lib
-cat > ./apps/web/src/components/CodeEditor/lib/monacoTheme.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/lib/monacoTheme.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type * as Monaco from 'monaco-editor';
 
 export function registerCustomTheme(monaco: typeof Monaco): void {
@@ -9703,10 +9703,10 @@ export function registerCustomTheme(monaco: typeof Monaco): void {
     },
   });
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor/lib
-cat > ./apps/web/src/components/CodeEditor/lib/pythonProvider.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/lib/pythonProvider.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/lib/pythonProvider.ts
 import type * as Monaco from 'monaco-editor';
 
@@ -10058,10 +10058,10 @@ export function registerPythonProvider(monaco: typeof Monaco): void {
 
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/CodeEditor
-cat > ./apps/web/src/components/CodeEditor/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/CodeEditor/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filepath: src/components/CodeEditor/types.ts
 export type Language = 'javascript' | 'python';
 
@@ -10087,10 +10087,10 @@ export interface EditorToolbarProps {
   readOnly: boolean;
   isReady: boolean;
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/AccountAvatar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/AccountAvatar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { UserCircleFreeIcons } from "@hugeicons/core-free-icons";
@@ -10134,10 +10134,10 @@ export default function AccountAvatar({ size = 25 }: { size?: number }) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/AiChatDrawer.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/AiChatDrawer.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10625,10 +10625,10 @@ function AIChatDrawer({ open, onClose }: { open: boolean; onClose: VoidFunction 
 
 export default AIChatDrawer;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/analysis-history.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/analysis-history.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import React, {
@@ -11582,10 +11582,10 @@ export default function AnalysisHistory({
         </div>
     );
 } 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/Analysis.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/Analysis.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { growthFor } from "@/lib/complexity";
@@ -13279,10 +13279,10 @@ export const ANALYSIS_COPY: FeatureCopy = {
  */
 // The default panel moved to AnalysisFeature.tsx (Phase 7): it chooses between real and sample analysis.
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/AnalysisFeature.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/AnalysisFeature.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -13417,10 +13417,10 @@ export default function AnalysisFeature() {
     return <FeatureGate feature="analysis" copy={ANALYSIS_COPY} preview={<SampleAnalysisPanel language={language} onComplete={noop} />} ready={<RealAnalysisPanel />} />;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/AnalysisHistoryFeature.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/AnalysisHistoryFeature.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13489,10 +13489,10 @@ export default function RealHistory() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/CodeSizeBadge.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/CodeSizeBadge.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // Phase 0b-2: live code size indicator
 "use client";
 
@@ -13520,10 +13520,10 @@ export function CodeSizeBadge({ className = "" }: { className?: string }) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/DashBoard.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/DashBoard.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -13626,10 +13626,10 @@ export default function AlgoforgeDashboard() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/DashboardGate.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/DashboardGate.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useSyncExternalStore, type ReactNode } from "react";
@@ -13656,10 +13656,10 @@ export function DashboardGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/DesktopOnlyScreen.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/DesktopOnlyScreen.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
@@ -13732,10 +13732,10 @@ export function DesktopOnlyScreen() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/FeaturePanel.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/FeaturePanel.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import dynamic from "next/dynamic";
@@ -13780,10 +13780,10 @@ export default function FeaturePanel({ activeFeature }: { activeFeature: Feature
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/Markdown.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/Markdown.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { Check, Copy, FileInput } from "lucide-react";
@@ -13899,10 +13899,10 @@ export function Markdown({ source, onInsert }: { source: string; onInsert?: (cod
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/NotificationsPopover.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/NotificationsPopover.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
@@ -13953,10 +13953,10 @@ export default function NotificationsPopover({ notifications = [] }: { notificat
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/Resize.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/Resize.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type RefObject } from "react";
@@ -14047,10 +14047,10 @@ export default function ResizeHandle({ containerRef, value, min, max, defaultVal
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/Setting.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/Setting.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -14294,10 +14294,10 @@ export default function SettingsDropdown({
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/ShareModal.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/ShareModal.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
@@ -14540,10 +14540,10 @@ export default function ShareModal({ isOpen, onClose, target, emptyHint }: Share
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/TitleBar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/TitleBar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import AccountAvatar from "./AccountAvatar";
@@ -15074,10 +15074,10 @@ export default function TopNav({
         </header>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/Toolbar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/Toolbar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import type { CSSProperties } from "react";
@@ -15255,10 +15255,10 @@ export default function Toolbar({
         </div>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/DashBoard
-cat > ./apps/web/src/components/DashBoard/WorkspaceEditor.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/DashBoard/WorkspaceEditor.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { CodeEditor } from "../CodeEditor";
@@ -15274,10 +15274,10 @@ export default function WorkspaceEditor() {
     return <CodeEditor height="100%" language={language} value={code} onChange={setCode} onLanguageChange={setLanguage} />;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/DemoVideo.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/DemoVideo.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -15379,10 +15379,10 @@ export default function DemoVideo({ lite = false }: { lite?: boolean }) {
         </div>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/FinalCTA.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/FinalCTA.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useRef } from "react";
@@ -15507,10 +15507,10 @@ export default function FinalCTA() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/Footer.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/Footer.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import React, { useEffect, useRef } from "react";
@@ -15652,10 +15652,10 @@ const Footer = () => {
 
 export default Footer;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/Hero.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/Hero.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { motion } from "framer-motion";
@@ -15857,10 +15857,10 @@ export default function Hero() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/HorizontalFeatureScroll.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/HorizontalFeatureScroll.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -16016,10 +16016,10 @@ export default function HorizontalFeatureScroll() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/MobileTabletLandingPage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/MobileTabletLandingPage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import {
@@ -17024,10 +17024,10 @@ export default function AlgoForgeLanding() {
         </div>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/Navbar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/Navbar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -17159,10 +17159,10 @@ export function SmartNavbar() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/ParticleField.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/ParticleField.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -17494,10 +17494,10 @@ export default function ParticleField({
     return <canvas ref={ref} aria-hidden className={`pointer-events-none h-full w-full ${className}`} />;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/particles.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/particles.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { motion } from "framer-motion";
@@ -17580,10 +17580,10 @@ export default function ParticleBg() {
     </div>
   );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/shared.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/shared.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
@@ -17728,10 +17728,10 @@ export function Buddy({ size = 72, track = true }: { size?: number; track?: bool
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/UseCases.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/UseCases.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import Link from "next/link";
@@ -17830,10 +17830,10 @@ export default function UseCases() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/LandingPage
-cat > ./apps/web/src/components/LandingPage/WhatYouGet.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/LandingPage/WhatYouGet.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { AiBrain01Icon, MessageMultiple01Icon, PlayIcon, TrendingUp } from "@hugeicons/core-free-icons";
@@ -17959,10 +17959,10 @@ export default function WhatYouGet() {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components
-cat > ./apps/web/src/components/Logo.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/Logo.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 const AlgoForgeLogo = ({ size = 150, ...props }) => {
   return (
     <svg
@@ -17997,10 +17997,10 @@ const AlgoForgeLogo = ({ size = 150, ...props }) => {
 };
 
 export default AlgoForgeLogo;
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components
-cat > ./apps/web/src/components/MotionProvider.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/MotionProvider.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { MotionConfig as FramerMotionConfig } from "framer-motion";
@@ -18015,10 +18015,10 @@ export default function MotionProvider({ children }: { children: React.ReactNode
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/share
-cat > ./apps/web/src/components/share/SharedView.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/share/SharedView.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import Link from "next/link";
@@ -18152,10 +18152,10 @@ export function SharedView({ share }: { share: PublicShareResponse }) {
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/site
-cat > ./apps/web/src/components/site/PageShell.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/site/PageShell.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import Link from "next/link";
 import type { ReactNode } from "react";
 import AlgoForgeLogo from "@/components/Logo";
@@ -18190,10 +18190,10 @@ export function PageShell({ children, wide = false }: { children: ReactNode; wid
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components
-cat > ./apps/web/src/components/SmoothScroll.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/SmoothScroll.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect } from "react";
@@ -18241,10 +18241,10 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     return <div className="root">{children}</div>;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/app-menu.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/app-menu.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
@@ -18281,10 +18281,10 @@ export const AppMenuItem = ({ className, ...props }: React.ComponentProps<typeof
     />
 );
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/badge.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/badge.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -18338,10 +18338,10 @@ function Badge({
 
 export { Badge, badgeVariants }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/button.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/button.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -18399,10 +18399,10 @@ function Button({
 
 export { Button, buttonVariants }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/ButtonAnimated.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/ButtonAnimated.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import Link from "next/link";
 
 const CLASS = `
@@ -18427,10 +18427,10 @@ const AnimatedButton = ({ text, href }: { text: string; href?: string }) => (
 
 export default AnimatedButton;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/card-hover-effect.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/card-hover-effect.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -18543,10 +18543,10 @@ export const CardDescription = ({
   );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/card.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/card.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -18648,10 +18648,10 @@ export {
   CardContent,
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/comet-card.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/comet-card.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import React, { useRef } from "react";
 import {
@@ -18770,10 +18770,10 @@ export const CometCard = ({
     );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/dialog.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/dialog.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client"
 
 import * as React from "react"
@@ -18932,10 +18932,10 @@ export {
   DialogTrigger,
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/FeatureCard.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/FeatureCard.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // FeatureCard.tsx
 "use client";
 
@@ -19082,10 +19082,10 @@ export default function FeatureCard({ points }: FeatureCardProps) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/FeaturePanel.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/FeaturePanel.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // FeaturePanel.tsx
 "use client";
 
@@ -19184,10 +19184,10 @@ export default function FeaturePanel({ feature }: { feature: Feature }) {
         </div>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/field.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/field.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client"
 
 import { useMemo } from "react"
@@ -19427,10 +19427,10 @@ export {
   FieldTitle,
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/glowing-effect.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/glowing-effect.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { memo, useCallback, useEffect, useRef } from "react";
@@ -19622,10 +19622,10 @@ GlowingEffect.displayName = "GlowingEffect";
 
 export { GlowingEffect };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/hover-border-gradient-demo.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/hover-border-gradient-demo.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import React from "react";
 import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
@@ -19665,10 +19665,10 @@ const AceternityLogo = () => {
   );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/hover-border-gradient.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/hover-border-gradient.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -19769,10 +19769,10 @@ export function HoverBorderGradient({
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/input.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/input.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import * as React from "react"
 import { Input as InputPrimitive } from "@base-ui/react/input"
 
@@ -19794,10 +19794,10 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
 
 export { Input }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/interactive-hover-button.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/interactive-hover-button.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19828,10 +19828,10 @@ export function InteractiveHoverButton({ children, className, href, ...props }: 
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/label.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/label.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client"
 
 import * as React from "react"
@@ -19853,10 +19853,10 @@ function Label({ className, ...props }: React.ComponentProps<"label">) {
 
 export { Label }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/loader.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/loader.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { motion } from "motion/react";
 
@@ -20062,10 +20062,10 @@ export const LoaderFive = ({ text }: { text: string }) => {
   );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/resizable-navbar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/resizable-navbar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { cn } from "@/lib/utils";
 import { IconMenu2, IconX } from "@tabler/icons-react";
@@ -20364,10 +20364,10 @@ export const NavbarButton = ({
     );
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/SampleChip.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/SampleChip.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export function SampleChip({ className = "" }: { className?: string }) {
     return (
         <span
@@ -20379,10 +20379,10 @@ export function SampleChip({ className = "" }: { className?: string }) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/scroll-area.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/scroll-area.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import * as React from "react";
@@ -20429,10 +20429,10 @@ ScrollBar.displayName = "ScrollBar";
 
 export { ScrollArea, ScrollBar };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/separator.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/separator.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client"
 
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator"
@@ -20459,10 +20459,10 @@ function Separator({
 
 export { Separator }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/StatusChip.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/StatusChip.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, type FeatureStatus } from "@/lib/featureStatus";
 
@@ -20480,10 +20480,10 @@ export function StatusChip({ status, className }: { status: FeatureStatus; class
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/tabs.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/tabs.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client"
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
@@ -20567,10 +20567,10 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
 
 export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/ui
-cat > ./apps/web/src/components/ui/tooltip.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/ui/tooltip.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client"
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
@@ -20638,16 +20638,16 @@ function TooltipContent({
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/array
-cat > ./apps/web/src/components/visualizers/array/arrayEngine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/array/arrayEngine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/array/arrayEngine";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/array
-cat > ./apps/web/src/components/visualizers/array/ArrayStage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/array/ArrayStage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { animate, createTimeline, spring, stagger, utils } from "animejs";
@@ -21452,28 +21452,28 @@ export function ArrayStageView({ data, anim, status, showIndex, finishAnimation 
     </section>
   );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/array
-cat > ./apps/web/src/components/visualizers/array/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/array/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/array/complexity";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/array
-cat > ./apps/web/src/components/visualizers/array/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/array/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/array/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/array
-cat > ./apps/web/src/components/visualizers/array/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/array/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/array/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/canvasStyles.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/canvasStyles.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * On the shared canvas each structure is drawn bare. The stages mark their own chrome (stat rows,
  * legends, footers, frames) with `data-chrome` / `data-stage`; this hides it without touching any stage code.
@@ -21493,10 +21493,10 @@ export const CANVAS_CSS = `
 [data-canvas-group] [data-stage-board]{max-height:none !important;min-height:0 !important;overflow:visible !important;border:0 !important;border-radius:0 !important}
 `;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/CanvasViewport.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/CanvasViewport.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import {
     useCallback,
@@ -21729,10 +21729,10 @@ export function Viewport({ content, children, className }: Props) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/Group.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/Group.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
@@ -21802,10 +21802,10 @@ export function Group({ meta, store, x, y, glide, onSize }: Props) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { VisualizerCanvas } from "./VisualizerCanvas";
 export { Viewport } from "./CanvasViewport";
 export { GroupRuntime, EMPTY_VIEW } from "./runtime";
@@ -21815,10 +21815,10 @@ export type { CanvasLayout, Lane, Placed } from "./layout";
 export { centered, fit, zoomAt, panBy, clampK, MIN_K, MAX_K } from "./viewport";
 export type { Point, Size, Transform } from "./viewport";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/layout.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/layout.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Point, Size } from "./viewport";
 
 /** One structure on the canvas, as measured. A hidden structure has size 0 x 0. */
@@ -21863,10 +21863,10 @@ export function stackLanes(lanes: readonly Lane[], gap = LANE_GAP): CanvasLayout
     return { placed, size: { w: right, h: bottom } };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/renderers.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/renderers.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import type { ReactElement } from "react";
 import { ArrayStageView, type ArrayStageViewProps } from "../array/ArrayStage";
@@ -21973,10 +21973,10 @@ export function renderStage(meta: InstanceMeta, view: GroupView, finish: (token:
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/runtime.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/runtime.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Beat } from "../script/compile";
 import type { AnyOutcome } from "../core/types";
 import type { TimelineSink } from "../shared/stage/StageEnv";
@@ -22099,10 +22099,10 @@ export class GroupRuntime implements GroupRunner {
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/viewport.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/viewport.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** Camera math for the shared canvas. Pure: no DOM. */
 
 export interface Size {
@@ -22159,10 +22159,10 @@ export const panBy = (t: Transform, dx: number, dy: number): Transform => ({ ...
 
 export const isSame = (a: Transform, b: Transform): boolean => a.x === b.x && a.y === b.y && a.k === b.k;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/canvas
-cat > ./apps/web/src/components/visualizers/canvas/VisualizerCanvas.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/canvas/VisualizerCanvas.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
@@ -22213,88 +22213,88 @@ export function VisualizerCanvas({ store = visualizer, className }: { store?: St
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/array.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/array.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/array";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/graph.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/graph.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/graph";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/hash.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/hash.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/hash";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/linear.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/linear.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/linear";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/linkedlist.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/linkedlist.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/linkedlist";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/make.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/make.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/make";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core/adapters
-cat > ./apps/web/src/components/visualizers/core/adapters/tree.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/adapters/tree.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/adapters/tree";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core
-cat > ./apps/web/src/components/visualizers/core/ids.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/ids.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/ids";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core
-cat > ./apps/web/src/components/visualizers/core/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/index";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core
-cat > ./apps/web/src/components/visualizers/core/opMeta.generated.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/opMeta.generated.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/opMeta.generated";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core
-cat > ./apps/web/src/components/visualizers/core/registry.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/registry.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/registry";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core
-cat > ./apps/web/src/components/visualizers/core/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/core
-cat > ./apps/web/src/components/visualizers/core/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/core/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/core/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/controller.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/controller.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { findDsType } from "../core/registry";
 import type { Compiled, Frame } from "../script/compile";
 import { playFrame, showSnapshot, type FrameRun } from "./scheduler";
@@ -22398,10 +22398,10 @@ export class PlaybackController {
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { dwellFor, PlaybackController } from "./controller";
 export { canPlay, canStepBack, canStepForward, currentBeat, currentIndex, currentMessages, failedSteps, frameAt, isPlaying, progressOf } from "./selectors";
 export type { Progress } from "./selectors";
@@ -22413,10 +22413,10 @@ export { initialTransport, MAX_SPEED, MIN_SPEED, reduce, restingStatus, SPEEDS }
 export type { Action, Effect, Status, Step, TransportState } from "./transport";
 export type { BeatHandle, GroupRunner, RunnerLookup } from "./types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/instance.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/instance.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useStore } from "zustand";
 import { createVisualizer, type VisualizerStore } from "./store";
@@ -22428,10 +22428,10 @@ export function useVisualizer<T>(selector: (s: VisualizerStore) => T): T {
     return useStore(visualizer, selector);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/scheduler.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/scheduler.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Beat, Frame } from "../script/compile";
 import { Timer } from "./timer";
 import type { BeatHandle, GroupRunner, RunnerLookup } from "./types";
@@ -22552,10 +22552,10 @@ export function showSnapshot(snapshot: Readonly<Record<string, unknown>>, instan
     for (const inst of instances) lookup(inst.id)?.show(Object.prototype.hasOwnProperty.call(snapshot, inst.id) ? snapshot[inst.id] : null);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/selectors.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/selectors.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Beat, Compiled, Frame } from "../script/compile";
 import type { TransportState } from "./transport";
 
@@ -22605,10 +22605,10 @@ export const isPlaying = (t: TransportState): boolean => t.status === "playing";
 export const canStepBack = (t: TransportState): boolean => canPlay(t) && currentIndex(t) >= 0;
 export const canStepForward = (t: TransportState): boolean => canPlay(t) && (t.running !== null || t.cursor < t.total - 1);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/store.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/store.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Compiled, Frame } from "../script/compile";
 import { dwellFor, PlaybackController } from "./controller";
@@ -22717,10 +22717,10 @@ export function createVisualizer(options: VisualizerOptions = {}): StoreApi<Visu
     });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/testing.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/testing.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Beat } from "../script/compile";
 import type { BeatHandle, GroupRunner } from "./types";
 
@@ -22761,10 +22761,10 @@ export class FakeRunner implements GroupRunner {
 export const settle = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/timer.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/timer.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * A pausable timer whose length is in "authored" milliseconds: at 2x speed it fires in half the time.
  * Used to keep a frame on screen long enough to read its message.
@@ -22843,10 +22843,10 @@ export class Timer {
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/transport.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/transport.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * The playback state machine. Pure: (state, action) -> (state, effects). No DOM, no timers, no React.
  * The controller carries out the effects; this file only decides what should happen.
@@ -23018,10 +23018,10 @@ export function reduce(s: TransportState, a: Action): Step {
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/engine
-cat > ./apps/web/src/components/visualizers/engine/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/engine/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Beat } from "../script/compile";
 
 /** A running animation of one beat. `done` settles when it finished OR was cancelled. */
@@ -23049,22 +23049,22 @@ export interface GroupRunner {
 
 export type RunnerLookup = (instance: string) => GroupRunner | undefined;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/graph/complexity";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/graph/engine";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/GraphStage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/GraphStage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { stagger, utils } from "animejs";
@@ -23521,52 +23521,52 @@ export function GraphStageView({ data, selV, selE, anim, status, showIds, captio
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/layout.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/layout.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/graph/layout";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/graph/model";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/graph/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/graph
-cat > ./apps/web/src/components/visualizers/graph/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/graph/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/graph/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/hash/complexity";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/hashEngine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/hashEngine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/hash/hashEngine";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/hashing.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/hashing.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/hash/hashing";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/HashPipeline.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/HashPipeline.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { fmt } from "./hashEngine";
 import type { Trace } from "./types";
@@ -23672,10 +23672,10 @@ export default function HashPipeline({ trace }: { trace: Trace | null }) {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/HashStage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/HashStage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useLayoutEffect, useRef } from "react";
 import { animate, createTimeline, spring, stagger, utils } from "animejs";
@@ -24405,40 +24405,40 @@ export function HashStageView({ kind, data, trace, anim, showIndex, finishAnimat
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/tableModel.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/tableModel.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/hash/tableModel";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/hash/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/hash
-cat > ./apps/web/src/components/visualizers/hash/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/hash/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/hash/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linear/complexity";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linear/engine";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/geometry.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/geometry.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Kind } from "./types";
 
 /**
@@ -24503,10 +24503,10 @@ export const stageWidth = (kind: Kind, n: number, prevN = 0) =>
     kind === "stack" ? S.LEFT + S.TW + S.GUT + 14 : Q.PADL * 2 + queueSlots(n, prevN) * Q.COL;
 export const stageHeight = (kind: Kind) => (kind === "stack" ? STACK_STAGE_H : QUEUE_STAGE_H);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/LinearStage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/LinearStage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useLayoutEffect, useRef } from "react";
 import { animate, createTimeline, spring, stagger, utils } from "animejs";
@@ -25217,40 +25217,40 @@ export function LinearStageView({ kind, data, last, anim, showIndex, finishAnima
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linear/model";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linear/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linear
-cat > ./apps/web/src/components/visualizers/linear/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linear/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linear/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linkedlist/complexity";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linkedlist/engine";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/layout.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/layout.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { linkEdge, type Box, type EdgeGeometry } from "../shared/edges";
 import { lengthOf, orderOf, type Edge } from "./model";
 import type { ListState, ListType } from "./types";
@@ -25325,10 +25325,10 @@ export function edgeGeometry(
 }
 export const laneOf = (kind: "next" | "prev", type: ListType) => (kind === "prev" ? 9 : type === "dll" ? -9 : 0);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/ListStage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/ListStage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useLayoutEffect, useRef } from "react";
 import { animate, createTimeline, spring, stagger, utils } from "animejs";
@@ -26068,40 +26068,40 @@ function edgeGeometryFor(kind: "next" | "prev", from: Box, to: Box, lane: number
   return linkEdge(from, to, { dir: kind === "next" ? "fwd" : "back", lane, self });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linkedlist/model";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/steps.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/steps.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linkedlist/steps";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linkedlist/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/linkedlist
-cat > ./apps/web/src/components/visualizers/linkedlist/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/linkedlist/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/linkedlist/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/compile.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/compile.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/script/compile";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/examples.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/examples.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export interface Example {
     id: string;
     title: string;
@@ -26189,10 +26189,10 @@ export const EXAMPLES: readonly Example[] = [
     },
 ];
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/fixes.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/fixes.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Diagnostic } from "../core/types";
 
 /** 1-based line and column -> offset into the text (clamped). Lines are split on "\n" like the parser does. */
@@ -26214,10 +26214,10 @@ export function applyFix(text: string, d: Diagnostic): string | null {
     return text.slice(0, a) + d.fix.replacement + text.slice(Math.max(a, b));
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { compileScript, compileValue, LIMITS } from "./compile";
 export type { Beat, Compiled, Frame, InstanceMeta } from "./compile";
 export { EXAMPLES } from "./examples";
@@ -26227,10 +26227,10 @@ export { applyFix, offsetOf } from "./fixes";
 export { toMarkers, countBySeverity } from "./markers";
 export type { MarkerData } from "./markers";
 export { loadScript, saveScript, SCRIPT_KEY } from "./storage";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/markers.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/markers.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Diagnostic } from "../core/types";
 
 /** Monaco's MarkerSeverity values, kept here so this file needs no editor import. */
@@ -26269,28 +26269,28 @@ export function countBySeverity(diagnostics: readonly Diagnostic[]): { errors: n
     return { errors, warnings };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/normalize.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/normalize.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/script/normalize";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/parse.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/parse.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/script/parse";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/schema.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/schema.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/script/schema";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/storage.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/storage.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export const SCRIPT_KEY = "algoforge:script:v1";
 
 type Reader = Pick<Storage, "getItem">;
@@ -26322,16 +26322,16 @@ export function saveScript(text: string, storage: Writer | null = browserStorage
         return false;
     }
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/script
-cat > ./apps/web/src/components/visualizers/script/suggest.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/script/suggest.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/script/suggest";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared
-cat > ./apps/web/src/components/visualizers/shared/animationSettings.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/animationSettings.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useSyncExternalStore } from "react";
 import { create } from "zustand";
@@ -26387,22 +26387,22 @@ export function useReducedMotion(): boolean {
   return override ?? system;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared
-cat > ./apps/web/src/components/visualizers/shared/edges.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/edges.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/shared/edges";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared
-cat > ./apps/web/src/components/visualizers/shared/ids.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/ids.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/shared/ids";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/Caption.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/Caption.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 export interface CaptionData {
@@ -26436,10 +26436,10 @@ export function Caption({ data }: { data: CaptionData | null }) {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/EdgeG.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/EdgeG.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { COLOR_FADE } from "./tokens";
 import type { EdgeGeo } from "./geometry";
@@ -26502,16 +26502,16 @@ export function EdgeG(p: EdgeGProps) {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/geometry.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/geometry.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/shared/stage/geometry";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/motion.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/motion.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { animate, createTimeline, spring, stagger, utils } from "animejs";
 import { INK } from "./tokens";
 
@@ -26631,10 +26631,10 @@ export function createMotion(tl: TL, D: number) {
 }
 export type Motion = ReturnType<typeof createMotion>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/NodeDisc.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/NodeDisc.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import type { PointerEvent as RPointerEvent } from "react";
 import { cn } from "@/lib/utils";
@@ -26755,10 +26755,10 @@ export function NodeDisc(p: NodeDiscProps) {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/StageBoard.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/StageBoard.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useCallback, useEffect, useRef, type MutableRefObject, type ReactNode } from "react";
 
@@ -26842,10 +26842,10 @@ export function StageBoard(p: Props) {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/StageEnv.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/StageEnv.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { createContext, useContext } from "react";
 import type { createTimeline } from "animejs";
@@ -26869,10 +26869,10 @@ const Ctx = createContext<TimelineSink>(noopSink);
 export const TimelineSinkProvider = Ctx.Provider;
 export const useTimelineSink = (): TimelineSink => useContext(Ctx);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/StageFrame.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/StageFrame.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import type { ReactNode, RefObject } from "react";
 import { cn } from "@/lib/utils";
@@ -26913,16 +26913,16 @@ export function StageFrame({ hostRef, label, stats, badge, children, footer }: S
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/tokens.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/tokens.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/shared/stage/tokens";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared/stage
-cat > ./apps/web/src/components/visualizers/shared/stage/useStageAnimator.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/stage/useStageAnimator.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import { createTimeline, stagger, utils } from "animejs";
@@ -27178,10 +27178,10 @@ export function playRestore(c: Ctx<unknown>) {
 }
 export type { El };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/shared
-cat > ./apps/web/src/components/visualizers/shared/styles.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/shared/styles.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export const panel =
   "rounded-2xl border border-primary-foreground/10 bg-card/50 p-5";
 export const panelTitle = "mb-4 text-sm font-semibold tracking-tight";
@@ -27196,28 +27196,28 @@ export const chip =
   "inline-flex h-7 items-center rounded-full border border-primary-foreground/10 px-3 font-mono text-xs transition hover:border-primary-foreground/30 hover:bg-primary-foreground/5 active:scale-[0.97] outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/20";
 export const chipActive =
   "border-primary-foreground bg-primary-foreground text-primary-background hover:bg-primary-foreground hover:border-primary-foreground";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/bst.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/bst.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/bst";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/complexity";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/engine";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/layout.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/layout.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { straightEdge, type Box, type EdgeGeometry } from "../shared/edges";
 import { lengthOf } from "./model";
 import type { TreeState } from "./types";
@@ -27323,22 +27323,22 @@ export function edgeLabel(from: Box, to: Box, kind: "left" | "right"): [number, 
 
 export const treeSize = (s: TreeState) => lengthOf(s);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/model";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/steps.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/steps.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/steps";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/TreeStage.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/TreeStage.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useRef, useState } from "react";
 import { spring, stagger, utils } from "animejs";
@@ -27824,22 +27824,22 @@ export function TreeStageView({ data, last, selectedId, anim, status, showIds, c
 }
 void cn;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/tree
-cat > ./apps/web/src/components/visualizers/tree/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/tree/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "@algoforge/visualizer-core/src/tree/validate";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/describe.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/describe.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { currentBeat, progressOf } from "../engine/selectors";
 import type { TransportState } from "../engine/transport";
 import type { Compiled } from "../script/compile";
@@ -27866,10 +27866,10 @@ export function valueText(c: Compiled | null, t: TransportState): string {
     return `Step ${position} of ${total}${d.call ? `: ${d.call}` : ""}${d.failed ? " (rejected)" : ""}`;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/hotkeys.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/hotkeys.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { SPEEDS } from "../engine/transport";
 
 export type Command =
@@ -27966,14 +27966,14 @@ export const HOTKEY_HELP: readonly (readonly [string, string])[] = [
     ["[ ]", "Slower / faster"],
     ["L", "Loop on / off"],
     ["M", "Show / hide operation details"],
-    ["F, 0, + −", "Fit, 100%, zoom (when the canvas is focused)"],
+    ["F, 0, +/-", "Fit, 100%, zoom in / out"],
     ["?", "This help"],
 ];
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/icons.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/icons.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export type IconName = "play" | "pause" | "back" | "forward" | "restart" | "end" | "replay" | "loop";
 
 const ICONS: Record<IconName, { d: string; stroke?: boolean }> = {
@@ -27996,10 +27996,10 @@ export function Icon({ name }: { name: IconName }) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { PlayerChrome } from "./PlayerChrome";
 export { TransportBar } from "./TransportBar";
 export { MessageDock } from "./MessageDock";
@@ -28015,10 +28015,10 @@ export { ThemeToggle } from "./ThemeToggle";
 export { useTheme, resolveTheme, applyTheme } from "./theme";
 export type { Theme } from "./theme";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/inlineCode.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/inlineCode.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export interface Segment {
     text: string;
     code: boolean;
@@ -28034,10 +28034,10 @@ export function splitInlineCode(message: string): Segment[] {
     return parts.map((text, i) => ({ text, code: i % 2 === 1 })).filter((s) => s.text !== "");
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/LazyScriptEditor.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/LazyScriptEditor.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
@@ -28049,10 +28049,10 @@ export const LazyScriptEditor: ComponentType<ScriptEditorProps> = dynamic(() => 
     loading: () => <div aria-busy aria-label="Loading editor" className="h-full animate-pulse rounded-lg bg-primary-foreground/5" />,
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/MessageDock.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/MessageDock.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
@@ -28112,65 +28112,57 @@ export function MessageDock({ store = visualizer, details = false, persist = tru
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/PlayerChrome.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/PlayerChrome.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
-import { cn } from "@/lib/utils";
 import { visualizer } from "../engine/instance";
 import type { VisualizerStore } from "../engine/store";
-import { btn } from "../shared/styles";
-import { HOTKEY_HELP } from "./hotkeys";
 import { MessageDock } from "./MessageDock";
-import { TransportBar } from "./TransportBar";
+import { ShortcutsHelp, TransportBar } from "./TransportBar";
 import { useTransportHotkeys } from "./useTransportHotkeys";
 
-const on = "bg-primary-foreground text-primary-background hover:bg-primary-foreground";
-
-/** Everything under the canvas: narration, transport, options and shortcut help. Phase 6 mounts this inside the panel. */
-export function PlayerChrome({ store = visualizer }: { store?: StoreApi<VisualizerStore> }) {
+/** Everything under the canvas: narration, transport (with display options), and shortcut help. Phase 6 mounts this inside the panel. */
+export function PlayerChrome({
+    store = visualizer,
+}: {
+    store?: StoreApi<VisualizerStore>;
+}) {
     const [details, setDetails] = useState(false);
     const [persist, setPersist] = useState(true);
     const [help, setHelp] = useState(false);
 
-    useTransportHotkeys(store, { messages: () => setDetails((d) => !d), help: () => setHelp((h) => !h) });
+    const toggleDetails = () => setDetails((d) => !d);
+    const toggleHelp = () => setHelp((h) => !h);
+
+    useTransportHotkeys(store, { messages: toggleDetails, help: toggleHelp });
 
     return (
         <div className="flex flex-col gap-3">
             <MessageDock store={store} details={details} persist={persist} />
-            <TransportBar store={store} />
-            <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className={cn(btn, details && on)} aria-pressed={details} aria-keyshortcuts="M" title="Show the operation call under the narration (M)" onClick={() => setDetails((d) => !d)}>
-                    Details
-                </button>
-                <button type="button" className={cn(btn, persist && on)} aria-pressed={persist} title="Keep the last narration visible on steps that have none" onClick={() => setPersist((p) => !p)}>
-                    Keep narration
-                </button>
-                <button type="button" className={btn} aria-expanded={help} aria-controls="player-keys" aria-keyshortcuts="?" onClick={() => setHelp((h) => !h)}>
-                    Shortcuts
-                </button>
-            </div>
-            {help && (
-                <dl id="player-keys" className="grid gap-x-6 gap-y-1.5 rounded-2xl border border-primary-foreground/10 bg-card/50 p-4 text-xs sm:grid-cols-2">
-                    {HOTKEY_HELP.map(([k, v]) => (
-                        <div key={k} className="flex items-baseline justify-between gap-3">
-                            <dt className="font-mono text-muted-foreground">{k}</dt>
-                            <dd className="text-right">{v}</dd>
-                        </div>
-                    ))}
-                </dl>
-            )}
+            <TransportBar
+                store={store}
+                options={{
+                    details,
+                    onDetails: toggleDetails,
+                    persist,
+                    onPersist: () => setPersist((p) => !p),
+                    help,
+                    onHelp: toggleHelp,
+                }}
+            />
+            <ShortcutsHelp open={help} onClose={() => setHelp(false)} />
         </div>
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/SavedWork.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/SavedWork.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28330,10 +28322,10 @@ export function SavedWork({ api }: { api: ScriptApi }) {
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/ScriptDrawer.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/ScriptDrawer.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import type { StoreApi } from "zustand/vanilla";
@@ -28526,10 +28518,10 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/ScriptEditor.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/ScriptEditor.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
@@ -28723,10 +28715,10 @@ export function ScriptEditor({
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/theme.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/theme.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
@@ -28772,10 +28764,10 @@ export function useTheme(): readonly [Theme, () => void] {
     return [theme, toggle] as const;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/ThemeToggle.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/ThemeToggle.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { btn } from "../shared/styles";
 import { useTheme } from "./theme";
@@ -28790,12 +28782,28 @@ export function ThemeToggle() {
         </button>
     );
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/TransportBar.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/TransportBar.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { btnPrimary } from "../shared/styles";
+import {
+    Backward01Icon,
+    CodeIcon,
+    Forward01Icon,
+    KeyboardIcon,
+    NextIcon,
+    PauseIcon,
+    PinIcon,
+    PlayIcon,
+    PreviousIcon,
+    ReloadIcon,
+    RepeatIcon,
+} from "@hugeicons/core-free-icons";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
 import { cn } from "@/lib/utils";
@@ -28805,32 +28813,57 @@ import type { VisualizerStore } from "../engine/store";
 import { SPEEDS } from "../engine/transport";
 import { btn } from "../shared/styles";
 import { describeStep, valueText } from "./describe";
-import { Icon, type IconName } from "./icons";
+import { HOTKEY_HELP } from "./hotkeys";
+import { useVisualize } from "../../../lib/workspace/VisualizerApi";
+
 
 const MAX_ALL_TICKS = 200;
 const on = "bg-primary-foreground text-primary-background hover:bg-primary-foreground";
 
-function Btn(p: { label: string; keys?: string; icon: IconName; onClick: () => void; disabled?: boolean; pressed?: boolean; children?: ReactNode }) {
+type BtnProps = {
+    label: string;
+    icon: IconSvgElement;
+    onClick: () => void;
+    keys?: string;
+    disabled?: boolean;
+    pressed?: boolean;
+    expanded?: boolean;
+    controls?: string;
+};
+
+function Btn({ label, icon, onClick, keys, disabled, pressed, expanded, controls }: BtnProps) {
     return (
         <button
             type="button"
-            className={cn(btn, "w-8 px-0", p.pressed && on)}
-            aria-label={p.label}
-            aria-pressed={p.pressed}
-            aria-keyshortcuts={p.keys}
-            title={p.keys ? `${p.label} (${p.keys})` : p.label}
-            onClick={p.onClick}
-            disabled={p.disabled}
+            className={cn(btn, "w-8 px-0", (pressed || expanded) && on)}
+            aria-label={label}
+            aria-pressed={pressed}
+            aria-expanded={expanded}
+            aria-controls={controls}
+            aria-keyshortcuts={keys}
+            title={keys ? `${label} (${keys})` : label}
+            onClick={onClick}
+            disabled={disabled}
         >
-            <Icon name={p.icon} />
+            <HugeiconsIcon icon={icon} size={14} strokeWidth={1.8} aria-hidden />
         </button>
     );
 }
 
-/** Play, pause, step, replay, restart, jump, loop, speed, and a slider with one tick per step. */
-export function TransportBar({ store = visualizer }: { store?: StoreApi<VisualizerStore> }) {
+export type TransportOptions = {
+    details: boolean;
+    onDetails: () => void;
+    persist: boolean;
+    onPersist: () => void;
+    help: boolean;
+    onHelp: () => void;
+};
+
+/** Play, pause, step, replay, restart, jump, loop, speed, display options, and a slider with one tick per step. */
+export function TransportBar({ store = visualizer, options }: { store?: StoreApi<VisualizerStore>; options: TransportOptions }) {
     const t = useStore(store, (s) => s.transport);
     const compiled = useStore(store, (s) => s.compiled);
+    const { visualize, loading, error } = useVisualize(store);
     const act = () => store.getState();
     const dragging = useRef(false);
 
@@ -28858,28 +28891,49 @@ export function TransportBar({ store = visualizer }: { store?: StoreApi<Visualiz
     return (
         <div role="group" aria-label="Playback controls" className="flex flex-col gap-3 rounded-2xl border border-primary-foreground/10 bg-card/50 p-3">
             <div className="flex flex-wrap items-center gap-1.5">
-                <Btn label="Restart" keys="Home" icon="restart" onClick={() => act().restart()} disabled={!enabled} />
-                <Btn label="Step back" keys="ArrowLeft" icon="back" onClick={() => act().stepBack()} disabled={!canStepBack(t)} />
-                <Btn label={playing ? "Pause" : "Play"} keys="Space" icon={playing ? "pause" : "play"} onClick={() => act().toggle()} disabled={!enabled} pressed={playing} />
-                <Btn label="Step forward" keys="ArrowRight" icon="forward" onClick={() => act().stepForward()} disabled={!canStepForward(t)} />
-                <Btn label="Replay step" keys="R" icon="replay" onClick={() => act().replayStep()} disabled={!enabled || currentIndex(t) < 0} />
-                <Btn label="Jump to end" keys="End" icon="end" onClick={() => act().jumpToEnd()} disabled={!enabled} />
-                <Btn label="Loop" keys="L" icon="loop" onClick={() => act().setLoop(!t.loop)} pressed={t.loop} />
+                <Btn label="Restart" keys="Home" icon={PreviousIcon} onClick={() => act().restart()} disabled={!enabled} />
+                <Btn label="Step back" keys="ArrowLeft" icon={Backward01Icon} onClick={() => act().stepBack()} disabled={!canStepBack(t)} />
+                <Btn label={playing ? "Pause" : "Play"} keys="Space" icon={playing ? PauseIcon : PlayIcon} onClick={() => act().toggle()} disabled={!enabled} pressed={playing} />
+                <Btn label="Step forward" keys="ArrowRight" icon={Forward01Icon} onClick={() => act().stepForward()} disabled={!canStepForward(t)} />
+                <Btn label="Replay step" keys="R" icon={ReloadIcon} onClick={() => act().replayStep()} disabled={!enabled || currentIndex(t) < 0} />
+                <Btn label="Jump to end" keys="End" icon={NextIcon} onClick={() => act().jumpToEnd()} disabled={!enabled} />
+                <Btn label="Loop" keys="L" icon={RepeatIcon} onClick={() => act().setLoop(!t.loop)} pressed={t.loop} />
+                
+                <div className="ml-auto flex items-center gap-2">
+                    <button
+                        type="button"
+                        className={cn(btnPrimary, "h-8 whitespace-nowrap px-3")}
+                        onClick={visualize}
+                        disabled={loading}
+                        aria-busy={loading}
+                        title="Convert the code in the editor into an animation"
+                    >
+                        {loading ? "Visualizing…" : "Visualize algorithm"}
+                    </button>
 
-                <div role="group" aria-label="Playback speed" className="ml-auto inline-flex rounded-lg border border-primary-foreground/15 p-0.5">
-                    {SPEEDS.map((x) => (
-                        <button
-                            key={x}
-                            type="button"
-                            aria-label={`Speed ${x}×`}
-                            aria-pressed={t.speed === x}
-                            onClick={() => act().setSpeed(x)}
-                            className={cn("h-7 min-w-9 rounded-md px-2 font-mono text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-primary-foreground/20", t.speed === x ? on : "text-muted-foreground hover:text-primary-foreground")}
-                        >
-                            {x}×
-                        </button>
-                    ))}
+                  
+                    <div role="group" aria-label="Playback speed" className="inline-flex rounded-lg border border-primary-foreground/15 p-0.5">
+                        {SPEEDS.map((x) => (
+                            <button
+                                key={x}
+                                type="button"
+                                aria-label={`Speed ${x}×`}
+                                aria-pressed={t.speed === x}
+                                onClick={() => act().setSpeed(x)}
+                                className={cn("h-7 min-w-9 rounded-md px-2 font-mono text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-primary-foreground/20", t.speed === x ? on : "text-muted-foreground hover:text-primary-foreground")}
+                            >
+                                {x}×
+                            </button>
+                        ))}
+                    </div>
+
+                    <div role="group" aria-label="Display options" className="flex items-center gap-1.5">
+                        <Btn label="Details: show the operation call under the narration" keys="M" icon={CodeIcon} onClick={options.onDetails} pressed={options.details} />
+                        <Btn label="Keep narration: stay visible on steps that have none" icon={PinIcon} onClick={options.onPersist} pressed={options.persist} />
+                        <Btn label="Keyboard shortcuts" keys="?" icon={KeyboardIcon} onClick={options.onHelp} expanded={options.help} controls="player-keys" />
+                    </div>
                 </div>
+                
             </div>
 
             <div className="flex items-center gap-3">
@@ -28920,14 +28974,190 @@ export function TransportBar({ store = visualizer }: { store?: StoreApi<Visualiz
                     {info.call ?? ""}
                 </span>
             </div>
+            {error && (
+                <p role="alert" className="text-xs text-destructive">
+                    {error}
+                </p>
+            )}
         </div>
     );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+const GROUPS: { title: string; match: RegExp }[] = [
+    { title: "Playback", match: /play|pause|restart|replay|jump|loop|speed|start|end/i },
+    { title: "Navigation", match: /step|back|forward|seek|next|prev|previous|slider/i },
+    { title: "Display", match: /detail|narration|message|shortcut|help|close/i },
+];
+
+/** "Shift + ArrowLeft / ArrowRight" -> [["Shift","←"], ["→"]] (alternatives, each a chord). */
+function parseKeys(raw: string): string[][] {
+    // If it contains a slash or comma that isn't part of "+/-", handle carefully:
+    // Better yet, update HOTKEY_HELP entry for +/- to use "or" or handle it in the regex:
+    return raw
+        .split(/\s*(?:\bor\b)\s*/i) // split by "or" first, or use custom split
+        .filter(Boolean)
+        .map((alt) => alt.split(/\s*,\s*/).map(k => k.trim())); // wait, if you want F, 0, and +/- as alternatives:
+}
+
+function Keycap({ children }: { children: string }) {
+    return (
+        <kbd
+            className={cn(
+                "inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2",
+                "border border-primary-foreground/15 border-b-[3px] bg-linear-to-b from-primary-foreground/10 to-primary-foreground/3",
+                "font-mono text-[11px] font-medium text-primary-foreground shadow-[0_1px_0_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)]",
+                "transition group-hover:-translate-y-px group-hover:border-[#FF430F]/50 group-hover:text-[#FF430F]",
+            )}
+        >
+            {children}
+        </kbd>
+    );
+}
+
+function KeyCombo({ raw }: { raw: string }) {
+    const alts = parseKeys(raw);
+    return (
+        <span className="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1">
+            {alts.map((chord, i) => (
+                <span key={i} className="flex items-center gap-1.5">
+                    {i > 0 && <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">or</span>}
+                    <span className="flex items-center gap-1">
+                        {chord.map((k, j) => (
+                            <span key={j} className="flex items-center gap-1">
+                                {j > 0 && <span className="text-xs text-muted-foreground/60">+</span>}
+                                <Keycap>{k}</Keycap>
+                            </span>
+                        ))}
+                    </span>
+                </span>
+            ))}
+        </span>
+    );
+}
+
+/** Centered, blurred-backdrop modal listing every keyboard shortcut. Toggled by the keyboard button or the "?" hotkey. */
+export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const ref = useRef<HTMLDialogElement>(null);
+    const [query, setQuery] = useState("");
+
+    useEffect(() => {
+        const d = ref.current;
+        if (!d) return;
+        if (open && !d.open) d.showModal();
+        if (!open && d.open) d.close();
+    }, [open]);
+
+    const sections = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        const rows = HOTKEY_HELP.filter(([k, v]) => !q || k.toLowerCase().includes(q) || v.toLowerCase().includes(q));
+        const buckets = new Map<string, typeof rows>();
+        for (const row of rows) {
+            const title = GROUPS.find((g) => g.match.test(row[1]))?.title ?? "General";
+            buckets.set(title, [...(buckets.get(title) ?? []), row]);
+        }
+        const order = [...GROUPS.map((g) => g.title), "General"];
+        return order.filter((t) => buckets.has(t)).map((t) => ({ title: t, rows: buckets.get(t)! }));
+    }, [query]);
+
+    return (
+        <dialog
+            ref={ref}
+            id="player-keys"
+            aria-labelledby="player-keys-title"
+            onClose={() => {
+                setQuery("");
+                onClose();
+            }}
+            onClick={(e) => e.target === ref.current && onClose()}
+            className={cn(
+                "m-auto w-[min(92vw,44rem)] overflow-visible bg-transparent p-0 text-primary-foreground",
+                "backdrop:bg-black/50 backdrop:backdrop-blur-md",
+                "open:animate-in open:fade-in-0 open:zoom-in-95 open:duration-200",
+            )}
+        >
+            <div className="relative overflow-hidden rounded-3xl border border-primary-foreground/10 bg-card/90 shadow-[0_30px_120px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+                {/* ambient glow */}
+
+                {/* header */}
+                <header className="relative flex items-center gap-4 border-b border-primary-foreground/10 px-6 py-5">
+                    <div className="grid size-11 place-items-center rounded-2xl bg-linear-to-br from-[#FF430F] to-[#FF8A3D] text-white shadow-lg shadow-[#FF430F]/30">
+                        <HugeiconsIcon icon={KeyboardIcon} size={22} strokeWidth={1.8} aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h2 id="player-keys-title" className="text-lg font-semibold leading-tight tracking-tight">
+                            Keyboard shortcuts
+                        </h2>
+                        <p className="text-xs text-muted-foreground">Drive the visualizer without touching the mouse.</p>
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="Close shortcuts"
+                        title="Close (Esc)"
+                        onClick={onClose}
+                        className="grid size-8 place-items-center rounded-lg border border-primary-foreground/10 text-muted-foreground outline-none transition hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-[#FF430F]/40"
+                    >
+                        <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={1.8} aria-hidden />
+                    </button>
+                </header>
+
+                {/* search */}
+                <div className="relative px-6 pt-4">
+                    <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.8} aria-hidden className="pointer-events-none absolute left-9 top-1/2 mt-2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search shortcuts…"
+                        aria-label="Search shortcuts"
+                        className="h-10 w-full rounded-xl border border-primary-foreground/10 bg-primary-foreground/[0.04] pl-10 pr-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-[#FF430F]/50 focus:ring-2 focus:ring-[#FF430F]/20"
+                    />
+                </div>
+
+                {/* body */}
+                <div className="relative max-h-[min(60vh,28rem)] overflow-y-auto scrollbar-thin px-6 py-5">
+                    {sections.length === 0 ? (
+                        <p className="py-10 text-center text-sm text-muted-foreground">No shortcuts match “{query}”.</p>
+                    ) : (
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            {sections.map((s) => (
+                                <section key={s.title} className="flex flex-col gap-1.5">
+                                    <h3 className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                        <span className="h-px w-3 bg-[#FF430F]" />
+                                        {s.title}
+                                    </h3>
+                                    <dl className="flex flex-col">
+                                        {s.rows.map(([k, v]) => (
+                                            <div key={k} className="group flex items-center justify-between gap-4 rounded-xl px-2.5 py-2 transition hover:bg-primary-foreground/[0.05]">
+                                                <dd className="min-w-0 text-sm text-primary-foreground/90">{v}</dd>
+                                                <dt className="shrink-0">
+                                                    <KeyCombo raw={k} />
+                                                </dt>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </section>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* footer */}
+                <footer className="relative flex items-center justify-between border-t border-primary-foreground/10 bg-primary-foreground/[0.02] px-6 py-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                        Press <Keycap>?</Keycap> anytime to toggle
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <Keycap>Esc</Keycap> to close
+                    </span>
+                </footer>
+            </div>
+        </dialog>
+    );
+}
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/useTransportHotkeys.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/useTransportHotkeys.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 import { useEffect, useRef } from "react";
 import type { StoreApi } from "zustand/vanilla";
@@ -28994,65 +29224,65 @@ export function useTransportHotkeys(store: StoreApi<VisualizerStore>, ui: UiHand
     }, [store]);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/components/visualizers/ui
-cat > ./apps/web/src/components/visualizers/ui/VisualizerPanel.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/components/visualizers/ui/VisualizerPanel.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect } from "react";
+import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
 import { VisualizerCanvas } from "../canvas";
 import { visualizer } from "../engine/instance";
 import type { VisualizerStore } from "../engine/store";
-import { LazyScriptEditor } from "./LazyScriptEditor";
+import { compileScript } from "../script/compile";
+import { loadScript } from "../script/storage";
 import { PlayerChrome } from "./PlayerChrome";
-import { SavedWork } from "./SavedWork";
-import { ScriptDrawer } from "./ScriptDrawer";
-import type { ScriptEditorProps } from "./ScriptEditor";
 
 interface Props {
     store?: StoreApi<VisualizerStore>;
-    /** Tests pass a plain textarea instead of Monaco. */
-    editor?: ComponentType<ScriptEditorProps>;
-    dark?: boolean;
 }
 
 const CANVAS_CLASS =
     "relative min-h-[260px] w-full flex-1 touch-none select-none overflow-hidden rounded-2xl border border-neutral-500/25 bg-neutral-500/5 outline-none focus-visible:ring-2 focus-visible:ring-neutral-500/40";
 
-/**
- * When the panel leaves the screen (another dashboard tab), its stages are destroyed.
- * Drop any half-played frame and rest on the last finished step, so coming back is
- * paused and consistent. The compiled script and cursor stay in the store.
- */
+/** Rest on the last finished step when the panel leaves the screen. */
 export function parkPlayback(store: StoreApi<VisualizerStore>): void {
     const s = store.getState();
     const t = s.transport;
     if (t.running !== null) s.seek(t.cursor);
 }
 
-/** The one component the dashboard mounts: canvas, narration, transport, script and saved work. Sized by its parent. */
-export function VisualizerPanel({ store = visualizer, editor = LazyScriptEditor, dark = true }: Props) {
-    // First visit (nothing compiled yet): open the script drawer so the empty state and examples are visible.
-    const [openDrawer] = useState(() => store.getState().compiled === null);
+export function VisualizerPanel({ store = visualizer }: Props) {
+    const compiled = useStore(store, (s) => s.compiled);
 
     useEffect(() => () => parkPlayback(store), [store]);
 
+    // Restore the last generated script if nothing is loaded yet.
+    useEffect(() => {
+        if (store.getState().compiled !== null) return;
+        const saved = loadScript();
+        if (saved && saved.trim() !== "") store.getState().load(compileScript(saved));
+    }, [store]);
+
     return (
         <div data-visualizer-panel className="flex h-full min-h-0 w-full flex-col gap-3 overflow-y-auto p-2">
-            <div className="flex min-h-65 flex-1 flex-col">
+            <div className="relative flex min-h-65 flex-1 flex-col">
                 <VisualizerCanvas store={store} className={CANVAS_CLASS} />
+                {compiled === null && (
+                    <p className="pointer-events-none absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted-foreground">
+                        Write your algorithm in the editor, then press “Visualize algorithm”.
+                    </p>
+                )}
             </div>
             <PlayerChrome store={store} />
-            <ScriptDrawer editor={editor} store={store} dark={dark} defaultOpen={openDrawer} extras={(api) => <SavedWork api={api} />} />
         </div>
     );
 }
-
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/data/samples
-cat > ./apps/web/src/data/samples/analysisHistory.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/data/samples/analysisHistory.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { AnalysisHistoryItem, AnalysisHistoryMeta } from "@/components/DashBoard/analysis-history";
 
 export const SAMPLE_HISTORY: AnalysisHistoryItem[] = [
@@ -29086,10 +29316,10 @@ export const SAMPLE_HISTORY: AnalysisHistoryItem[] = [
 ];
 export const SAMPLE_META: AnalysisHistoryMeta = { nextCursor: null, hasMore: false };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/hooks
-cat > ./apps/web/src/hooks/useDebouncedValue.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/hooks/useDebouncedValue.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useState } from "react";
@@ -29103,10 +29333,10 @@ export function useDebouncedValue<T>(value: T, delayMs: number): T {
     return debounced;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/hooks
-cat > ./apps/web/src/hooks/useIsClient.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/hooks/useIsClient.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { useSyncExternalStore } from "react";
 
 const subscribe = () => () => {};
@@ -29114,10 +29344,10 @@ const subscribe = () => () => {};
 /** false on the server and during hydration, true on the client afterwards. */
 export const useIsClient = () => useSyncExternalStore(subscribe, () => true, () => false);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/hooks
-cat > ./apps/web/src/hooks/useIsMobile.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/hooks/useIsMobile.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useState } from "react";
@@ -29137,10 +29367,10 @@ export function useIsMobile(breakpoint = 768) {
     return isMobile;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/analysisStatus.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/analysisStatus.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useCapabilities } from "./query";
@@ -29158,10 +29388,10 @@ export const ANALYSIS_LIVE_COPY = {
     faq: "Yes. Sign in with Google, paste your code in the dashboard and press Analyze. A daily limit applies, and repeating an analysis of the same code is free.",
 } as const;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/api
-cat > ./apps/web/src/lib/api/client.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/api/client.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { CSRF_HEADER_NAME, ERROR_CODES, ErrorResponseSchema, REQUEST_ID_HEADER, RETRY_AFTER_HEADER, type ErrorCode } from "@algoforge/contracts";
 import { API_BASE_URL } from "./config";
@@ -29338,10 +29568,10 @@ export type ApiClient = ReturnType<typeof createApiClient>;
 /** The app-wide client. When a 401 cannot be fixed by refreshing, the AuthProvider is told so it can show the guest state. */
 export const apiClient: ApiClient = createApiClient({ onSessionExpired: notifySessionExpired });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/api
-cat > ./apps/web/src/lib/api/config.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/api/config.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Where the API lives.
  *  - NEXT_PUBLIC_API_URL unset or empty: same-origin ("/api/..."), the default; Phase 4 adds the Next.js rewrite.
@@ -29356,10 +29586,10 @@ export function resolveApiBaseUrl(value: string | undefined): string {
 // A literal process.env access so Next can inline it in client code.
 export const API_BASE_URL: string = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/api
-cat > ./apps/web/src/lib/api/csrf.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/api/csrf.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { CSRF_COOKIE_NAME } from "@algoforge/contracts";
 
 /** Reads one cookie from a cookie header string. Pure, so it is testable without a DOM. */
@@ -29384,10 +29614,10 @@ export function getCsrfToken(): string | null {
   return readCookie(document.cookie, CSRF_COOKIE_NAME);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/api
-cat > ./apps/web/src/lib/api/endpoints.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/api/endpoints.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   AlgorithmDetailResponseSchema,
   AlgorithmListResponseSchema,
@@ -29493,6 +29723,8 @@ export function createEndpoints(client: ApiClient) {
 
     visualizations: (params: PageParams = {}, signal?: AbortSignal): Promise<VisualizationListResponse> =>
       client.get("/api/visualizations", VisualizationListResponseSchema, { query: { ...params }, ...opt(signal) }),
+    generateVisualization: (body: { code: string; language: string }, signal?: AbortSignal): Promise<unknown> =>
+      client.post("/visualize", z.unknown(), body, opt(signal)),
     visualization: (id: string, signal?: AbortSignal): Promise<Visualization> => client.get(`/api/visualizations/${seg(id)}`, VisualizationSchema, opt(signal)),
     createVisualization: (body: CreateVisualizationRequest): Promise<Visualization> => client.post("/api/visualizations", VisualizationSchema, body),
     updateVisualization: (id: string, body: UpdateVisualizationRequest): Promise<Visualization> =>
@@ -29511,10 +29743,10 @@ export function createEndpoints(client: ApiClient) {
 
 export const endpoints = createEndpoints(apiClient);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/api
-cat > ./apps/web/src/lib/api/errors.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/api/errors.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ErrorCode, ErrorDetail, QuotaInfo } from "@algoforge/contracts";
 
 /** The API answered with a non-2xx status. Always carries the typed error envelope when the API sent one. */
@@ -29605,10 +29837,10 @@ export function errorMessage(error: unknown): string {
   return "Something went wrong.";
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/api
-cat > ./apps/web/src/lib/api/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/api/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { API_BASE_URL, resolveApiBaseUrl } from "./config";
 export { ApiError, NetworkError, ResponseValidationError, errorMessage, isApiError } from "./errors";
 export { getCsrfToken, readCookie } from "./csrf";
@@ -29617,10 +29849,10 @@ export type { ApiClient, ApiClientOptions, QueryParams, RequestOptions } from ".
 export { createEndpoints, endpoints } from "./endpoints";
 export type { PageParams } from "./endpoints";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/assistant
-cat > ./apps/web/src/lib/assistant/algorithmContext.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/assistant/algorithmContext.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 const KEY = "algoforge:assistant:algorithm";
 
 type Reader = Pick<Storage, "getItem">;
@@ -29655,10 +29887,10 @@ export function recallAlgorithm(currentScript: string | null, storage: Reader | 
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/assistant
-cat > ./apps/web/src/lib/assistant/context-core.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/assistant/context-core.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS, type AnalysisLanguage, type ExplainContext } from "@algoforge/contracts";
 
 /** Plain data the assistant context is made from. Kept free of stores so it is easy to test. */
@@ -29690,10 +29922,10 @@ export function assembleContext(s: ContextSources): ExplainContext {
   return ctx;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/assistant
-cat > ./apps/web/src/lib/assistant/context.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/assistant/context.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ExplainContext } from "@algoforge/contracts";
 import { visualizer } from "@/components/visualizers/engine/instance";
 import { currentMessages, progressOf } from "@/components/visualizers/engine/selectors";
@@ -29721,10 +29953,10 @@ export function readSources(): ContextSources {
 
 export const readAssistantContext = (): ExplainContext => assembleContext(readSources());
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/assistant
-cat > ./apps/web/src/lib/assistant/suggestions.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/assistant/suggestions.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ContextSources } from "./context-core";
 
 const MAX_CHIPS = 3;
@@ -29761,10 +29993,10 @@ export function suggestionsFor(s: ContextSources): string[] {
   return out.slice(0, MAX_CHIPS);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/async.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/async.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** Resolves true after `ms`, or false right away (timer cleared) when `signal` aborts. */
 export function wait(ms: number, signal?: AbortSignal): Promise<boolean> {
     return new Promise((resolve) => {
@@ -29781,10 +30013,10 @@ export function wait(ms: number, signal?: AbortSignal): Promise<boolean> {
     });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/AuthProvider.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/auth/AuthProvider.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -29957,10 +30189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/featureState.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/auth/featureState.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { CapabilitiesResponse } from "@algoforge/contracts";
 
 /** The capabilities that gate UI features (a subset of the keys of GET /api/meta/capabilities). */
@@ -29997,10 +30229,10 @@ export function resolveFeatureState(feature: FeatureKey, input: FeatureInputs): 
   return "ready";
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/auth/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { AuthProvider, useAuth } from "./AuthProvider";
 export type { AuthContextValue, AuthStatus, LoginModalOptions } from "./AuthProvider";
 export { useFeatureState } from "./useFeatureState";
@@ -30009,10 +30241,10 @@ export type { FeatureInputs, FeatureKey, FeatureState } from "./featureState";
 export { AUTH_ERROR_MESSAGES, buildLoginUrl, readAuthError, stripAuthError } from "./loginUrl";
 export { notifySessionExpired, onSessionExpired } from "./sessionEvents";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/loginUrl.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/auth/loginUrl.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
   AUTH_ERROR_PARAM,
   AuthErrorCodeSchema,
@@ -30050,10 +30282,10 @@ export function stripAuthError(href: string): string {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/sessionEvents.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/auth/sessionEvents.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
@@ -30070,10 +30302,10 @@ export function notifySessionExpired(): void {
   for (const listener of [...listeners]) listener();
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/auth
-cat > ./apps/web/src/lib/auth/useFeatureState.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/auth/useFeatureState.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { MOCK_DATA_ENABLED } from "../featureFlags";
@@ -30098,10 +30330,10 @@ export function useFeatureState(feature: FeatureKey, options: { uiReady: boolean
   });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export type GrowthFn = (n: number) => number;
 /** Upper bound of the chart's y axis; fast-growing classes are clipped here. */
 export const CHART_CAP = 100;
@@ -30160,10 +30392,10 @@ export const canonicalLabel = (raw: string): string | null => {
     return id ? GROWTH[id].label : null;
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/device.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/device.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export function isMobileDevice(): boolean {
     if (typeof navigator === "undefined") return false;
 
@@ -30178,10 +30410,10 @@ export function isMobileDevice(): boolean {
     // iPadOS 13+ reports itself as a Mac
     return nav.platform === "MacIntel" && nav.maxTouchPoints > 1;
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/featureFlags.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/featureFlags.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Development-only switch for fixed sample content (sample report, sample history, preview chat).
  * It never decides whether a feature is AVAILABLE: GET /api/meta/capabilities does
@@ -30195,17 +30427,17 @@ export function resolveMockFlag(nodeEnv: string | undefined, override: string | 
 // Literal process.env accesses so Next can inline them in client code.
 export const MOCK_DATA_ENABLED = resolveMockFlag(process.env.NODE_ENV, process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/featureStatus.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/featureStatus.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export type FeatureStatus = "available" | "preview" | "planned";
 export const STATUS_LABEL: Record<FeatureStatus, string> = { available: "Available", preview: "Preview", planned: "Planned" };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/fonts.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/fonts.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 const FALLBACK = 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace';
 type Read = () => string;
 
@@ -30220,10 +30452,10 @@ export function resolveMonoFontFamily(read: Read = readRoot): string {
     return read().trim() || FALLBACK;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/lenis.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/lenis.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type Lenis from "lenis";
 
 let lenis: Lenis | null = null;
@@ -30236,10 +30468,10 @@ export function getLenis() {
     return lenis;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/markdown
-cat > ./apps/web/src/lib/markdown/markdown.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/markdown/markdown.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * A small, safe Markdown subset for assistant answers: headings, paragraphs, lists, fenced code,
  * `code`, **bold**, *italic* and links. The result is a plain AST that React renders as elements,
@@ -30383,10 +30615,10 @@ export function parseBlocks(src: string): Block[] {
   return blocks;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/navEvents.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/navEvents.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** The dashboard reads ?tab and ?viz. Pages that change them without a remount fire NAV_EVENT. */
 export const NAV_EVENT = "algoforge:navigate";
 
@@ -30408,17 +30640,17 @@ export function dropParams(names: readonly string[]): void {
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/productFacts.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/productFacts.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** Numbers shown on the landing page. productFacts.test.ts checks them against the real code so they cannot drift. */
 export const PRODUCT_FACTS = { structures: 11, speedRange: "0.25×–4×" } as const;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/query
-cat > ./apps/web/src/lib/query/hooks.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/query/hooks.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -30540,10 +30772,10 @@ export function usePublicShare(shareId: string) {
   });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/query
-cat > ./apps/web/src/lib/query/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/query/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { QueryProvider } from "./QueryProvider";
 export { QueryBoundary } from "./QueryBoundary";
 export type { QueryStateLike } from "./QueryBoundary";
@@ -30551,10 +30783,10 @@ export { createQueryClient, retryDelayMs, shouldRetry } from "./queryClient";
 export { queryKeys } from "./keys";
 export { useAlgorithm, useAlgorithmCatalog, useAlgorithms, useAnalysis, useAnalysisHistory, useAnalysisQuota, useCapabilities, useCategories, useExplainSessions, useVisualizations, useTargetShares, usePublicShare } from "./hooks";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/query
-cat > ./apps/web/src/lib/query/keys.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/query/keys.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { AlgorithmListQuery } from "@algoforge/contracts";
 
 /** One place for every cache key, so invalidation stays predictable. */
@@ -30575,10 +30807,10 @@ export const queryKeys = {
   publicShare: (shareId: string) => ["share", "public", shareId] as const,
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/query
-cat > ./apps/web/src/lib/query/QueryBoundary.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/query/QueryBoundary.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import type { ReactNode } from "react";
@@ -30619,10 +30851,10 @@ export function QueryBoundary({ query, children, loadingLabel = "Loading…" }: 
   return <>{children}</>;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/query
-cat > ./apps/web/src/lib/query/queryClient.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/query/queryClient.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { QueryClient } from "@tanstack/react-query";
 import { ApiError, NetworkError } from "../api/errors";
 
@@ -30653,10 +30885,10 @@ export function createQueryClient(): QueryClient {
   });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/query
-cat > ./apps/web/src/lib/query/QueryProvider.tsx <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/query/QueryProvider.tsx <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useState, type ReactNode } from "react";
@@ -30669,10 +30901,10 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/reducedMotion.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/reducedMotion.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import gsap from "gsap";
 import { useSyncExternalStore } from "react";
 
@@ -30704,10 +30936,10 @@ export function settleIfReduced(targets: Parameters<typeof gsap.set>[0]): boolea
     return true;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/search
-cat > ./apps/web/src/lib/search/items.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/search/items.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { SearchResponse } from "@algoforge/contracts";
 
 export interface SearchResultItem {
@@ -30729,10 +30961,10 @@ export function toSearchItems(response: SearchResponse): SearchResultItem[] {
     }));
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/search
-cat > ./apps/web/src/lib/search/useSearch.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/search/useSearch.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 "use client";
 
 import { useEffect, useState } from "react";
@@ -30776,10 +31008,10 @@ export function useSearch(query: string, enabled = true) {
     };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/share
-cat > ./apps/web/src/lib/share/target.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/share/target.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { ShareType } from "@algoforge/contracts";
 
 export interface ShareTarget {
@@ -30818,10 +31050,10 @@ export function shareHintFor(feature: ShareFeature): string {
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/site.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/site.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export const SITE = { name: "AlgoForge", year: new Date().getFullYear() } as const;
 export const DASHBOARD_HREF = "/dashboard";
 
@@ -30833,10 +31065,10 @@ export interface SocialLink {
 /** Add real profile URLs here. The footer renders only what is listed. */
 export const SOCIAL_LINKS: readonly SocialLink[] = [];
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/split.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/split.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export const SPLIT = { min: 25, max: 70, default: 35, key: "algoforge:dashboard:split" } as const;
 
 export const clampPct = (v: number, min: number = SPLIT.min, max: number = SPLIT.max) => Math.min(max, Math.max(min, v));
@@ -30894,10 +31126,10 @@ export function saveSplit(value: number, storage: Writer | null = browserStorage
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export type IconSvgObject =
     | [
           string,
@@ -30912,10 +31144,10 @@ export type IconSvgObject =
           },
       ])[];
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib
-cat > ./apps/web/src/lib/utils.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/utils.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -30923,10 +31155,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/workspace
-cat > ./apps/web/src/lib/workspace/analysis-run.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/workspace/analysis-run.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { QueryClient } from "@tanstack/react-query";
 import { checkRunnableCode } from "@algoforge/contracts";
 import { endpoints } from "../api/endpoints";
@@ -30964,10 +31196,10 @@ export async function runAnalysis(queryClient: QueryClient): Promise<void> {
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/workspace
-cat > ./apps/web/src/lib/workspace/code-limits.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/workspace/code-limits.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // Phase 0b: frontend side of the code-size gate (editor, analysis, visualizer).
 "use client";
 
@@ -30990,10 +31222,10 @@ export function useCodeLimits(): CodeLimitsState {
   );
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/workspace
-cat > ./apps/web/src/lib/workspace/failure.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/workspace/failure.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { RunFailure } from "./store";
 import { errorMessage, isApiError } from "../api/errors";
 
@@ -31009,10 +31241,10 @@ export function failureFrom(error: unknown, now: number = Date.now()): RunFailur
   return { message: errorMessage(error), code: null, retryAt: null };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web/src/lib/workspace
-cat > ./apps/web/src/lib/workspace/store.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/src/lib/workspace/store.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { create } from "zustand";
 import type { AnalysisLanguage, AnalysisResult, ErrorCode } from "@algoforge/contracts";
 
@@ -31168,10 +31400,235 @@ export const useWorkspace = create<WorkspaceStore>()((set) => ({
   reset: () => set(initial()),
 }));
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
+
+mkdir -p ./apps/web/src/lib/workspace
+cat > ./apps/web/src/lib/workspace/VisualizerApi.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
+
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { StoreApi } from "zustand/vanilla";
+import { ApiError } from "@/lib/api/errors";
+import { endpoints } from "@/lib/api/endpoints";
+import { useWorkspace } from "@/lib/workspace/store";
+import { VisualizerStore } from "../../components/visualizers/engine";
+import { visualizer } from "../../components/visualizers/engine/instance";
+import { compileScript, saveScript } from "../../components/visualizers/script";
+
+export class VisualizeError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "VisualizeError";
+    }
+}
+
+/**
+ * Maps API errors to meaningful user-facing messages.
+ */
+function getErrorMessage(error: ApiError): string {
+    switch (error.status) {
+        case 400:
+            return "Your code couldn't be processed. Check the code and try again.";
+
+        case 401:
+            return "Your session has expired. Please sign in again.";
+
+        case 403:
+            return "You don't have permission to use the visualization service.";
+
+        case 404:
+            return "The visualization service couldn't be found. Please try again later.";
+
+        case 408:
+            return "The request took too long. Try again with a smaller code sample.";
+
+        case 413:
+            return "Your code is too large to visualize. Try reducing its size.";
+
+        case 422:
+            return "Your code couldn't be converted into a visualization. Check its structure and try again.";
+
+        case 429:
+            return "You've made too many visualization requests. Please wait a moment and try again.";
+
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+            return "The visualization service is experiencing issues. Please try again shortly.";
+
+        default:
+            if (error.status >= 500) {
+                return "Something went wrong on our server. Please try again later.";
+            }
+
+            return "We couldn't complete your visualization request. Please try again.";
+    }
+}
+
+/**
+ * Reads the code for the active language from the workspace store.
+ */
+function readEditor() {
+    const { language, codes } = useWorkspace.getState();
+
+    return {
+        code: codes[language] ?? "",
+        language,
+    };
+}
+
+/**
+ * Sends code to the backend and returns the generated script as JSON text.
+ */
+export async function requestScript(
+    code: string,
+    language: string,
+    signal?: AbortSignal
+): Promise<string> {
+    let body: unknown;
+
+    try {
+        body = await endpoints.generateVisualization({ code, language }, signal);
+    } catch (error) {
+        if ((error as Error).name === "AbortError") {
+            throw error;
+        }
+
+        if (error instanceof ApiError) {
+            throw new VisualizeError(getErrorMessage(error));
+        }
+
+        throw new VisualizeError(
+            "Unable to connect to the visualization service. Check your internet connection and try again."
+        );
+    }
+
+    const script =
+        typeof body === "object" && body !== null && "script" in body
+            ? body.script
+            : body;
+
+    if (script == null || script === "") {
+        throw new VisualizeError(
+            "No visualization was generated. Try modifying your code and running it again."
+        );
+    }
+
+    const result =
+        typeof script === "string"
+            ? script
+            : JSON.stringify(script, null, 2);
+
+    if (!result || result.trim() === "") {
+        throw new VisualizeError(
+            "The visualization service returned an empty response. Please try again."
+        );
+    }
+
+    return result;
+}
+
+/**
+ * Requests a visualization, compiles the generated script,
+ * and loads it into the visualizer store.
+ */
+export function useVisualize(
+    store: StoreApi<VisualizerStore> = visualizer
+) {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const abort = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        return () => {
+            abort.current?.abort();
+            abort.current = null;
+        };
+    }, []);
+
+    const visualize = useCallback(async () => {
+        const { code, language } = readEditor();
+
+        if (code.trim() === "") {
+            setError(
+                "Add some code to the editor before generating a visualization."
+            );
+            return;
+        }
+
+        // Cancel any previous visualization request.
+        abort.current?.abort();
+
+        const ctl = new AbortController();
+        abort.current = ctl;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            // Generate visualization script.
+            const text = await requestScript(
+                code,
+                language,
+                ctl.signal
+            );
+
+            if (ctl.signal.aborted) return;
+
+            // Compile and validate generated script.
+            const compiled = compileScript(text);
+
+            if (!compiled.ok) {
+                const first = compiled.diagnostics.find(
+                    (d) => d.severity === "error"
+                );
+
+                throw new VisualizeError(
+                    first
+                        ? `We couldn't generate a valid visualization: ${first.message}`
+                        : "The generated visualization is invalid. Try modifying your code."
+                );
+            }
+
+            if (ctl.signal.aborted) return;
+
+            // Load visualization and persist generated script.
+            store.getState().load(compiled);
+            saveScript(text);
+
+            setError(null);
+        } catch (e) {
+            if ((e as Error).name === "AbortError") {
+                return;
+            }
+
+            setError(
+                e instanceof Error
+                    ? e.message
+                    : "Something went wrong while generating your visualization. Please try again."
+            );
+        } finally {
+            if (abort.current === ctl) {
+                setLoading(false);
+                abort.current = null;
+            }
+        }
+    }, [store]);
+
+    return {
+        visualize,
+        loading,
+        error,
+    };
+}
+
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./apps/web
-cat > ./apps/web/tailwind.config.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./apps/web/tailwind.config.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Config } from "tailwindcss";
 import tailwindAnimate from "tailwindcss-animate";
 
@@ -31275,10 +31732,10 @@ const config: Config = {
 
 export default config;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p .
-cat > ./package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "algoforge",
   "version": "1.0.0",
@@ -31322,10 +31779,10 @@ cat > ./package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/analysis
-cat > ./packages/analysis/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/analysis/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "@algoforge/analysis",
   "version": "1.0.0",
@@ -31336,15 +31793,15 @@ cat > ./packages/analysis/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957e
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/analysis/src
-cat > ./packages/analysis/src/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/analysis/src/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "./schema";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/analysis/src
-cat > ./packages/analysis/src/schema.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/analysis/src/schema.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 
 export const AnalysisLanguageSchema = z.enum(["javascript", "python"]);
@@ -31454,10 +31911,10 @@ export type AnalysisRecord = z.infer<typeof AnalysisRecordSchema>;
 export type SharedAnalysis = z.infer<typeof SharedAnalysisSchema>;
 export type AnalysisHistoryItem = z.infer<typeof AnalysisHistoryItemSchema>;
 export type AnalysisHistoryResponse = z.infer<typeof AnalysisHistoryResponseSchema>;
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts
-cat > ./packages/contracts/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "@algoforge/contracts",
   "version": "1.0.0",
@@ -31480,10 +31937,10 @@ cat > ./packages/contracts/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/admin.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/admin.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { IsoDateTimeSchema, pageQuerySchema, paginatedResponse } from "./common";
 import { UserRoleSchema } from "./auth";
@@ -31508,10 +31965,10 @@ export const AdminRoleChangeResponseSchema = z.object({
 export type AdminUser = z.infer<typeof AdminUserSchema>;
 export type AdminUserListResponse = z.infer<typeof AdminUserListResponseSchema>;
 export type AdminRoleChangeResponse = z.infer<typeof AdminRoleChangeResponseSchema>;
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/algorithms.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/algorithms.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { CursorSchema, paginatedResponse } from "./common";
 import { LIMITS } from "./limits";
@@ -31625,10 +32082,10 @@ export type AlgorithmListQuery = z.input<typeof AlgorithmListQuerySchema>;
 export type CreateAlgorithmRequest = z.infer<typeof CreateAlgorithmRequestSchema>;
 export type UpdateAlgorithmRequest = z.infer<typeof UpdateAlgorithmRequestSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/analysis.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/analysis.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import {
   AnalysisHistoryItemSchema,
@@ -31725,10 +32182,10 @@ export type ShareUrlResponse = z.infer<typeof ShareUrlResponseSchema>;
 export const AnalysisReportSchema = z.object({ language: AnalysisLanguageSchema, result: AnalysisResultSchema });
 export type AnalysisReport = z.infer<typeof AnalysisReportSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/auth.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/auth.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 
 export const UserRoleSchema = z.enum(["USER", "ADMIN"]);
@@ -31763,10 +32220,10 @@ export const AuthStartQuerySchema = z.object({
   returnTo: z.string().optional().describe("Internal path to return to after sign-in. Anything unsafe is replaced by /dashboard."),
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/capabilities.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/capabilities.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 
 /** Contract for Phase 4 (GET /api/meta/capabilities). */
@@ -31779,10 +32236,10 @@ export const CapabilitiesResponseSchema = z.object({
 });
 export type CapabilitiesResponse = z.infer<typeof CapabilitiesResponseSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/categories.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/categories.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { IsoDateTimeSchema, listResponse } from "./common";
 
@@ -31811,10 +32268,10 @@ export const UpdateCategoryRequestSchema = CreateCategoryRequestSchema.partial()
 export type CreateCategoryRequest = z.infer<typeof CreateCategoryRequestSchema>;
 export type UpdateCategoryRequest = z.infer<typeof UpdateCategoryRequestSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/common.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/common.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import type { PageSizeLimits } from "./limits";
 
@@ -31846,10 +32303,10 @@ export const IdParamsSchema = z.object({ id: z.string().min(1) });
 export const SlugParamsSchema = z.object({ slug: z.string().min(1) });
 export const ShareIdParamsSchema = z.object({ shareId: z.string().min(1) });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/errors.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/errors.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { IsoDateTimeSchema } from "./common";
 
@@ -31921,10 +32378,10 @@ export const ErrorResponseSchema = z.object({
 });
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/explain.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/explain.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { AnalysisLanguageSchema } from "@algoforge/analysis";
 import { IsoDateTimeSchema, pageQuerySchema, paginatedResponse } from "./common";
@@ -32002,10 +32459,10 @@ export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
 export type SendMessageResponse = z.infer<typeof SendMessageResponseSchema>;
 export type SharedExplainSessionResponse = z.infer<typeof SharedExplainSessionResponseSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/health.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/health.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { IsoDateTimeSchema } from "./common";
 
@@ -32016,10 +32473,10 @@ export const ReadyResponseSchema = z.object({
   timestamp: IsoDateTimeSchema,
 });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "./limits";
 export * from "./common";
 export * from "./errors";
@@ -32041,10 +32498,10 @@ export * from "./registry";
 export * from "./routes";
 export * from "./openapi";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/limits.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/limits.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * The single source of truth for every size, length and pagination limit.
  * The API validators, the Express body parser, the shared visualizer compiler and the frontend read these.
@@ -32130,10 +32587,10 @@ export const CAPABILITY_LIMITS = {
   messageMaxChars: LIMITS.message.maxChars,
 } as const;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/openapi.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/openapi.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { ACCESS_COOKIE_NAME, CSRF_HEADER_NAME, REQUEST_ID_HEADER, RETRY_AFTER_HEADER } from "./common";
 import { SCHEMA_REGISTRY } from "./registry";
@@ -32252,10 +32709,10 @@ export function buildOpenApiDocument(options: OpenApiOptions = {}): OpenApiDocum
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/registry.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/registry.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { z } from "zod";
 import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListResponseSchema, AdminUserSchema } from "./admin";
 import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmListResponseSchema, AlgorithmSummarySchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
@@ -32328,10 +32785,10 @@ export const SCHEMA_REGISTRY = {
   ReadyResponse: ReadyResponseSchema,
 } as const satisfies Record<string, z.ZodType>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/return-to.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/return-to.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { AUTH_ERROR_PARAM } from "./auth";
 
 /**
@@ -32391,10 +32848,10 @@ export function appendAuthError(path: string, code: string): string {
   return `${url.pathname}${url.search}`;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/routes.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/routes.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { z } from "zod";
 import { AdminRoleChangeRequestSchema, AdminRoleChangeResponseSchema, AdminUserListQuerySchema, AdminUserListResponseSchema } from "./admin";
 import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, AlgorithmLangQuerySchema, AlgorithmListQuerySchema, AlgorithmListResponseSchema, CreateAlgorithmRequestSchema, UpdateAlgorithmRequestSchema } from "./algorithms";
@@ -32506,10 +32963,10 @@ export const routes: readonly RouteDef[] = [
 
 export const toExpressPath = (path: string): string => path.replace(/\{(\w+)\}/g, ":$1");
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/search.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/search.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { LIMITS } from "./limits";
 
@@ -32528,10 +32985,10 @@ export const SearchQuerySchema = z.object({
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/shares.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/shares.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { IsoDateTimeSchema, listResponse } from "./common";
 import { SharedAnalysisResponseSchema } from "./analysis";
@@ -32602,10 +33059,10 @@ export type PublicCreator = z.infer<typeof PublicCreatorSchema>;
 export type SharedVisualizationResponse = z.infer<typeof SharedVisualizationResponseSchema>;
 export type PublicShareResponse = z.infer<typeof PublicShareResponseSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/stored-results.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/stored-results.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { AnalysisResultSchema, type AnalysisResult } from "@algoforge/analysis";
 
@@ -32639,10 +33096,10 @@ export function parseStoredAnalysisResult(raw: unknown): ParsedStoredAnalysisRes
   return legacy.success ? { status: "ok", version: 0, result: legacy.data } : { status: "unreadable", version: null, reason: "invalid" };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/users.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/users.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { SafeUserSchema } from "@algoforge/analysis";
 import { IsoDateTimeSchema } from "./common";
@@ -32668,10 +33125,10 @@ export const DeviceSessionSchema = z.object({
 export const DeviceSessionListResponseSchema = z.object({ data: z.array(DeviceSessionSchema) });
 export type DeviceSession = z.infer<typeof DeviceSessionSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/contracts/src
-cat > ./packages/contracts/src/visualizations.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/contracts/src/visualizations.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { z } from "zod";
 import { AnalysisLanguageSchema } from "@algoforge/analysis";
 import { IsoDateTimeSchema, pageQuerySchema, paginatedResponse } from "./common";
@@ -32738,10 +33195,10 @@ export type CreateVisualizationRequest = z.infer<typeof CreateVisualizationReque
 export type UpdateVisualizationRequest = z.infer<typeof UpdateVisualizationRequestSchema>;
 export type ValidateScriptResponse = z.infer<typeof ValidateScriptResponseSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db
-cat > ./packages/db/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "@algoforge/db",
   "version": "1.0.0",
@@ -32776,10 +33233,10 @@ cat > ./packages/db/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db/prisma
-cat > ./packages/db/prisma/make-admin.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/prisma/make-admin.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /* Promotes an existing user to ADMIN.
    Usage: pnpm db:make-admin <email>
    The user must have signed in with Google at least once so the account exists. */
@@ -32825,10 +33282,10 @@ main()
   })
   .finally(() => prisma.$disconnect());
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db/prisma
-cat > ./packages/db/prisma/run-backfill.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/prisma/run-backfill.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /* Re-runs the Phase 5 backfill. Idempotent. Usage: pnpm db:backfill:phase5
    Run it again right before the Phase 8 / Phase 9 cutovers to pick up rows written since the migration. */
 import { readFileSync } from "node:fs";
@@ -32848,10 +33305,10 @@ main()
   })
   .finally(() => prisma.$disconnect());
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db/prisma
-cat > ./packages/db/prisma/schema.prisma <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/prisma/schema.prisma <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filename: packages/db/prisma/schema.prisma
 
 generator client {
@@ -33204,10 +33661,10 @@ model AlgorithmTag {
   @@map("algorithm_tags")
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db/prisma
-cat > ./packages/db/prisma/seed.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/prisma/seed.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /* Development seed. Idempotent (upserts with fixed ids). Refuses to run in production.
    Creates: 3 categories, 6 published algorithms (3 with visualizer scripts), 2 demo users,
    2 analyses, 2 chat sessions with 6 messages, 2 visualizations (one a fork),
@@ -33606,10 +34063,10 @@ main()
   .catch((e) => { console.error(e); process.exitCode = 1; })
   .finally(() => prisma.$disconnect());
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db/prisma
-cat > ./packages/db/prisma/verify-phase5.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/prisma/verify-phase5.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /* Verifies Phase 5 data invariants. Exit code 1 when any check finds violations.
    Usage: pnpm db:verify:phase5 */
 import { prisma } from "../src/index";
@@ -33676,10 +34133,10 @@ main()
   })
   .finally(() => prisma.$disconnect());
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/db/src
-cat > ./packages/db/src/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/db/src/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -33700,10 +34157,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export * from "@prisma/client";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/forge
-cat > ./packages/forge/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/forge/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
     "name": "@algoforge/forge",
     "version": "1.0.0",
@@ -33714,17 +34171,17 @@ cat > ./packages/forge/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/forge/src
-cat > ./packages/forge/src/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/forge/src/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export * from "./types";
 export * from "./schemas";
 export * from "./recorder";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/forge/src
-cat > ./packages/forge/src/recorder.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/forge/src/recorder.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type {
   Step,
   StructureState,
@@ -33912,10 +34369,10 @@ export class ForgeRecorder {
     return (this.state[id] as QueueState).values;
   }
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/forge/src
-cat > ./packages/forge/src/schemas.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/forge/src/schemas.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // filename: packages/forge/src/schemas.ts
 
 import { z } from "zod";
@@ -34207,10 +34664,10 @@ export type AlgorithmListItem = z.infer<typeof AlgorithmListItemSchema>;
 export type AlgorithmDetail = z.infer<typeof AlgorithmDetailSchema>;
 export type AlgorithmExecution = z.infer<typeof AlgorithmExecutionSchema>;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/forge/src
-cat > ./packages/forge/src/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/forge/src/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export type StructureType =
   | "array"
   | "linkedList"
@@ -34404,10 +34861,10 @@ export interface AlgorithmInput {
 }
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core
-cat > ./packages/visualizer-core/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/package.json <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 {
   "name": "@algoforge/visualizer-core",
   "version": "1.0.0",
@@ -34428,10 +34885,10 @@ cat > ./packages/visualizer-core/package.json <<'__ALGOFORGE_4d57f0dcd25c33b4e07
   }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src
-cat > ./packages/visualizer-core/src/analyze.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/analyze.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS as CONTRACT_LIMITS } from "@algoforge/contracts/src/limits";
 import type { Diagnostic } from "./core/types";
 import { compileScript } from "./script/compile";
@@ -34477,10 +34934,10 @@ export function analyzeScript(text: string): ScriptAnalysis {
   };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/array
-cat > ./packages/visualizer-core/src/array/arrayEngine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/array/arrayEngine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type {
     Anim,
     ArrayState,
@@ -35351,10 +35808,10 @@ export function applyOp(s: ArrayState, op: Op, self: string = ARRAY_ID): Outcome
             );
     }
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/array
-cat > ./packages/visualizer-core/src/array/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/array/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Op } from "./types";
 
 /** Conceptual dynamic-array costs, not measurements. */
@@ -35394,10 +35851,10 @@ export const COMPLEXITY: Record<Op["type"], string> = {
     recolorArrows: "O(arrows): annotation only; no array data is touched.",
     clearArrows: "Annotation only.",
 };
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/array
-cat > ./packages/visualizer-core/src/array/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/array/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "../core/types";
 export type { Primitive };
 
@@ -35523,10 +35980,10 @@ export interface LogEntry {
   after: Primitive[];
   mutated: boolean;
 }
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/array
-cat > ./packages/visualizer-core/src/array/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/array/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { isPrimitive, type Parsed } from "../core/validate";
 import type { Primitive } from "./types";
 
@@ -35548,10 +36005,10 @@ export function parseArrayJson(text: string): Parsed<Primitive[]> {
   return { ok: true, value: v };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src
-cat > ./packages/visualizer-core/src/catalog-scripts.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/catalog-scripts.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 type Entry = Readonly<Record<string, unknown>>;
 const json = (entries: readonly Entry[]): string => JSON.stringify(entries, null, 2);
 
@@ -35685,10 +36142,10 @@ export const CATALOG_SCRIPTS: Readonly<Record<string, string>> = {
 
 export const CATALOG_SLUGS: readonly string[] = Object.keys(CATALOG_SCRIPTS);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/array.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/array.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { applyOp, createState } from "../../array/arrayEngine";
 import { COMPLEXITY } from "../../array/complexity";
 import type { ArrayState, Op } from "../../array/types";
@@ -35697,10 +36154,10 @@ import { makeAdapter } from "./make";
 export const arrayAdapter = makeAdapter<ArrayState, Op>("array", { single: ["arr"], pair: ["arr1", "arr2"] }, COMPLEXITY, (s, op, self) => applyOp(s, op, self));
 export const createArray = (): ArrayState => createState([]);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/graph.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/graph.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { COMPLEXITY } from "../../graph/complexity";
 import { applyOp } from "../../graph/engine";
 import { DEFAULT_PROPS, emptyGraph } from "../../graph/model";
@@ -35710,10 +36167,10 @@ import { makeAdapter } from "./make";
 export const graphAdapter = makeAdapter<GraphState, GraphOp>("graph", { single: ["graph"], pair: ["graph1", "graph2"] }, COMPLEXITY, (s, op, self) => applyOp(s, op, self));
 export const createGraph = (): GraphState => emptyGraph(DEFAULT_PROPS);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/hash.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/hash.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { COMPLEXITY } from "../../hash/complexity";
 import { applyOp } from "../../hash/hashEngine";
 import { DEFAULT_CAPACITY } from "../../hash/hashing";
@@ -35724,10 +36181,10 @@ import { makeAdapter } from "./make";
 export const hashAdapter = makeAdapter<TableState, HashOp>("hash", { single: [], pair: null }, COMPLEXITY, (s, op) => applyOp(s, op));
 export const createHash = (kind: Kind): TableState => createTable(kind, DEFAULT_CAPACITY, []);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/linear.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/linear.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { COMPLEXITY } from "../../linear/complexity";
 import { applyOp } from "../../linear/engine";
 import { createState } from "../../linear/model";
@@ -35737,10 +36194,10 @@ import { makeAdapter } from "./make";
 export const linearAdapter = makeAdapter<LinearState, LinearOp>("linear", { single: [], pair: null }, COMPLEXITY, (s, op) => applyOp(s, op));
 export const createLinear = (kind: Kind): LinearState => createState(kind, []);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/linkedlist.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/linkedlist.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { COMPLEXITY } from "../../linkedlist/complexity";
 import { applyOp } from "../../linkedlist/engine";
 import { createList } from "../../linkedlist/model";
@@ -35750,10 +36207,10 @@ import { makeAdapter } from "./make";
 export const linkedListAdapter = makeAdapter<ListState, ListOp>("linkedlist", { single: ["list"], pair: ["list1", "list2"] }, COMPLEXITY, (s, op, self) => applyOp(s, op, self));
 export const createLinkedList = (type: ListType): ListState => createList(type, []);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/make.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/make.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { OP_ARGS } from "../opMeta.generated";
 import type { AnyAdapter, AnyOutcome, ArgMeta, OpMeta, RawOp, Refs } from "../types";
 
@@ -35785,10 +36242,10 @@ export function makeAdapter<S, O>(family: Family, refs: Refs, complexity: Readon
     };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core/adapters
-cat > ./packages/visualizer-core/src/core/adapters/tree.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/adapters/tree.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { COMPLEXITY } from "../../tree/complexity";
 import { applyOp } from "../../tree/engine";
 import { emptyTree } from "../../tree/model";
@@ -35798,10 +36255,10 @@ import { makeAdapter } from "./make";
 export const treeAdapter = makeAdapter<TreeState, TreeOp>("tree", { single: ["tree"], pair: ["tree1", "tree2"] }, COMPLEXITY, (s, op, self) => applyOp(s, op, self));
 export const createTree = (type: TreeType): TreeState => emptyTree(type);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core
-cat > ./packages/visualizer-core/src/core/ids.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/ids.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Element ids on the shared canvas are namespaced by instance: "A:e1".
  * Two arrays both own an "e1" internally; the canvas never sees a collision.
@@ -35818,18 +36275,18 @@ export function splitNsId(ns: string): { instance: string; id: string } {
 /** Valid instance ids: a letter, then letters, digits, _ or -. No ":" so namespacing stays unambiguous. */
 export const INSTANCE_ID_RE = /^[A-Za-z][A-Za-z0-9_-]{0,15}$/;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core
-cat > ./packages/visualizer-core/src/core/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 export { INSTANCE_ID_RE, nsId, splitNsId } from "./ids";
 export { ADAPTERS, DS_NAMES, DS_TYPES, findDsType, opsOf } from "./registry";
 export type { AnyAdapter, AnyOutcome, ArgKind, ArgMeta, Diagnostic, DsType, Explain, OpMeta, Primitive, RawOp, Refs } from "./types";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core
-cat > ./packages/visualizer-core/src/core/opMeta.generated.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/opMeta.generated.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 // AUTO-GENERATED by scripts/gen-op-meta.mjs from each lab's Op union. Do not edit by hand.
 import type { ArgMeta } from "./types";
 
@@ -37201,10 +37658,10 @@ export const OP_ARGS: Record<"array" | "linear" | "linkedlist" | "tree" | "hash"
   }
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core
-cat > ./packages/visualizer-core/src/core/registry.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/registry.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { arrayAdapter, createArray } from "./adapters/array";
 import { createGraph, graphAdapter } from "./adapters/graph";
 import { createHash, hashAdapter } from "./adapters/hash";
@@ -37252,10 +37709,10 @@ export function opsOf(type: DsType): Readonly<Record<string, OpMeta>> {
     return Object.fromEntries(Object.entries(type.adapter.ops).filter(([name]) => !hidden.includes(name)));
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core
-cat > ./packages/visualizer-core/src/core/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** Shared contracts for the unified visualizer. Pure types: no DOM, no React. */
 
 export type Primitive = string | number | boolean | null;
@@ -37340,10 +37797,10 @@ export interface Diagnostic {
     fix?: { label: string; replacement: string };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/core
-cat > ./packages/visualizer-core/src/core/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/core/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "./types";
 
 /** Shared input validation. Everything is parsed with JSON.parse; never eval / Function. */
@@ -37384,10 +37841,10 @@ export function parseOptionalInteger(text: string, label = "index"): Parsed<numb
     return text.trim() === "" ? ok(undefined) : parseInteger(text, label);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/graph
-cat > ./packages/visualizer-core/src/graph/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/graph/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { OpType } from "./types";
 
 /**
@@ -37430,10 +37887,10 @@ export const COMPLEXITY: Record<OpType, string> = {
     moveMarkToIndex: "O(1): re-attach the marker.",
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/graph
-cat > ./packages/visualizer-core/src/graph/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/graph/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { HEX_RE, isPrimitive } from "../core/validate";
 import { lowestFreeId } from "../shared/ids";
 import { G, nextPosition } from "./layout";
@@ -37921,10 +38378,10 @@ export function applyOp(s: GraphState, op: GraphOp, self: string = GRAPH_ID): Ou
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/graph
-cat > ./packages/visualizer-core/src/graph/layout.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/graph/layout.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Box } from "../shared/edges";
 import { NODE_D } from "../shared/stage/tokens";
 import type { Pos } from "./types";
@@ -37968,10 +38425,10 @@ export function nextPosition(taken: Pos[]): Pos {
     return best;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/graph
-cat > ./packages/visualizer-core/src/graph/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/graph/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { circlePositions } from "./layout";
 import type { Edge, GraphProps, GraphState, InitSpec } from "./types";
 
@@ -38189,10 +38646,10 @@ export function summaryOf(s: GraphState): string {
     return `${propsText(s.props)} · ${vertexCount(s)} V, ${edgeCount(s)} E\nvertices: ${vs}\nedges: ${es}`;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/graph
-cat > ./packages/visualizer-core/src/graph/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/graph/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "../core/types";
 export type { Primitive };
 
@@ -38340,10 +38797,10 @@ export interface LogEntry {
     mutated: boolean;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/graph
-cat > ./packages/visualizer-core/src/graph/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/graph/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { isPrimitive, parseValue, type Parsed } from "../core/validate";
 import { MAX_EDGES, MAX_VERTICES } from "./model";
 import type { InitEdge, InitSpec, Primitive } from "./types";
@@ -38424,10 +38881,10 @@ export function parseInitial(text: string): Parsed<InitSpec> {
     return ok({ vertices: vs.value, edges });
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/hash
-cat > ./packages/visualizer-core/src/hash/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/hash/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { OpType } from "./types";
 
 /** Conceptual hash-table costs, not measurements. */
@@ -38458,10 +38915,10 @@ export const COMPLEXITY: Record<OpType, string> = {
     clearArrows: "Annotation only; no contents are touched.",
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/hash
-cat > ./packages/visualizer-core/src/hash/hashEngine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/hash/hashEngine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { HEX_RE, isPrimitive } from "../core/validate";
 import {
     CAPACITY_CHOICES,
@@ -39094,10 +39551,10 @@ export function applyOp(s: TableState, op: HashOp): Outcome {
 
 export { describe };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/hash
-cat > ./packages/visualizer-core/src/hash/hashing.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/hash/hashing.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "./types";
 
 /**
@@ -39170,10 +39627,10 @@ export const exceedsMaxLoad = (size: number, capacity: number): boolean =>
 export const fmtLoad = (size: number, capacity: number): string =>
     loadFactor(size, capacity).toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0");
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/hash
-cat > ./packages/visualizer-core/src/hash/tableModel.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/hash/tableModel.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
     MAX_CAPACITY,
     bucketOf,
@@ -39364,10 +39821,10 @@ export function describe(s: TableState): string {
     return `size ${sizeOf(s)} · capacity ${s.capacity} · load ${fmtLoad(sizeOf(s), s.capacity)}\n${parts.length ? parts.join("   ") : "(empty)"}`;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/hash
-cat > ./packages/visualizer-core/src/hash/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/hash/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "../core/types";
 export type { Primitive };
 
@@ -39512,10 +39969,10 @@ export interface LogEntry {
     mutated: boolean;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/hash
-cat > ./packages/visualizer-core/src/hash/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/hash/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import {
     isPrimitive,
     parseInteger,
@@ -39599,10 +40056,10 @@ export function parseInitial(kind: Kind, text: string): Parsed<KV[]> {
     return ok(out);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src
-cat > ./packages/visualizer-core/src/index.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/index.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * The one visualizer compiler. Pure TypeScript: no DOM, no React, no Node APIs.
  * The browser (editor, canvas) and the API (validation on save) both import it,
@@ -39617,10 +40074,10 @@ export { analyzeScript, MAX_SCRIPT_CHARS, SCRIPT_SCHEMA_VERSION } from "./analyz
 export type { ScriptAnalysis, ScriptStructure } from "./analyze";
 export { CATALOG_SCRIPTS, CATALOG_SLUGS } from "./catalog-scripts";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linear
-cat > ./packages/visualizer-core/src/linear/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linear/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { OpType } from "./types";
 
 /** Conceptual costs, not measurements. */
@@ -39644,10 +40101,10 @@ export const COMPLEXITY: Record<OpType, string> = {
     clearArrows: "Annotation only.",
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linear
-cat > ./packages/visualizer-core/src/linear/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linear/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { HEX_RE, isPrimitive } from "../core/validate";
 import {
     ARROW_DEFAULT_COLOR,
@@ -39954,10 +40411,10 @@ export function applyOp(s: LinearState, op: LinearOp): Outcome {
 
 export { describe, inWord };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linear
-cat > ./packages/visualizer-core/src/linear/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linear/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Item, Kind, LinearState, Primitive } from "./types";
 
 /** Pure data model helpers: no DOM, no React, no animation. */
@@ -40037,10 +40494,10 @@ export const hasAnnotations = (s: LinearState) =>
 
 export type { Item };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linear
-cat > ./packages/visualizer-core/src/linear/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linear/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "../core/types";
 export type { Primitive };
 
@@ -40141,10 +40598,10 @@ export interface LogEntry {
     mutated: boolean;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linear
-cat > ./packages/visualizer-core/src/linear/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linear/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { isPrimitive, parseInteger, parseValue, type Parsed } from "../core/validate";
 import { MAX_ITEMS } from "./model";
 import type { Primitive } from "./types";
@@ -40181,10 +40638,10 @@ export function parseInitial(text: string): Parsed<Primitive[]> {
     return ok(v);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linkedlist
-cat > ./packages/visualizer-core/src/linkedlist/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linkedlist/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { OpType } from "./types";
 
 /** Conceptual costs, not measurements. */
@@ -40224,10 +40681,10 @@ export const COMPLEXITY: Record<OpType, string> = {
     clearArrows: "Annotation only.",
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linkedlist
-cat > ./packages/visualizer-core/src/linkedlist/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linkedlist/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { HEX_RE, isPrimitive } from "../core/validate";
 import {
     ARROW_DEFAULT_COLOR,
@@ -40724,10 +41181,10 @@ export function applyOp(s: ListState, op: ListOp, self: string = LIST_ID): Outco
 
 export { describe, hasAnnotations };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linkedlist
-cat > ./packages/visualizer-core/src/linkedlist/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linkedlist/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { freshIds } from "../shared/ids";
 import type { ListState, ListType, LNode, Primitive } from "./types";
 
@@ -40891,10 +41348,10 @@ export function describe(s: ListState): string {
 export const indexOfId = (s: ListState, id: string) => orderOf(s).indexOf(id);
 export const hasAnnotations = (s: ListState) => s.markers.length > 0 || s.arrows.length > 0 || Object.keys(s.highlights).length > 0;
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linkedlist
-cat > ./packages/visualizer-core/src/linkedlist/steps.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linkedlist/steps.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { edgesOf, type Edge } from "./model";
 import type { ListState, Step } from "./types";
 
@@ -40974,10 +41431,10 @@ export function buildSteps(before: ListState, after: ListState, hint: StepHint):
     return steps;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linkedlist
-cat > ./packages/visualizer-core/src/linkedlist/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linkedlist/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "../core/types";
 export type { Primitive };
 
@@ -41111,10 +41568,10 @@ export interface LogEntry {
     mutated: boolean;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/linkedlist
-cat > ./packages/visualizer-core/src/linkedlist/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/linkedlist/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { isPrimitive, parseInteger, parseValue, type Parsed } from "../core/validate";
 import { MAX_NODES } from "./model";
 import type { Primitive } from "./types";
@@ -41149,10 +41606,10 @@ export function parseInitial(text: string): Parsed<Primitive[]> {
     return ok(v);
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/script
-cat > ./packages/visualizer-core/src/script/compile.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/script/compile.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { LIMITS as CONTRACT_LIMITS } from "@algoforge/contracts/src/limits";
 import { INSTANCE_ID_RE } from "../core/ids";
 import { DS_NAMES, findDsType, opsOf } from "../core/registry";
@@ -41497,10 +41954,10 @@ export function compileValue(value: unknown): Compiled {
     return compileScript(JSON.stringify(value, null, 2));
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/script
-cat > ./packages/visualizer-core/src/script/normalize.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/script/normalize.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { INSTANCE_ID_RE } from "../core/ids";
 import type { Diagnostic } from "../core/types";
 import { didYouMean } from "./suggest";
@@ -41686,10 +42143,10 @@ function readEntry(obj: JObject, index: number, lines: LineIndex, diagnostics: D
     return entry;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/script
-cat > ./packages/visualizer-core/src/script/parse.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/script/parse.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Diagnostic } from "../core/types";
 
 /**
@@ -41937,10 +42394,10 @@ export class LineIndex {
     }
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/script
-cat > ./packages/visualizer-core/src/script/schema.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/script/schema.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { DS_NAMES, DS_TYPES, opsOf } from "../core/registry";
 import type { ArgMeta } from "../core/types";
 import { INSTANCE_ID_RE } from "../core/ids";
@@ -42046,10 +42503,10 @@ export function buildScriptSchema(): Json {
     };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/script
-cat > ./packages/visualizer-core/src/script/suggest.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/script/suggest.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** "Did you mean ...?" helpers. */
 
 function distance(a: string, b: string): number {
@@ -42086,10 +42543,10 @@ export const didYouMean = (name: string, candidates: readonly string[]): string 
     return c ? ` Did you mean "${c}"?` : "";
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/shared
-cat > ./packages/visualizer-core/src/shared/edges.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/shared/edges.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Pure edge geometry (no DOM, no React). Straight and curved arrows between two boxes,
  * with the arrowhead as two separate "wing" paths so it can be drawn on after the shaft.
@@ -42172,10 +42629,10 @@ export function annotationArc(from: Box, to: Box): EdgeGeometry {
     };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/shared
-cat > ./packages/visualizer-core/src/shared/ids.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/shared/ids.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /**
  * Id allocation shared by the node-based labs (linked list, tree, and later graph).
  * A new node always takes the LOWEST free number: delete n6 and the next new node is n6 again,
@@ -42189,10 +42646,10 @@ export function lowestFreeId(used: Iterable<string>, prefix = "n"): string {
 /** `count` ids for a structure that is being rebuilt from scratch: n1, n2, … */
 export const freshIds = (count: number, prefix = "n"): string[] => Array.from({ length: count }, (_, i) => `${prefix}${i + 1}`);
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/shared/stage
-cat > ./packages/visualizer-core/src/shared/stage/geometry.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/shared/stage/geometry.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Box } from "../edges";
 
 export interface EdgeGeo {
@@ -42258,19 +42715,19 @@ export function edgeCurve(a: Box, b: Box, o: { directed: boolean; bend?: number;
     };
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/shared/stage
-cat > ./packages/visualizer-core/src/shared/stage/tokens.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/shared/stage/tokens.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 /** One palette and one node size for every lab, so they look like the same product. */
 export const INK = { accent: "#FF430F", blue: "#0070F3", green: "#17A34A", purple: "#7928CA", red: "#E5484D", amber: "#D97706" } as const;
 export const NODE_D = 56;
 export const COLOR_FADE = "stroke 320ms ease";
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/bst.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/bst.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive, TNode, TreeState } from "./types";
 
 /**
@@ -42359,10 +42816,10 @@ export function leftmost(nodes: Record<string, TNode>, id: string): string {
     return cur;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/complexity.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/complexity.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { OpType } from "./types";
 
 const H = "O(h), where h is the tree's height. A balanced BST has h ≈ log n; a lopsided one can have h = n.";
@@ -42409,10 +42866,10 @@ export const COMPLEXITY: Record<OpType, string> = {
     clearArrows: "Annotation only.",
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/engine.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/engine.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { HEX_RE, isPrimitive } from "../core/validate";
 import { BST_RULE, bstViolations, compare, leftmost, placeBst, whyNotKey } from "./bst";
 import {
@@ -43032,10 +43489,10 @@ function compareKeyless(v: Primitive): boolean {
 export { describe };
 export type { TreeType };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/model.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/model.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { InitSpec, Primitive, Shape, TreeState, TreeType } from "./types";
 import { bstViolations, placeBst } from "./bst";
 
@@ -43316,10 +43773,10 @@ export const pathOf = (s: TreeState, id: string): string => {
     return out;
 };
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/steps.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/steps.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { edgesOf, type Edge } from "./model";
 import type { Step, TreeState } from "./types";
 
@@ -43396,10 +43853,10 @@ export function buildSteps(before: TreeState, after: TreeState, hint: StepHint):
     return steps;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/types.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/types.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import type { Primitive } from "../core/types";
 export type { Primitive };
 
@@ -43548,10 +44005,10 @@ export interface LogEntry {
     mutated: boolean;
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core/src/tree
-cat > ./packages/visualizer-core/src/tree/validate.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/src/tree/validate.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { isPrimitive, parseInteger, parseValue, type Parsed } from "../core/validate";
 import { MAX_NODES, MAX_PATH } from "./model";
 import type { InitSpec, Primitive, Shape, TreeType } from "./types";
@@ -43623,15 +44080,15 @@ export function parseInitial(type: TreeType, text: string): Parsed<InitSpec> {
     return fail("The value must be a JSON array of values or an object describing the tree.");
 }
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 mkdir -p ./packages/visualizer-core
-cat > ./packages/visualizer-core/vitest.config.ts <<'__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__'
+cat > ./packages/visualizer-core/vitest.config.ts <<'__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__'
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({ test: { environment: "node", include: ["src/**/*.test.ts"] } });
 
-__ALGOFORGE_4d57f0dcd25c33b4e0788c957eff9fe9__
+__ALGOFORGE_3e86f951123ec1066cf985084cf7df3a__
 
 
 echo "All AlgoForge files restored successfully."

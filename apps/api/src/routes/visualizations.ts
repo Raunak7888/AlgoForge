@@ -11,6 +11,7 @@ const limit = generalRateLimiter({ scope: "viz", limitPerMinute: env.redis.visua
 // "/validate" is declared before "/:id" so it is never read as an id.
 router.get("/", requireAuth, limit, c.list);
 router.post("/validate", requireAuth, requireCsrf, limit, c.validate);
+router.post("/generate", requireAuth, requireCsrf, limit, c.generate);
 router.post("/", requireAuth, requireCsrf, limit, c.create);
 router.get("/:id", requireAuth, limit, c.get);
 router.patch("/:id", requireAuth, requireCsrf, limit, c.update);

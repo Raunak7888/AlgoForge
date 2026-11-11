@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
   },
   // Workspace packages export TypeScript source.
   transpilePackages: ["@algoforge/analysis", "@algoforge/contracts", "@algoforge/visualizer-core"],
+  experimental: { proxyTimeout: 120_000 },
   async rewrites() {
     return apiUrl ? [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }] : [];
   },

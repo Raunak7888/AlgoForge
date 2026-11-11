@@ -65,6 +65,9 @@ export const env = {
     /** The assistant writes explanations and code, so it gets more time and room than the generic text helper. */
     assistantTimeoutMs: parseInteger("AI_ASSISTANT_TIMEOUT_MS", 30000),
     assistantMaxOutputTokens: parseInteger("AI_ASSISTANT_MAX_OUTPUT_TOKENS", 2048),
+    /** Code -> visualizer script returns a long JSON array, so it gets its own budget. */
+    visualizeTimeoutMs: parseInteger("AI_VISUALIZE_TIMEOUT_MS", 60000),
+    visualizeMaxOutputTokens: parseInteger("AI_VISUALIZE_MAX_OUTPUT_TOKENS", 8192),
   },
   quotas: {
     /** Billable (uncached) analyses per user. Cache hits never use quota. */

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AnalysisLanguageSchema } from "@algoforge/analysis";
 import { IsoDateTimeSchema, pageQuerySchema, paginatedResponse } from "./common";
-import { LIMITS } from "./limits";
+import { checkRunnableCode, LIMITS } from "./limits";
 
 export const DiagnosticSchema = z.object({
   severity: z.enum(["error", "warning", "info"]),
@@ -63,3 +63,26 @@ export type VisualizationListResponse = z.infer<typeof VisualizationListResponse
 export type CreateVisualizationRequest = z.infer<typeof CreateVisualizationRequestSchema>;
 export type UpdateVisualizationRequest = z.infer<typeof UpdateVisualizationRequestSchema>;
 export type ValidateScriptResponse = z.infer<typeof ValidateScriptResponseSchema>;
+
+/** POST /api/visualizations/generate: AI turns the code into a visualizer script. Same size gate as analysis. */
+export const GenerateVisualizationRequestSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(1, "Code must be a non-empty string.")
+    .max(LIMITS.code.maxChars, "Code payload is too large.")
+    .superRefine((code, ctx) => {
+      if (code.length > LIMITS.code.maxChars) return;
+      const check = checkRunnableCode(code);
+      if (!check.ok) ctx.addIssue({ code: "custom", message: check.message });
+    }),
+  language: AnalysisLanguageSchema,
+});
+export const GenerateVisualizationResponseSchema = z.object({
+  script: z.string(),
+  stepCount: z.number().int().min(0),
+  structures: z.array(VisualizationStructureSchema),
+  cached: z.boolean(),
+});
+export type GenerateVisualizationRequest = z.infer<typeof GenerateVisualizationRequestSchema>;
+export type GenerateVisualizationResponse = z.infer<typeof GenerateVisualizationResponseSchema>;
