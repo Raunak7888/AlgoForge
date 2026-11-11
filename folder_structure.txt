@@ -6,6 +6,9 @@
 ├── .gitignore
 ├── .npmrc
 ├── .nvmrc
+├── .phase-backups
+│   ├── phase1-20261110-190749
+│   │   ├── apps
 ├── .pnpmfile.cjs
 ├── apps
 │   ├── api
@@ -111,7 +114,7 @@
 │   │   │   │   │   ├── ai-provider.ts
 │   │   │   │   │   ├── gemini.provider.ts
 │   │   │   │   │   ├── gemini-messages.ts
-│   │   │   │   │   ├── openrouter.provider.ts
+│   │   │   │   │   ├── provider-factory.test.ts
 │   │   │   │   │   ├── provider-factory.ts
 │   │   │   │   ├── public-share.service.ts
 │   │   │   │   ├── quota.service.ts
@@ -139,6 +142,7 @@
 │   │   │   │   ├── algorithm.ts
 │   │   │   │   ├── analysis.ts
 │   │   │   │   ├── category.ts
+│   │   │   │   ├── code-limits.test.ts
 │   │   │   │   ├── common.ts
 │   │   │   │   ├── explanation-session.ts
 │   │   │   │   ├── share.ts
@@ -220,6 +224,7 @@
 │   │   │   │   │   ├── AnalysisFeature.tsx
 │   │   │   │   │   ├── analysis-history.tsx
 │   │   │   │   │   ├── AnalysisHistoryFeature.tsx
+│   │   │   │   │   ├── CodeSizeBadge.tsx
 │   │   │   │   │   ├── DashBoard.tsx
 │   │   │   │   │   ├── DashboardGate.tsx
 │   │   │   │   │   ├── DesktopOnlyScreen.tsx
@@ -467,6 +472,7 @@
 │   │   │   │   ├── utils.ts
 │   │   │   │   ├── workspace
 │   │   │   │   │   ├── analysis-run.ts
+│   │   │   │   │   ├── code-limits.ts
 │   │   │   │   │   ├── failure.ts
 │   │   │   │   │   ├── store.ts
 │   │   ├── tailwind.config.ts

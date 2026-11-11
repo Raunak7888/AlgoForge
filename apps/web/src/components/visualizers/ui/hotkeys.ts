@@ -94,6 +94,6 @@ export const HOTKEY_HELP: readonly (readonly [string, string])[] = [
     ["[ ]", "Slower / faster"],
     ["L", "Loop on / off"],
     ["M", "Show / hide operation details"],
-    ["F, 0, + −", "Fit, 100%, zoom (when the canvas is focused)"],
+    ["F, 0, +/-", "Fit, 100%, zoom in / out"],
     ["?", "This help"],
 ];

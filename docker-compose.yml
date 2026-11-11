@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17
     container_name: algoforge-db
     restart: unless-stopped
     environment:
@@ -12,7 +10,27 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - algoforge_pgdata:/var/lib/postgresql/data
+      - algoforge_pgdata17:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U algoforge -d algoforge"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: algoforge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - algoforge_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
 
 volumes:
-  algoforge_pgdata:
+  algoforge_pgdata17:
+  algoforge_redisdata:
