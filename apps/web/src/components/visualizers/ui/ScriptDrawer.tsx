@@ -8,7 +8,7 @@ import type { VisualizerStore } from "../engine/store";
 import { compileScript } from "../script/compile";
 import { applyFix } from "../script/fixes";
 import { countBySeverity } from "../script/markers";
-import { loadScript, saveScript } from "../script/storage";
+import { saveScript } from "../script/storage";
 import { btn, btnPrimary, inputCls } from "../shared/styles";
 import type { EditorHandle, ScriptEditorProps } from "./ScriptEditor";
 
@@ -63,16 +63,10 @@ export function ScriptDrawer({ editor: Editor, store = visualizer, dark = true, 
     );
     const run = useCallback(() => runText(textRef.current), [runText]);
 
-    // Restore the last script. If nothing is loaded yet, show it on the canvas straight away.
+    // Start with a blank editor; saved scripts load only when the user explicitly opens them.
     useEffect(() => {
-        const saved = loadScript();
-        if (saved && saved.trim() !== "") {
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- the saved script only exists in the browser
-            setText(saved);
-            if (store.getState().compiled === null) runText(saved);
-        }
         hydrated.current = true;
-    }, [store, runText]);
+    }, []);
 
     useEffect(() => {
         if (!hydrated.current) return;

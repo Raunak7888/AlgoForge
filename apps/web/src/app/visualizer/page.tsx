@@ -1,6 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
-import { ThemeToggle, useTheme } from "@/components/visualizers/ui";
+import { ThemeToggle } from "@/components/visualizers/ui";
 
 const VisualizerPanel = dynamic(() => import("@/components/visualizers/ui/VisualizerPanel").then((m) => m.VisualizerPanel), {
     ssr: false,
@@ -8,14 +8,13 @@ const VisualizerPanel = dynamic(() => import("@/components/visualizers/ui/Visual
 });
 
 export default function VisualizerPage() {
-    const [theme] = useTheme();
     return (
         <main className="flex h-screen flex-col gap-2 bg-background p-3 text-foreground">
             <div className="flex justify-end">
                 <ThemeToggle />
             </div>
             <div className="min-h-0 flex-1">
-                <VisualizerPanel dark={theme === "dark"} />
+                <VisualizerPanel />
             </div>
         </main>
     );

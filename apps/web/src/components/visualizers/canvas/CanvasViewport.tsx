@@ -181,7 +181,7 @@ export function Viewport({ content, children, className }: Props) {
             {empty ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                     <p className="rounded-lg border border-neutral-500/25 bg-neutral-500/10 px-4 py-2 text-sm text-neutral-400">
-                        Nothing here yet. Press Play or Forward to begin.
+                        Nothing here yet. Press Visualize then Play or Forward to begin.
                     </p>
                 </div>
             ) : null}

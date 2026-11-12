@@ -10,4 +10,3 @@ export { DS_NAMES, DS_TYPES, findDsType, opsOf } from "./core/registry";
 export type { Diagnostic } from "./core/types";
 export { analyzeScript, MAX_SCRIPT_CHARS, SCRIPT_SCHEMA_VERSION } from "./analyze";
 export type { ScriptAnalysis, ScriptStructure } from "./analyze";
-export { CATALOG_SCRIPTS, CATALOG_SLUGS } from "./catalog-scripts";
