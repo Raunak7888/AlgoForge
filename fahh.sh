@@ -96,6 +96,7 @@ HEADER
             -type f \( \
                 -name 'package.json' -o \
                 -name '*.ts' -o \
+                -name '*.sql' -o \
                 -name '*.tsx' -o \
                 -name '*.prisma' \
             \) -print0

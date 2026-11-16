@@ -45,7 +45,7 @@ cleanup() {
     [ -n "$pid" ] && kill_tree "$pid" KILL
   done
   echo "==> Stopping Docker services..."
-  docker compose down
+  docker compose stop
   echo "==> Clean. Bye."
   exit 0
 }

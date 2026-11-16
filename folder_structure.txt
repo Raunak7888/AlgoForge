@@ -1,634 +1,326 @@
-.
-├── .env
-├── .github
-│   ├── workflows
-│   │   ├── ci.yml
-├── .gitignore
-├── .npmrc
-├── .nvmrc
-├── .phase-backups
-│   ├── phase1-20261110-190749
-│   │   ├── apps
-├── .pnpmfile.cjs
-├── apps
-│   ├── api
-│   │   ├── .env
-│   │   ├── eslint.config.mjs
-│   │   ├── package.json
-│   │   ├── src
-│   │   │   ├── ai
-│   │   │   │   ├── context-builder.ts
-│   │   │   ├── app.ts
-│   │   │   ├── config
-│   │   │   │   ├── env.ts
-│   │   │   │   ├── redis.ts
-│   │   │   ├── contracts
-│   │   │   ├── controllers
-│   │   │   │   ├── admin.controller.ts
-│   │   │   │   ├── algorithm.controller.ts
-│   │   │   │   ├── analysis.controller.ts
-│   │   │   │   ├── auth.controller.ts
-│   │   │   │   ├── category.controller.ts
-│   │   │   │   ├── explanation-session.controller.ts
-│   │   │   │   ├── meta.controller.ts
-│   │   │   │   ├── search.controller.ts
-│   │   │   │   ├── share.controller.ts
-│   │   │   │   ├── user.controller.ts
-│   │   │   │   ├── visualization.controller.ts
-│   │   │   ├── db
-│   │   │   ├── middleware
-│   │   │   │   ├── auth.ts
-│   │   │   │   ├── csrf.ts
-│   │   │   │   ├── error-handler.ts
-│   │   │   │   ├── not-found.ts
-│   │   │   │   ├── rate-limit.ts
-│   │   │   │   ├── request-id.ts
-│   │   │   │   ├── security-headers.ts
-│   │   │   ├── prompts
-│   │   │   │   ├── analysis.prompt.ts
-│   │   │   │   ├── assistant.prompt.ts
-│   │   │   ├── repositories
-│   │   │   │   ├── ai-usage.repository.ts
-│   │   │   │   ├── algorithm.repository.ts
-│   │   │   │   ├── analysis.repository.ts
-│   │   │   │   ├── audit-log.repository.ts
-│   │   │   │   ├── category.repository.ts
-│   │   │   │   ├── explanation-message.repository.ts
-│   │   │   │   ├── explanation-session.repository.ts
-│   │   │   │   ├── session.repository.ts
-│   │   │   │   ├── share.repository.ts
-│   │   │   │   ├── user.repository.ts
-│   │   │   │   ├── visualization.repository.ts
-│   │   │   ├── routes
-│   │   │   │   ├── admin.ts
-│   │   │   │   ├── algorithm.ts
-│   │   │   │   ├── analysis.ts
-│   │   │   │   ├── auth.ts
-│   │   │   │   ├── category.ts
-│   │   │   │   ├── explanation-session.ts
-│   │   │   │   ├── health.ts
-│   │   │   │   ├── meta.ts
-│   │   │   │   ├── openapi.ts
-│   │   │   │   ├── search.ts
-│   │   │   │   ├── share.ts
-│   │   │   │   ├── shares.ts
-│   │   │   │   ├── users.ts
-│   │   │   │   ├── visualizations.ts
-│   │   │   ├── security
-│   │   │   ├── serializers
-│   │   │   │   ├── admin.ts
-│   │   │   │   ├── algorithm.ts
-│   │   │   │   ├── analysis.ts
-│   │   │   │   ├── auth.ts
-│   │   │   │   ├── dates.ts
-│   │   │   │   ├── explain.ts
-│   │   │   │   ├── share.ts
-│   │   │   │   ├── visualization.ts
-│   │   │   ├── server.ts
-│   │   │   ├── services
-│   │   │   │   ├── admin.service.ts
-│   │   │   │   ├── ai.service.ts
-│   │   │   │   ├── ai-usage.service.ts
-│   │   │   │   ├── algorithm
-│   │   │   │   ├── algorithm.service.ts
-│   │   │   │   │   ├── cache-keys.ts
-│   │   │   │   │   ├── detail.service.ts
-│   │   │   │   │   ├── index.ts
-│   │   │   │   │   ├── mutation.service.ts
-│   │   │   │   │   ├── query.service.ts
-│   │   │   │   │   ├── viz.service.ts
-│   │   │   │   ├── analysis.service.ts
-│   │   │   │   ├── audit.service.ts
-│   │   │   │   ├── auth.service.ts
-│   │   │   │   ├── capabilities.service.ts
-│   │   │   │   ├── category.service.ts
-│   │   │   │   ├── explanation-session.service.ts
-│   │   │   │   ├── lib
-│   │   │   │   │   ├── ai-output.ts
-│   │   │   │   │   ├── cache-version.ts
-│   │   │   │   │   ├── layered-cache.ts
-│   │   │   │   │   ├── lru.cache.ts
-│   │   │   │   │   ├── redis.cache.ts
-│   │   │   │   │   ├── share-cache.ts
-│   │   │   │   ├── providers
-│   │   │   │   │   ├── ai-provider.ts
-│   │   │   │   │   ├── gemini.provider.ts
-│   │   │   │   │   ├── gemini-messages.ts
-│   │   │   │   │   ├── provider-factory.test.ts
-│   │   │   │   │   ├── provider-factory.ts
-│   │   │   │   ├── public-share.service.ts
-│   │   │   │   ├── quota.service.ts
-│   │   │   │   ├── script.service.ts
-│   │   │   │   ├── search.service.ts
-│   │   │   │   ├── session-cleanup.service.ts
-│   │   │   │   ├── share.service.ts
-│   │   │   │   ├── user.service.ts
-│   │   │   │   ├── visualization.service.ts
-│   │   │   ├── types
-│   │   │   │   ├── algorithm.types.ts
-│   │   │   │   ├── express.d.ts
-│   │   │   ├── utils
-│   │   │   │   ├── ai-cache-keys.ts
-│   │   │   │   ├── app-error.ts
-│   │   │   │   ├── async-handler.ts
-│   │   │   │   ├── capabilities.ts
-│   │   │   │   ├── cookies.ts
-│   │   │   │   ├── crypto.ts
-│   │   │   │   ├── logger.ts
-│   │   │   │   ├── pagination.ts
-│   │   │   │   ├── session-activity.ts
-│   │   │   │   ├── token.ts
-│   │   │   ├── validation
-│   │   │   │   ├── algorithm.ts
-│   │   │   │   ├── analysis.ts
-│   │   │   │   ├── category.ts
-│   │   │   │   ├── code-limits.test.ts
-│   │   │   │   ├── common.ts
-│   │   │   │   ├── explanation-session.ts
-│   │   │   │   ├── share.ts
-│   │   │   │   ├── user.ts
-│   │   │   │   ├── visualization.ts
-│   │   ├── tsconfig.json
-│   │   ├── tsup.config.ts
-│   │   ├── vitest.config.ts
-│   ├── web
-│   │   ├── .env
-│   │   ├── .gitignore
-│   │   ├── components.json
-│   │   ├── eslint.config.mjs
-│   │   ├── next.config.ts
-│   │   ├── next-env.d.ts
-│   │   ├── package.json
-│   │   ├── package.json.bak
-│   │   ├── Plan.md
-│   │   ├── postcss.config.mjs
-│   │   ├── public
-│   │   │   ├── AlgoForgeLogo.png
-│   │   │   ├── AlgoforgeLogo.svg
-│   │   │   ├── demo
-│   │   │   │   ├── usage.mp4
-│   │   ├── README.md
-│   │   ├── sourcecode.txt
-│   │   ├── src
-│   │   │   ├── app
-│   │   │   │   ├── algorithms
-│   │   │   │   │   ├── [slug]
-│   │   │   │   │   │   ├── page.tsx
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   ├── dashboard
-│   │   │   │   │   ├── [id]
-│   │   │   │   │   │   ├── page.tsx
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   ├── globals.css
-│   │   │   │   ├── layout.tsx
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── privacy
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   ├── s
-│   │   │   │   │   ├── [shareId]
-│   │   │   │   │   │   ├── layout.tsx
-│   │   │   │   │   │   ├── page.tsx
-│   │   │   │   ├── terms
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   ├── visualizer
-│   │   │   │   │   ├── page.tsx
-│   │   │   ├── components
-│   │   │   │   ├── account
-│   │   │   │   │   ├── deviceLabel.ts
-│   │   │   │   │   ├── DialogShell.tsx
-│   │   │   │   │   ├── ProfileDialog.tsx
-│   │   │   │   │   ├── SettingsDialog.tsx
-│   │   │   │   ├── auth
-│   │   │   │   │   ├── FeatureGate.tsx
-│   │   │   │   │   ├── GlassCard.tsx
-│   │   │   │   │   ├── GoogleButton.tsx
-│   │   │   │   │   ├── GoogleLoginModal.tsx
-│   │   │   │   │   ├── SignInPrompt.tsx
-│   │   │   │   ├── CodeEditor
-│   │   │   │   │   ├── CodeEditor.module.css
-│   │   │   │   │   ├── CodeEditor.tsx
-│   │   │   │   │   ├── constants.ts
-│   │   │   │   │   ├── EditorStatusBar.tsx
-│   │   │   │   │   ├── EditorToolbar.tsx
-│   │   │   │   │   ├── index.ts
-│   │   │   │   │   ├── lib
-│   │   │   │   │   │   ├── formatters.ts
-│   │   │   │   │   │   ├── monacoTheme.ts
-│   │   │   │   │   │   ├── pythonProvider.ts
-│   │   │   │   │   ├── sourcecode.txt
-│   │   │   │   │   ├── types.ts
-│   │   │   │   ├── DashBoard
-│   │   │   │   │   ├── AccountAvatar.tsx
-│   │   │   │   │   ├── AiChatDrawer.tsx
-│   │   │   │   │   ├── Analysis.tsx
-│   │   │   │   │   ├── AnalysisFeature.tsx
-│   │   │   │   │   ├── analysis-history.tsx
-│   │   │   │   │   ├── AnalysisHistoryFeature.tsx
-│   │   │   │   │   ├── CodeSizeBadge.tsx
-│   │   │   │   │   ├── DashBoard.tsx
-│   │   │   │   │   ├── DashboardGate.tsx
-│   │   │   │   │   ├── DesktopOnlyScreen.tsx
-│   │   │   │   │   ├── FeaturePanel.tsx
-│   │   │   │   │   ├── Markdown.tsx
-│   │   │   │   │   ├── NotificationsPopover.tsx
-│   │   │   │   │   ├── Resize.tsx
-│   │   │   │   │   ├── Setting.tsx
-│   │   │   │   │   ├── ShareModal.tsx
-│   │   │   │   │   ├── TitleBar.tsx
-│   │   │   │   │   ├── Toolbar.tsx
-│   │   │   │   │   ├── WorkspaceEditor.tsx
-│   │   │   │   ├── LandingPage
-│   │   │   │   │   ├── DemoVideo.tsx
-│   │   │   │   │   ├── FinalCTA.tsx
-│   │   │   │   │   ├── Footer.tsx
-│   │   │   │   │   ├── Hero.tsx
-│   │   │   │   │   ├── HorizontalFeatureScroll.tsx
-│   │   │   │   │   ├── MobileTabletLandingPage.tsx
-│   │   │   │   │   ├── Navbar.tsx
-│   │   │   │   │   ├── ParticleField.tsx
-│   │   │   │   │   ├── particles.tsx
-│   │   │   │   │   ├── shared.tsx
-│   │   │   │   │   ├── UseCases.tsx
-│   │   │   │   │   ├── WhatYouGet.tsx
-│   │   │   │   ├── Logo.tsx
-│   │   │   │   ├── MotionProvider.tsx
-│   │   │   │   ├── share
-│   │   │   │   │   ├── SharedView.tsx
-│   │   │   │   ├── site
-│   │   │   │   │   ├── PageShell.tsx
-│   │   │   │   ├── SmoothScroll.tsx
-│   │   │   │   ├── ui
-│   │   │   │   │   ├── app-menu.tsx
-│   │   │   │   │   ├── badge.tsx
-│   │   │   │   │   ├── button.tsx
-│   │   │   │   │   ├── ButtonAnimated.tsx
-│   │   │   │   │   ├── card.tsx
-│   │   │   │   │   ├── card-hover-effect.tsx
-│   │   │   │   │   ├── comet-card.tsx
-│   │   │   │   │   ├── dialog.tsx
-│   │   │   │   │   ├── FeatureCard.tsx
-│   │   │   │   │   ├── FeaturePanel.tsx
-│   │   │   │   │   ├── field.tsx
-│   │   │   │   │   ├── glowing-effect.tsx
-│   │   │   │   │   ├── hover-border-gradient.tsx
-│   │   │   │   │   ├── hover-border-gradient-demo.tsx
-│   │   │   │   │   ├── input.tsx
-│   │   │   │   │   ├── interactive-hover-button.tsx
-│   │   │   │   │   ├── label.tsx
-│   │   │   │   │   ├── loader.tsx
-│   │   │   │   │   ├── resizable-navbar.tsx
-│   │   │   │   │   ├── SampleChip.tsx
-│   │   │   │   │   ├── scroll-area.tsx
-│   │   │   │   │   ├── separator.tsx
-│   │   │   │   │   ├── StatusChip.tsx
-│   │   │   │   │   ├── tabs.tsx
-│   │   │   │   │   ├── tooltip.tsx
-│   │   │   │   ├── visualizers
-│   │   │   │   │   ├── array
-│   │   │   │   │   │   ├── arrayEngine.ts
-│   │   │   │   │   │   ├── ArrayStage.tsx
-│   │   │   │   │   │   ├── complexity.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── canvas
-│   │   │   │   │   │   ├── canvasStyles.ts
-│   │   │   │   │   │   ├── CanvasViewport.tsx
-│   │   │   │   │   │   ├── Group.tsx
-│   │   │   │   │   │   ├── index.ts
-│   │   │   │   │   │   ├── layout.ts
-│   │   │   │   │   │   ├── renderers.tsx
-│   │   │   │   │   │   ├── runtime.ts
-│   │   │   │   │   │   ├── viewport.ts
-│   │   │   │   │   │   ├── VisualizerCanvas.tsx
-│   │   │   │   │   ├── core
-│   │   │   │   │   │   ├── adapters
-│   │   │   │   │   │   │   ├── array.ts
-│   │   │   │   │   │   │   ├── graph.ts
-│   │   │   │   │   │   │   ├── hash.ts
-│   │   │   │   │   │   │   ├── linear.ts
-│   │   │   │   │   │   │   ├── linkedlist.ts
-│   │   │   │   │   │   │   ├── make.ts
-│   │   │   │   │   │   │   ├── tree.ts
-│   │   │   │   │   │   ├── ids.ts
-│   │   │   │   │   │   ├── index.ts
-│   │   │   │   │   │   ├── opMeta.generated.ts
-│   │   │   │   │   │   ├── registry.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── engine
-│   │   │   │   │   │   ├── controller.ts
-│   │   │   │   │   │   ├── index.ts
-│   │   │   │   │   │   ├── instance.ts
-│   │   │   │   │   │   ├── scheduler.ts
-│   │   │   │   │   │   ├── selectors.ts
-│   │   │   │   │   │   ├── store.ts
-│   │   │   │   │   │   ├── testing.ts
-│   │   │   │   │   │   ├── timer.ts
-│   │   │   │   │   │   ├── transport.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   ├── graph
-│   │   │   │   │   │   ├── complexity.ts
-│   │   │   │   │   │   ├── engine.ts
-│   │   │   │   │   │   ├── GraphStage.tsx
-│   │   │   │   │   │   ├── layout.ts
-│   │   │   │   │   │   ├── model.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── hash
-│   │   │   │   │   │   ├── complexity.ts
-│   │   │   │   │   │   ├── hashEngine.ts
-│   │   │   │   │   │   ├── hashing.ts
-│   │   │   │   │   │   ├── HashPipeline.tsx
-│   │   │   │   │   │   ├── HashStage.tsx
-│   │   │   │   │   │   ├── tableModel.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── linear
-│   │   │   │   │   │   ├── complexity.ts
-│   │   │   │   │   │   ├── engine.ts
-│   │   │   │   │   │   ├── geometry.ts
-│   │   │   │   │   │   ├── LinearStage.tsx
-│   │   │   │   │   │   ├── model.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── linkedlist
-│   │   │   │   │   │   ├── complexity.ts
-│   │   │   │   │   │   ├── engine.ts
-│   │   │   │   │   │   ├── layout.ts
-│   │   │   │   │   │   ├── ListStage.tsx
-│   │   │   │   │   │   ├── model.ts
-│   │   │   │   │   │   ├── steps.ts
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── script
-│   │   │   │   │   │   ├── compile.ts
-│   │   │   │   │   │   ├── examples.ts
-│   │   │   │   │   │   ├── fixes.ts
-│   │   │   │   │   │   ├── index.ts
-│   │   │   │   │   │   ├── markers.ts
-│   │   │   │   │   │   ├── normalize.ts
-│   │   │   │   │   │   ├── parse.ts
-│   │   │   │   │   │   ├── schema.ts
-│   │   │   │   │   │   ├── storage.ts
-│   │   │   │   │   │   ├── suggest.ts
-│   │   │   │   │   ├── shared
-│   │   │   │   │   │   ├── animationSettings.ts
-│   │   │   │   │   │   ├── edges.ts
-│   │   │   │   │   │   ├── ids.ts
-│   │   │   │   │   │   ├── stage
-│   │   │   │   │   │   │   ├── Caption.tsx
-│   │   │   │   │   │   │   ├── EdgeG.tsx
-│   │   │   │   │   │   │   ├── geometry.ts
-│   │   │   │   │   │   │   ├── motion.ts
-│   │   │   │   │   │   │   ├── NodeDisc.tsx
-│   │   │   │   │   │   │   ├── StageBoard.tsx
-│   │   │   │   │   │   │   ├── StageEnv.tsx
-│   │   │   │   │   │   │   ├── StageFrame.tsx
-│   │   │   │   │   │   │   ├── tokens.ts
-│   │   │   │   │   │   │   ├── useStageAnimator.ts
-│   │   │   │   │   │   ├── styles.ts
-│   │   │   │   │   ├── tree
-│   │   │   │   │   │   ├── bst.ts
-│   │   │   │   │   │   ├── complexity.ts
-│   │   │   │   │   │   ├── engine.ts
-│   │   │   │   │   │   ├── layout.ts
-│   │   │   │   │   │   ├── model.ts
-│   │   │   │   │   │   ├── steps.ts
-│   │   │   │   │   │   ├── TreeStage.tsx
-│   │   │   │   │   │   ├── types.ts
-│   │   │   │   │   │   ├── validate.ts
-│   │   │   │   │   ├── ui
-│   │   │   │   │   │   ├── describe.ts
-│   │   │   │   │   │   ├── hotkeys.ts
-│   │   │   │   │   │   ├── icons.tsx
-│   │   │   │   │   │   ├── index.ts
-│   │   │   │   │   │   ├── inlineCode.ts
-│   │   │   │   │   │   ├── LazyScriptEditor.tsx
-│   │   │   │   │   │   ├── MessageDock.tsx
-│   │   │   │   │   │   ├── PlayerChrome.tsx
-│   │   │   │   │   │   ├── SavedWork.tsx
-│   │   │   │   │   │   ├── ScriptDrawer.tsx
-│   │   │   │   │   │   ├── ScriptEditor.tsx
-│   │   │   │   │   │   ├── theme.ts
-│   │   │   │   │   │   ├── ThemeToggle.tsx
-│   │   │   │   │   │   ├── TransportBar.tsx
-│   │   │   │   │   │   ├── useTransportHotkeys.ts
-│   │   │   │   │   │   ├── VisualizerPanel.tsx
-│   │   │   ├── data
-│   │   │   │   ├── samples
-│   │   │   │   │   ├── analysisHistory.ts
-│   │   │   ├── hooks
-│   │   │   │   ├── useDebouncedValue.ts
-│   │   │   │   ├── useIsClient.ts
-│   │   │   │   ├── useIsMobile.ts
-│   │   │   ├── lib
-│   │   │   │   ├── analysisStatus.ts
-│   │   │   │   ├── api
-│   │   │   │   │   ├── client.ts
-│   │   │   │   │   ├── config.ts
-│   │   │   │   │   ├── csrf.ts
-│   │   │   │   │   ├── endpoints.ts
-│   │   │   │   │   ├── errors.ts
-│   │   │   │   │   ├── index.ts
-│   │   │   │   ├── assistant
-│   │   │   │   │   ├── algorithmContext.ts
-│   │   │   │   │   ├── context.ts
-│   │   │   │   │   ├── context-core.ts
-│   │   │   │   │   ├── suggestions.ts
-│   │   │   │   ├── async.ts
-│   │   │   │   ├── auth
-│   │   │   │   │   ├── AuthProvider.tsx
-│   │   │   │   │   ├── featureState.ts
-│   │   │   │   │   ├── index.ts
-│   │   │   │   │   ├── loginUrl.ts
-│   │   │   │   │   ├── sessionEvents.ts
-│   │   │   │   │   ├── useFeatureState.ts
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── device.ts
-│   │   │   │   ├── featureFlags.ts
-│   │   │   │   ├── featureStatus.ts
-│   │   │   │   ├── fonts.ts
-│   │   │   │   ├── lenis.ts
-│   │   │   │   ├── markdown
-│   │   │   │   │   ├── markdown.ts
-│   │   │   │   ├── navEvents.ts
-│   │   │   │   ├── productFacts.ts
-│   │   │   │   ├── query
-│   │   │   │   │   ├── hooks.ts
-│   │   │   │   │   ├── index.ts
-│   │   │   │   │   ├── keys.ts
-│   │   │   │   │   ├── QueryBoundary.tsx
-│   │   │   │   │   ├── queryClient.ts
-│   │   │   │   │   ├── QueryProvider.tsx
-│   │   │   │   ├── reducedMotion.ts
-│   │   │   │   ├── search
-│   │   │   │   │   ├── items.ts
-│   │   │   │   │   ├── useSearch.ts
-│   │   │   │   ├── share
-│   │   │   │   │   ├── target.ts
-│   │   │   │   ├── site.ts
-│   │   │   │   ├── split.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── utils.ts
-│   │   │   │   ├── workspace
-│   │   │   │   │   ├── analysis-run.ts
-│   │   │   │   │   ├── code-limits.ts
-│   │   │   │   │   ├── failure.ts
-│   │   │   │   │   ├── store.ts
-│   │   ├── tailwind.config.ts
-│   │   ├── tsconfig.json
-│   │   ├── tsconfig.tsbuildinfo
-├── docker-compose.yml
-├── env_dump.txt
-├── fahh.sh
-├── folder_structure.txt
-├── images
-│   ├── image1.png
-│   ├── image2.png
-│   ├── image3.png
-├── package.json
-├── packages
-│   ├── analysis
-│   │   ├── package.json
-│   │   ├── src
-│   │   │   ├── index.ts
-│   │   │   ├── schema.ts
-│   │   ├── tsconfig.json
-│   ├── contracts
-│   │   ├── package.json
-│   │   ├── src
-│   │   │   ├── admin.ts
-│   │   │   ├── algorithms.ts
-│   │   │   ├── analysis.ts
-│   │   │   ├── auth.ts
-│   │   │   ├── capabilities.ts
-│   │   │   ├── categories.ts
-│   │   │   ├── common.ts
-│   │   │   ├── errors.ts
-│   │   │   ├── explain.ts
-│   │   │   ├── health.ts
-│   │   │   ├── index.ts
-│   │   │   ├── limits.ts
-│   │   │   ├── openapi.ts
-│   │   │   ├── registry.ts
-│   │   │   ├── return-to.ts
-│   │   │   ├── routes.ts
-│   │   │   ├── search.ts
-│   │   │   ├── shares.ts
-│   │   │   ├── stored-results.ts
-│   │   │   ├── users.ts
-│   │   │   ├── visualizations.ts
-│   │   ├── tsconfig.json
-│   ├── db
-│   │   ├── .env
-│   │   ├── package.json
-│   │   ├── prisma
-│   │   │   ├── backfills
-│   │   │   │   ├── phase5_backfill.sql
-│   │   │   ├── make-admin.ts
-│   │   │   ├── migrations
-│   │   │   │   ├── 20260501175040_init
-│   │   │   │   │   ├── migration.sql
-│   │   │   │   ├── 20261104120000_phase4_auth_sessions
-│   │   │   │   │   ├── migration.sql
-│   │   │   │   ├── 20261104144224_phase5_data_model
-│   │   │   │   │   ├── migration.sql
-│   │   │   │   ├── migration_lock.toml
-│   │   │   ├── run-backfill.ts
-│   │   │   ├── schema.prisma
-│   │   │   ├── seed.ts
-│   │   │   ├── verify-phase5.ts
-│   │   ├── src
-│   │   │   ├── index.ts
-│   │   ├── tsconfig.json
-│   ├── forge
-│   │   ├── package.json
-│   │   ├── src
-│   │   │   ├── index.ts
-│   │   │   ├── recorder.ts
-│   │   │   ├── schemas.ts
-│   │   │   ├── types.ts
-│   │   ├── tsconfig.json
-│   ├── visualizer-core
-│   │   ├── package.json
-│   │   ├── src
-│   │   │   ├── analyze.ts
-│   │   │   ├── array
-│   │   │   │   ├── arrayEngine.ts
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   │   ├── catalog-scripts.ts
-│   │   │   ├── core
-│   │   │   │   ├── adapters
-│   │   │   │   │   ├── array.ts
-│   │   │   │   │   ├── graph.ts
-│   │   │   │   │   ├── hash.ts
-│   │   │   │   │   ├── linear.ts
-│   │   │   │   │   ├── linkedlist.ts
-│   │   │   │   │   ├── make.ts
-│   │   │   │   │   ├── tree.ts
-│   │   │   │   ├── ids.ts
-│   │   │   │   ├── index.ts
-│   │   │   │   ├── opMeta.generated.ts
-│   │   │   │   ├── registry.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   │   ├── graph
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── engine.ts
-│   │   │   │   ├── layout.ts
-│   │   │   │   ├── model.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   │   ├── hash
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── hashEngine.ts
-│   │   │   │   ├── hashing.ts
-│   │   │   │   ├── tableModel.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   │   ├── index.ts
-│   │   │   ├── linear
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── engine.ts
-│   │   │   │   ├── model.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   │   ├── linkedlist
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── engine.ts
-│   │   │   │   ├── model.ts
-│   │   │   │   ├── steps.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   │   ├── script
-│   │   │   │   ├── compile.ts
-│   │   │   │   ├── normalize.ts
-│   │   │   │   ├── parse.ts
-│   │   │   │   ├── schema.ts
-│   │   │   │   ├── suggest.ts
-│   │   │   ├── shared
-│   │   │   │   ├── edges.ts
-│   │   │   │   ├── ids.ts
-│   │   │   │   ├── stage
-│   │   │   │   │   ├── geometry.ts
-│   │   │   │   │   ├── tokens.ts
-│   │   │   ├── tree
-│   │   │   │   ├── bst.ts
-│   │   │   │   ├── complexity.ts
-│   │   │   │   ├── engine.ts
-│   │   │   │   ├── model.ts
-│   │   │   │   ├── steps.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── validate.ts
-│   │   ├── tsconfig.json
-│   │   ├── vitest.config.ts
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml
-├── README.md
-├── s.sh
-├── ss.sh
-├── sss.sh
-├── ssss.sh
-├── sssss.sh
+src/app/algos/[slug]/page.tsx(8,10): error TS2305: Module '"@/components/visualizers/script/compile"' has no exported member 'compileScript'.
+src/components/share/SharedView.tsx(11,10): error TS2305: Module '"@/components/visualizers/script/compile"' has no exported member 'compileScript'.
+src/components/visualizers/array/arrayEngine.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/array/arrayEngine' or its corresponding type declarations.
+src/components/visualizers/array/ArrayStage.tsx(7,10): error TS2305: Module '"./arrayEngine"' has no exported member 'fmt'.
+src/components/visualizers/array/ArrayStage.tsx(9,15): error TS2305: Module '"./types"' has no exported member 'ArrayState'.
+src/components/visualizers/array/ArrayStage.tsx(9,27): error TS2305: Module '"./types"' has no exported member 'Arrow'.
+src/components/visualizers/array/ArrayStage.tsx(9,34): error TS2305: Module '"./types"' has no exported member 'Item'.
+src/components/visualizers/array/ArrayStage.tsx(9,40): error TS2305: Module '"./types"' has no exported member 'MarkPointer'.
+src/components/visualizers/array/ArrayStage.tsx(137,40): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(138,40): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(200,26): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(228,25): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(328,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/array/types"' has no exported member 'ArrayState'.
+src/components/visualizers/array/ArrayStage.tsx(329,37): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/array/types"' has no exported member 'Anim'.
+src/components/visualizers/array/ArrayStage.tsx(355,32): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(355,38): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(358,31): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(358,58): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(361,29): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(361,70): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(700,53): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(702,84): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(707,63): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(707,90): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(741,26): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+src/components/visualizers/array/ArrayStage.tsx(741,34): error TS2322: Type 'unknown' is not assignable to type 'number'.
+src/components/visualizers/array/ArrayStage.tsx(744,30): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(744,36): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(778,33): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/ArrayStage.tsx(782,34): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/visualizers/array/complexity.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/array/complexity' or its corresponding type declarations.
+src/components/visualizers/array/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/array/types' or its corresponding type declarations.
+src/components/visualizers/array/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/array/validate' or its corresponding type declarations.
+src/components/visualizers/canvas/Group.tsx(5,15): error TS2305: Module '"../script/compile"' has no exported member 'InstanceMeta'.
+src/components/visualizers/canvas/renderers.tsx(4,15): error TS2305: Module '"../array/types"' has no exported member 'ArrayState'.
+src/components/visualizers/canvas/renderers.tsx(5,15): error TS2305: Module '"../script/compile"' has no exported member 'InstanceMeta'.
+src/components/visualizers/canvas/renderers.tsx(7,15): error TS2305: Module '"../graph/types"' has no exported member 'GraphState'.
+src/components/visualizers/canvas/renderers.tsx(9,15): error TS2305: Module '"../hash/types"' has no exported member 'TableState'.
+src/components/visualizers/canvas/renderers.tsx(9,27): error TS2305: Module '"../hash/types"' has no exported member 'Trace'.
+src/components/visualizers/canvas/renderers.tsx(11,15): error TS2305: Module '"../linear/types"' has no exported member 'LinearState'.
+src/components/visualizers/canvas/renderers.tsx(13,15): error TS2305: Module '"../linkedlist/types"' has no exported member 'ListState'.
+src/components/visualizers/canvas/renderers.tsx(15,15): error TS2305: Module '"../tree/types"' has no exported member 'TreeState'.
+src/components/visualizers/canvas/runtime.ts(1,15): error TS2305: Module '"../script/compile"' has no exported member 'Beat'.
+src/components/visualizers/canvas/runtime.ts(2,15): error TS2305: Module '"../core/types"' has no exported member 'AnyOutcome'.
+src/components/visualizers/canvas/VisualizerCanvas.tsx(30,68): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/canvas/VisualizerCanvas.tsx(43,37): error TS7006: Parameter 'inst' implicitly has an 'any' type.
+src/components/visualizers/core/adapters/array.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/array' or its corresponding type declarations.
+src/components/visualizers/core/adapters/graph.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/graph' or its corresponding type declarations.
+src/components/visualizers/core/adapters/hash.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/hash' or its corresponding type declarations.
+src/components/visualizers/core/adapters/linear.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/linear' or its corresponding type declarations.
+src/components/visualizers/core/adapters/linkedlist.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/linkedlist' or its corresponding type declarations.
+src/components/visualizers/core/adapters/make.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/make' or its corresponding type declarations.
+src/components/visualizers/core/adapters/tree.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/adapters/tree' or its corresponding type declarations.
+src/components/visualizers/core/ids.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/ids' or its corresponding type declarations.
+src/components/visualizers/core/index.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/index' or its corresponding type declarations.
+src/components/visualizers/core/opMeta.generated.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/opMeta.generated' or its corresponding type declarations.
+src/components/visualizers/core/registry.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/registry' or its corresponding type declarations.
+src/components/visualizers/core/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/types' or its corresponding type declarations.
+src/components/visualizers/core/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/core/validate' or its corresponding type declarations.
+src/components/visualizers/engine/controller.ts(1,10): error TS2305: Module '"../core/registry"' has no exported member 'findDsType'.
+src/components/visualizers/engine/controller.ts(2,15): error TS2305: Module '"../script/compile"' has no exported member 'Compiled'.
+src/components/visualizers/engine/controller.ts(2,25): error TS2305: Module '"../script/compile"' has no exported member 'Frame'.
+src/components/visualizers/engine/controller.ts(9,42): error TS7006: Parameter 'n' implicitly has an 'any' type.
+src/components/visualizers/engine/controller.ts(9,45): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/engine/scheduler.ts(1,15): error TS2305: Module '"../script/compile"' has no exported member 'Beat'.
+src/components/visualizers/engine/scheduler.ts(1,21): error TS2305: Module '"../script/compile"' has no exported member 'Frame'.
+src/components/visualizers/engine/selectors.ts(1,15): error TS2305: Module '"../script/compile"' has no exported member 'Beat'.
+src/components/visualizers/engine/selectors.ts(1,21): error TS2305: Module '"../script/compile"' has no exported member 'Compiled'.
+src/components/visualizers/engine/selectors.ts(1,31): error TS2305: Module '"../script/compile"' has no exported member 'Frame'.
+src/components/visualizers/engine/selectors.ts(43,85): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/components/visualizers/engine/store.ts(2,15): error TS2305: Module '"../script/compile"' has no exported member 'Compiled'.
+src/components/visualizers/engine/store.ts(2,25): error TS2305: Module '"../script/compile"' has no exported member 'Frame'.
+src/components/visualizers/engine/testing.ts(1,15): error TS2305: Module '"../script/compile"' has no exported member 'Beat'.
+src/components/visualizers/engine/types.ts(1,15): error TS2305: Module '"../script/compile"' has no exported member 'Beat'.
+src/components/visualizers/graph/complexity.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/graph/complexity' or its corresponding type declarations.
+src/components/visualizers/graph/engine.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/graph/engine' or its corresponding type declarations.
+src/components/visualizers/graph/GraphStage.tsx(5,10): error TS2305: Module '"../shared/edges"' has no exported member 'annotationArc'.
+src/components/visualizers/graph/GraphStage.tsx(5,30): error TS2305: Module '"../shared/edges"' has no exported member 'Box'.
+src/components/visualizers/graph/GraphStage.tsx(11,10): error TS2305: Module '"../shared/stage/tokens"' has no exported member 'COLOR_FADE'.
+src/components/visualizers/graph/GraphStage.tsx(11,22): error TS2305: Module '"../shared/stage/tokens"' has no exported member 'INK'.
+src/components/visualizers/graph/GraphStage.tsx(14,10): error TS2305: Module '"./engine"' has no exported member 'fmt'.
+src/components/visualizers/graph/GraphStage.tsx(15,10): error TS2305: Module '"./layout"' has no exported member 'G'.
+src/components/visualizers/graph/GraphStage.tsx(15,13): error TS2305: Module '"./layout"' has no exported member 'boxAt'.
+src/components/visualizers/graph/GraphStage.tsx(15,20): error TS2305: Module '"./layout"' has no exported member 'clampPos'.
+src/components/visualizers/graph/GraphStage.tsx(15,30): error TS2305: Module '"./layout"' has no exported member 'edgeGeo'.
+src/components/visualizers/graph/GraphStage.tsx(16,10): error TS2305: Module '"./model"' has no exported member 'connectivityOfState'.
+src/components/visualizers/graph/GraphStage.tsx(16,31): error TS2305: Module '"./model"' has no exported member 'edgeCount'.
+src/components/visualizers/graph/GraphStage.tsx(16,42): error TS2305: Module '"./model"' has no exported member 'edgeList'.
+src/components/visualizers/graph/GraphStage.tsx(16,52): error TS2305: Module '"./model"' has no exported member 'findReverse'.
+src/components/visualizers/graph/GraphStage.tsx(16,65): error TS2305: Module '"./model"' has no exported member 'propsText'.
+src/components/visualizers/graph/GraphStage.tsx(16,76): error TS2305: Module '"./model"' has no exported member 'vertexCount'.
+src/components/visualizers/graph/GraphStage.tsx(16,89): error TS2305: Module '"./model"' has no exported member 'vertexIds'.
+src/components/visualizers/graph/GraphStage.tsx(18,15): error TS2305: Module '"./types"' has no exported member 'Edge'.
+src/components/visualizers/graph/GraphStage.tsx(18,21): error TS2305: Module '"./types"' has no exported member 'GraphState'.
+src/components/visualizers/graph/GraphStage.tsx(18,33): error TS2305: Module '"./types"' has no exported member 'Pos'.
+src/components/visualizers/graph/GraphStage.tsx(22,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/graph/types"' has no exported member 'GraphState'.
+src/components/visualizers/graph/GraphStage.tsx(25,37): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/graph/types"' has no exported member 'Anim'.
+src/components/visualizers/graph/GraphStage.tsx(34,18): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/graph/types"' has no exported member 'GraphOp'.
+src/components/visualizers/graph/GraphStage.tsx(53,129): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(54,73): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(149,30): error TS7006: Parameter 'eid' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(149,35): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(216,32): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(216,36): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(221,30): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(252,26): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(252,30): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(391,34): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(394,24): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(395,21): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(405,29): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(427,45): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(440,45): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(440,77): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(450,225): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/graph/GraphStage.tsx(450,257): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/graph/layout.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/graph/layout' or its corresponding type declarations.
+src/components/visualizers/graph/model.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/graph/model' or its corresponding type declarations.
+src/components/visualizers/graph/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/graph/types' or its corresponding type declarations.
+src/components/visualizers/graph/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/graph/validate' or its corresponding type declarations.
+src/components/visualizers/hash/complexity.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/hash/complexity' or its corresponding type declarations.
+src/components/visualizers/hash/hashEngine.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/hash/hashEngine' or its corresponding type declarations.
+src/components/visualizers/hash/hashing.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/hash/hashing' or its corresponding type declarations.
+src/components/visualizers/hash/HashPipeline.tsx(2,10): error TS2305: Module '"./hashEngine"' has no exported member 'fmt'.
+src/components/visualizers/hash/HashPipeline.tsx(3,15): error TS2305: Module '"./types"' has no exported member 'Trace'.
+src/components/visualizers/hash/HashStage.tsx(7,10): error TS2305: Module '"./hashEngine"' has no exported member 'fmt'.
+src/components/visualizers/hash/HashStage.tsx(8,10): error TS2305: Module '"./hashing"' has no exported member 'MAX_LOAD_FACTOR'.
+src/components/visualizers/hash/HashStage.tsx(8,27): error TS2305: Module '"./hashing"' has no exported member 'fmtLoad'.
+src/components/visualizers/hash/HashStage.tsx(8,36): error TS2305: Module '"./hashing"' has no exported member 'hashOf'.
+src/components/visualizers/hash/HashStage.tsx(8,44): error TS2305: Module '"./hashing"' has no exported member 'hex'.
+src/components/visualizers/hash/HashStage.tsx(8,49): error TS2305: Module '"./hashing"' has no exported member 'loadFactor'.
+src/components/visualizers/hash/HashStage.tsx(11,10): error TS2305: Module '"./tableModel"' has no exported member 'sizeOf'.
+src/components/visualizers/hash/HashStage.tsx(12,15): error TS2305: Module '"./types"' has no exported member 'Entry'.
+src/components/visualizers/hash/HashStage.tsx(12,22): error TS2305: Module '"./types"' has no exported member 'EntryArrow'.
+src/components/visualizers/hash/HashStage.tsx(12,34): error TS2305: Module '"./types"' has no exported member 'TableState'.
+src/components/visualizers/hash/HashStage.tsx(41,65): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(73,36): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(74,35): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(122,23): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(172,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/hash/types"' has no exported member 'Kind'.
+src/components/visualizers/hash/HashStage.tsx(173,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/hash/types"' has no exported member 'TableState'.
+src/components/visualizers/hash/HashStage.tsx(174,15): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/hash/types"' has no exported member 'Trace'.
+src/components/visualizers/hash/HashStage.tsx(175,37): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/hash/types"' has no exported member 'Anim'.
+src/components/visualizers/hash/HashStage.tsx(196,38): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(196,41): error TS7006: Parameter 'bucket' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(196,59): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(196,66): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(479,24): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(479,28): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(657,32): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(657,35): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(676,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(676,39): error TS7006: Parameter 'bucket' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(677,22): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(677,29): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+src/components/visualizers/hash/HashStage.tsx(687,55): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/hash/tableModel.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/hash/tableModel' or its corresponding type declarations.
+src/components/visualizers/hash/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/hash/types' or its corresponding type declarations.
+src/components/visualizers/hash/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/hash/validate' or its corresponding type declarations.
+src/components/visualizers/linear/complexity.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linear/complexity' or its corresponding type declarations.
+src/components/visualizers/linear/engine.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linear/engine' or its corresponding type declarations.
+src/components/visualizers/linear/geometry.ts(1,15): error TS2305: Module '"./types"' has no exported member 'Kind'.
+src/components/visualizers/linear/LinearStage.tsx(7,10): error TS2305: Module '"./engine"' has no exported member 'fmt'.
+src/components/visualizers/linear/LinearStage.tsx(10,15): error TS2305: Module '"./types"' has no exported member 'Anim'.
+src/components/visualizers/linear/LinearStage.tsx(10,21): error TS2305: Module '"./types"' has no exported member 'Item'.
+src/components/visualizers/linear/LinearStage.tsx(10,27): error TS2305: Module '"./types"' has no exported member 'ItemArrow'.
+src/components/visualizers/linear/LinearStage.tsx(10,38): error TS2305: Module '"./types"' has no exported member 'Kind'.
+src/components/visualizers/linear/LinearStage.tsx(10,44): error TS2305: Module '"./types"' has no exported member 'LinearState'.
+src/components/visualizers/linear/LinearStage.tsx(10,57): error TS2305: Module '"./types"' has no exported member 'LogEntry'.
+src/components/visualizers/linear/LinearStage.tsx(57,36): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(58,35): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(109,23): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(212,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linear/types"' has no exported member 'Kind'.
+src/components/visualizers/linear/LinearStage.tsx(213,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linear/types"' has no exported member 'LinearState'.
+src/components/visualizers/linear/LinearStage.tsx(214,19): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linear/types"' has no exported member 'LogEntry'.
+src/components/visualizers/linear/LinearStage.tsx(215,37): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linear/types"' has no exported member 'Anim'.
+src/components/visualizers/linear/LinearStage.tsx(239,32): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(239,38): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(239,73): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(239,76): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(655,30): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(655,36): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/linear/LinearStage.tsx(670,53): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linear/model.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linear/model' or its corresponding type declarations.
+src/components/visualizers/linear/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linear/types' or its corresponding type declarations.
+src/components/visualizers/linear/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linear/validate' or its corresponding type declarations.
+src/components/visualizers/linkedlist/complexity.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linkedlist/complexity' or its corresponding type declarations.
+src/components/visualizers/linkedlist/engine.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linkedlist/engine' or its corresponding type declarations.
+src/components/visualizers/linkedlist/layout.ts(1,10): error TS2305: Module '"../shared/edges"' has no exported member 'linkEdge'.
+src/components/visualizers/linkedlist/layout.ts(1,25): error TS2305: Module '"../shared/edges"' has no exported member 'Box'.
+src/components/visualizers/linkedlist/layout.ts(1,35): error TS2305: Module '"../shared/edges"' has no exported member 'EdgeGeometry'.
+src/components/visualizers/linkedlist/layout.ts(2,10): error TS2305: Module '"./model"' has no exported member 'lengthOf'.
+src/components/visualizers/linkedlist/layout.ts(2,20): error TS2305: Module '"./model"' has no exported member 'orderOf'.
+src/components/visualizers/linkedlist/layout.ts(2,34): error TS2305: Module '"./model"' has no exported member 'Edge'.
+src/components/visualizers/linkedlist/layout.ts(3,15): error TS2305: Module '"./types"' has no exported member 'ListState'.
+src/components/visualizers/linkedlist/layout.ts(3,26): error TS2305: Module '"./types"' has no exported member 'ListType'.
+src/components/visualizers/linkedlist/layout.ts(37,20): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/layout.ts(37,24): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(6,10): error TS2305: Module '"../shared/edges"' has no exported member 'annotationArc'.
+src/components/visualizers/linkedlist/ListStage.tsx(6,30): error TS2305: Module '"../shared/edges"' has no exported member 'Box'.
+src/components/visualizers/linkedlist/ListStage.tsx(6,40): error TS2305: Module '"../shared/edges"' has no exported member 'EdgeGeometry'.
+src/components/visualizers/linkedlist/ListStage.tsx(8,10): error TS2305: Module '"./engine"' has no exported member 'fmt'.
+src/components/visualizers/linkedlist/ListStage.tsx(10,10): error TS2305: Module '"./model"' has no exported member 'TYPE_LABEL'.
+src/components/visualizers/linkedlist/ListStage.tsx(10,22): error TS2305: Module '"./model"' has no exported member 'edgesOf'.
+src/components/visualizers/linkedlist/ListStage.tsx(10,31): error TS2305: Module '"./model"' has no exported member 'lengthOf'.
+src/components/visualizers/linkedlist/ListStage.tsx(10,41): error TS2305: Module '"./model"' has no exported member 'orderOf'.
+src/components/visualizers/linkedlist/ListStage.tsx(10,50): error TS2305: Module '"./model"' has no exported member 'parseEdgeKey'.
+src/components/visualizers/linkedlist/ListStage.tsx(10,69): error TS2305: Module '"./model"' has no exported member 'Edge'.
+src/components/visualizers/linkedlist/ListStage.tsx(12,15): error TS2305: Module '"./types"' has no exported member 'ListState'.
+src/components/visualizers/linkedlist/ListStage.tsx(12,26): error TS2305: Module '"./types"' has no exported member 'ListType'.
+src/components/visualizers/linkedlist/ListStage.tsx(12,36): error TS2305: Module '"./types"' has no exported member 'Step'.
+src/components/visualizers/linkedlist/ListStage.tsx(53,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(54,36): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(99,25): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(200,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linkedlist/types"' has no exported member 'ListState'.
+src/components/visualizers/linkedlist/ListStage.tsx(201,19): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linkedlist/types"' has no exported member 'LogEntry'.
+src/components/visualizers/linkedlist/ListStage.tsx(203,37): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/linkedlist/types"' has no exported member 'Anim'.
+src/components/visualizers/linkedlist/ListStage.tsx(227,33): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(229,73): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(450,29): error TS7006: Parameter 'k' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(450,32): error TS7006: Parameter 'j' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(454,26): error TS7006: Parameter 'k' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(454,29): error TS7006: Parameter 'j' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(497,37): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(655,31): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(658,26): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(659,23): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(671,31): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(696,25): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(696,29): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/linkedlist/ListStage.tsx(735,10): error TS2305: Module '"../shared/edges"' has no exported member 'linkEdge'.
+src/components/visualizers/linkedlist/model.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linkedlist/model' or its corresponding type declarations.
+src/components/visualizers/linkedlist/steps.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linkedlist/steps' or its corresponding type declarations.
+src/components/visualizers/linkedlist/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linkedlist/types' or its corresponding type declarations.
+src/components/visualizers/linkedlist/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/linkedlist/validate' or its corresponding type declarations.
+src/components/visualizers/script/compile.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/script/compile' or its corresponding type declarations.
+src/components/visualizers/script/fixes.ts(1,15): error TS2305: Module '"../core/types"' has no exported member 'Diagnostic'.
+src/components/visualizers/script/index.ts(1,10): error TS2305: Module '"./compile"' has no exported member 'compileScript'.
+src/components/visualizers/script/index.ts(1,25): error TS2305: Module '"./compile"' has no exported member 'compileValue'.
+src/components/visualizers/script/index.ts(1,39): error TS2305: Module '"./compile"' has no exported member 'LIMITS'.
+src/components/visualizers/script/index.ts(2,15): error TS2305: Module '"./compile"' has no exported member 'Beat'.
+src/components/visualizers/script/index.ts(2,21): error TS2305: Module '"./compile"' has no exported member 'Compiled'.
+src/components/visualizers/script/index.ts(2,31): error TS2305: Module '"./compile"' has no exported member 'Frame'.
+src/components/visualizers/script/index.ts(2,38): error TS2305: Module '"./compile"' has no exported member 'InstanceMeta'.
+src/components/visualizers/script/index.ts(3,10): error TS2305: Module '"./schema"' has no exported member 'buildScriptSchema'.
+src/components/visualizers/script/markers.ts(1,15): error TS2305: Module '"../core/types"' has no exported member 'Diagnostic'.
+src/components/visualizers/script/markers.ts(18,19): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly info: 2; readonly warning: 4; readonly error: 8; }'.
+src/components/visualizers/script/normalize.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/script/normalize' or its corresponding type declarations.
+src/components/visualizers/script/parse.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/script/parse' or its corresponding type declarations.
+src/components/visualizers/script/schema.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/script/schema' or its corresponding type declarations.
+src/components/visualizers/script/suggest.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/script/suggest' or its corresponding type declarations.
+src/components/visualizers/shared/edges.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/shared/edges' or its corresponding type declarations.
+src/components/visualizers/shared/ids.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/shared/ids' or its corresponding type declarations.
+src/components/visualizers/shared/stage/EdgeG.tsx(2,10): error TS2305: Module '"./tokens"' has no exported member 'COLOR_FADE'.
+src/components/visualizers/shared/stage/EdgeG.tsx(3,15): error TS2305: Module '"./geometry"' has no exported member 'EdgeGeo'.
+src/components/visualizers/shared/stage/geometry.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/shared/stage/geometry' or its corresponding type declarations.
+src/components/visualizers/shared/stage/motion.ts(2,10): error TS2305: Module '"./tokens"' has no exported member 'INK'.
+src/components/visualizers/shared/stage/NodeDisc.tsx(4,15): error TS2305: Module '"../edges"' has no exported member 'Box'.
+src/components/visualizers/shared/stage/NodeDisc.tsx(5,10): error TS2305: Module '"./tokens"' has no exported member 'COLOR_FADE'.
+src/components/visualizers/shared/stage/NodeDisc.tsx(5,22): error TS2305: Module '"./tokens"' has no exported member 'INK'.
+src/components/visualizers/shared/stage/tokens.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/shared/stage/tokens' or its corresponding type declarations.
+src/components/visualizers/shared/stage/useStageAnimator.ts(5,10): error TS2305: Module '"../edges"' has no exported member 'annotationArc'.
+src/components/visualizers/shared/stage/useStageAnimator.ts(5,30): error TS2305: Module '"../edges"' has no exported member 'Box'.
+src/components/visualizers/shared/stage/useStageAnimator.ts(7,10): error TS2305: Module '"./geometry"' has no exported member 'edgeCurve'.
+src/components/visualizers/shared/stage/useStageAnimator.ts(9,10): error TS2305: Module '"./tokens"' has no exported member 'INK'.
+src/components/visualizers/tree/bst.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/bst' or its corresponding type declarations.
+src/components/visualizers/tree/complexity.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/complexity' or its corresponding type declarations.
+src/components/visualizers/tree/engine.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/engine' or its corresponding type declarations.
+src/components/visualizers/tree/layout.ts(1,10): error TS2305: Module '"../shared/edges"' has no exported member 'straightEdge'.
+src/components/visualizers/tree/layout.ts(1,29): error TS2305: Module '"../shared/edges"' has no exported member 'Box'.
+src/components/visualizers/tree/layout.ts(1,39): error TS2305: Module '"../shared/edges"' has no exported member 'EdgeGeometry'.
+src/components/visualizers/tree/layout.ts(2,10): error TS2305: Module '"./model"' has no exported member 'lengthOf'.
+src/components/visualizers/tree/layout.ts(3,15): error TS2305: Module '"./types"' has no exported member 'TreeState'.
+src/components/visualizers/tree/layout.ts(58,29): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/components/visualizers/tree/layout.ts(58,32): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/tree/model.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/model' or its corresponding type declarations.
+src/components/visualizers/tree/steps.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/steps' or its corresponding type declarations.
+src/components/visualizers/tree/TreeStage.tsx(6,10): error TS2305: Module '"../shared/edges"' has no exported member 'annotationArc'.
+src/components/visualizers/tree/TreeStage.tsx(10,10): error TS2305: Module '"../shared/stage/geometry"' has no exported member 'edgeCurve'.
+src/components/visualizers/tree/TreeStage.tsx(13,10): error TS2305: Module '"../shared/stage/tokens"' has no exported member 'COLOR_FADE'.
+src/components/visualizers/tree/TreeStage.tsx(13,22): error TS2305: Module '"../shared/stage/tokens"' has no exported member 'INK'.
+src/components/visualizers/tree/TreeStage.tsx(16,10): error TS2305: Module '"./engine"' has no exported member 'fmt'.
+src/components/visualizers/tree/TreeStage.tsx(18,10): error TS2305: Module '"./model"' has no exported member 'TYPE_LABEL'.
+src/components/visualizers/tree/TreeStage.tsx(18,22): error TS2305: Module '"./model"' has no exported member 'activeIds'.
+src/components/visualizers/tree/TreeStage.tsx(18,33): error TS2305: Module '"./model"' has no exported member 'edgesOf'.
+src/components/visualizers/tree/TreeStage.tsx(18,42): error TS2305: Module '"./model"' has no exported member 'heightOf'.
+src/components/visualizers/tree/TreeStage.tsx(18,52): error TS2305: Module '"./model"' has no exported member 'lengthOf'.
+src/components/visualizers/tree/TreeStage.tsx(18,62): error TS2305: Module '"./model"' has no exported member 'parseEdgeKey'.
+src/components/visualizers/tree/TreeStage.tsx(18,81): error TS2305: Module '"./model"' has no exported member 'Edge'.
+src/components/visualizers/tree/TreeStage.tsx(20,15): error TS2305: Module '"./types"' has no exported member 'Step'.
+src/components/visualizers/tree/TreeStage.tsx(34,14): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/tree/types"' has no exported member 'TreeState'.
+src/components/visualizers/tree/TreeStage.tsx(35,19): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/tree/types"' has no exported member 'LogEntry'.
+src/components/visualizers/tree/TreeStage.tsx(37,37): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/tree/types"' has no exported member 'Anim'.
+src/components/visualizers/tree/TreeStage.tsx(43,18): error TS2694: Namespace '"C:/Users/rauna/Dev/algoforge/apps/web/src/components/visualizers/tree/types"' has no exported member 'TreeOp'.
+src/components/visualizers/tree/TreeStage.tsx(58,47): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(67,33): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(69,35): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(69,56): error TS7006: Parameter 'k' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(71,73): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(122,31): error TS7006: Parameter 'k' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(122,34): error TS7006: Parameter 'j' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(126,28): error TS7006: Parameter 'k' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(126,31): error TS7006: Parameter 'j' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(171,37): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(171,66): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(212,26): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(212,30): error TS7006: Parameter 'k' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(244,26): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(244,30): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(397,33): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(400,24): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(401,21): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(413,29): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(450,45): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(463,45): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(463,75): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(475,201): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/tree/TreeStage.tsx(475,231): error TS7006: Parameter 'mk' implicitly has an 'any' type.
+src/components/visualizers/tree/types.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/types' or its corresponding type declarations.
+src/components/visualizers/tree/validate.ts(1,15): error TS2307: Cannot find module '@algoforge/visualizer-core/src/tree/validate' or its corresponding type declarations.
+src/components/visualizers/ui/describe.ts(3,15): error TS2305: Module '"../script/compile"' has no exported member 'Compiled'.
+src/components/visualizers/ui/ScriptDrawer.tsx(5,15): error TS2305: Module '"../core/types"' has no exported member 'Diagnostic'.
+src/components/visualizers/ui/ScriptDrawer.tsx(8,10): error TS2305: Module '"../script/compile"' has no exported member 'compileScript'.
+src/components/visualizers/ui/ScriptEditor.tsx(6,15): error TS2305: Module '"../core/types"' has no exported member 'Diagnostic'.
+src/components/visualizers/ui/ScriptEditor.tsx(8,10): error TS2305: Module '"../script/schema"' has no exported member 'buildScriptSchema'.
+src/lib/workspace/VisualizerApi.ts(87,58): error TS7006: Parameter 'd' implicitly has an 'any' type.

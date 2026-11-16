@@ -15,5 +15,19 @@
   "devDependencies": {
     "typescript": "^5.9.3",
     "vitest": "^5.0.5"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./catalog-scripts": {
+      "types": "./src/catalog-scripts/index.ts",
+      "default": "./src/catalog-scripts/index.ts"
+    },
+    "./src/*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
   }
 }

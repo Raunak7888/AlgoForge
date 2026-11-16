@@ -3,9 +3,9 @@
    2 analyses, 2 chat sessions with 6 messages, 2 visualizations (one a fork),
    3 shares, 2 AI usage rows and 2 audit-log rows. Demo emails use the reserved .invalid TLD.
    Sessions/accounts are intentionally not seeded (they hold auth tokens). */
-import { createHash } from "node:crypto";
+import { createHash } from "crypto";
 import { prisma, Difficulty, Role, Prisma } from "../src/index";
-import { CATALOG_SCRIPTS } from "@algoforge/visualizer-core/src/catalog-scripts";
+import { CATALOG_SCRIPTS } from "@algoforge/visualizer-core/src/catalog-scripts/index";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Refusing to seed: NODE_ENV=production.");
@@ -151,43 +151,6 @@ const dfsPy = `def dfs(graph, start, seen=None):
             order.extend(dfs(graph, nxt, seen))
     return order`;
 
-// Visualizer scripts in the frontend's JSON script format (see Phase 6 for the shared compiler).
-const scripts: Record<string, string> = {
-  "bubble-sort": JSON.stringify(
-    [
-      { step: 1, id: "A", ds: "array", op: "initialize", values: [5, 3, 8, 1] },
-      { step: 2, id: "A", op: "swap", indexA: 0, indexB: 1 },
-      { step: 2, message: "5 > 3, so the two are swapped." },
-      { step: 3, id: "A", op: "swap", indexA: 2, indexB: 3 },
-      { step: 3, message: "8 > 1, so they are swapped." },
-    ],
-    null,
-    2,
-  ),
-  "linear-search": JSON.stringify(
-    [
-      { step: 1, id: "A", ds: "array", op: "initialize", values: [4, 8, 15, 16] },
-      { step: 2, id: "A", op: "highlight", index: 0, color: "#FF430F" },
-      { step: 2, message: "Check index 0: 4 is not 15." },
-      { step: 3, id: "A", op: "highlight", index: 2, color: "#17A34A" },
-      { step: 3, message: "Index 2 holds 15: found." },
-    ],
-    null,
-    2,
-  ),
-  "binary-search": JSON.stringify(
-    [
-      { step: 1, id: "A", ds: "array", op: "initialize", values: [1, 3, 5, 7, 9, 11] },
-      { step: 2, id: "A", op: "highlight", index: 2, color: "#FF430F" },
-      { step: 2, message: "mid = 2 holds 5, which is smaller than 9: search the right half." },
-      { step: 3, id: "A", op: "highlight", index: 4, color: "#17A34A" },
-      { step: 3, message: "mid = 4 holds 9: found." },
-    ],
-    null,
-    2,
-  ),
-};
-
 const algorithms = [
   { slug: "bubble-sort", name: "Bubble Sort", categoryId: "sorting", difficulty: Difficulty.beginner,
     description: "Repeatedly swaps adjacent elements that are out of order until the array is sorted.",
@@ -241,7 +204,8 @@ async function main() {
   let order = 0;
   for (const a of algorithms) {
     order += 1;
-    const script = CATALOG_SCRIPTS[a.slug] ?? scripts[a.slug] ?? null;
+    const script = CATALOG_SCRIPTS[a.slug] ?? null;
+
     const fields = {
       name: a.name, description: a.description, categoryId: a.categoryId, difficulty: a.difficulty,
       isPublished: true, timeBest: a.timeBest, timeAverage: a.timeAverage, timeWorst: a.timeWorst,
@@ -351,14 +315,14 @@ async function main() {
     where: { id: "seed_viz_1" }, update: {},
     create: {
       id: "seed_viz_1", userId: learner.id, title: "Bubble sort, first pass", description: "Two swaps on a four-element array.",
-      script: scripts["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1,
+      script: CATALOG_SCRIPTS["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1,
     },
   });
   await prisma.visualization.upsert({
     where: { id: "seed_viz_2" }, update: {},
     create: {
       id: "seed_viz_2", userId: admin.id, title: "Bubble sort (copy)", description: "A fork of the learner's visualization.",
-      script: scripts["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1, forkedFromId: "seed_viz_1",
+      script: CATALOG_SCRIPTS["bubble-sort"], structures: json(structures), stepCount: 3, schemaVersion: 1, forkedFromId: "seed_viz_1",
     },
   });
   await prisma.share.upsert({

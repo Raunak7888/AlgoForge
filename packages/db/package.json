@@ -1,33 +1,33 @@
 {
-  "name": "@algoforge/db",
-  "version": "1.0.0",
-  "private": true,
-  "main": "./src/index.ts",
-  "scripts": {
-    "migrate": "prisma migrate dev",
-    "generate": "prisma generate",
-    "studio": "prisma studio",
-    "build": "prisma generate",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts",
-    "reset": "prisma migrate reset",
-    "typecheck": "tsc --noEmit",
-    "make-admin": "tsx prisma/make-admin.ts",
-    "verify:phase5": "tsx prisma/verify-phase5.ts",
-    "backfill:phase5": "tsx prisma/run-backfill.ts"
-  },
-  "dependencies": {
-    "@prisma/client": "5.22.0"
-  },
-  "devDependencies": {
-    "@algoforge/visualizer-core": "workspace:*",
-    "@types/node": "^24.0.0",
-    "prisma": "^5.22.0",
-    "tsx": "^4.20.0",
-    "typescript": "^5.9.3"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  }
+    "name": "@algoforge/db",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./src/index.ts",
+    "scripts": {
+        "migrate": "prisma migrate dev",
+        "generate": "prisma generate",
+        "studio": "prisma studio",
+        "build": "prisma generate",
+        "migrate:dev": "prisma migrate dev",
+        "migrate:deploy": "prisma migrate deploy",
+        "seed": "tsx prisma/seed.ts",
+        "reset": "prisma migrate reset",
+        "typecheck": "tsc --noEmit",
+        "make-admin": "tsx prisma/make-admin.ts",
+        "verify:phase5": "tsx prisma/verify-phase5.ts",
+        "backfill:phase5": "tsx prisma/run-backfill.ts"
+    },
+    "dependencies": {
+        "@prisma/client": "5.22.0",
+        "@algoforge/visualizer-core": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/node": "^24.0.0",
+        "prisma": "^5.22.0",
+        "tsx": "^4.20.0",
+        "typescript": "^5.9.3"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
+    }
 }
