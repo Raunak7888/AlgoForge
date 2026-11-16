@@ -9,6 +9,7 @@ import { logger, serializeError } from "../utils/logger";
 import { paginate } from "../utils/pagination";
 import { encodeSessionCursor, type ListMessagesQuery, type ListSessionsQuery } from "../validation/explanation-session";
 import { aiService } from "./ai.service";
+import type { AIUsage } from "./providers/ai-provider";
 import { aiUsageService } from "./ai-usage.service";
 import { layeredCache } from "./lib/layered-cache";
 import { quotaService } from "./quota.service";
@@ -76,21 +77,24 @@ class ExplanationSessionService {
 
     const reservation = await quotaService.reserve(userId, "session");
     let answer: string;
+    let usage: AIUsage = { tokensIn: 0, tokensOut: 0 };
     try {
-      answer = (
-        await aiService.generateText(messages, {
+      const generated = (
+        await aiService.generateTextWithUsage(messages, {
           timeoutMs: env.ai.assistantTimeoutMs,
           maxOutputTokens: env.ai.assistantMaxOutputTokens,
           ...(signal ? { signal } : {}),
         })
-      ).trim();
+      );
+      answer = generated.content.trim();
+      usage = generated.usage;
       if (answer === "") throw AppError.aiInvalidOutput();
     } catch (error) {
       await reservation.release();
       throw error;
     }
     try {
-      await aiUsageService.record(userId, "session");
+      await aiUsageService.record(userId, "session", usage);
     } catch (error) {
       logger.warn("ai usage could not be recorded", { userId, ...serializeError(error) });
     }

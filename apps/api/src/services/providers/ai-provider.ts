@@ -16,10 +16,14 @@ export type AIGenerateRequest = {
   signal?: AbortSignal;
 };
 
+export type AIUsage = { tokensIn: number; tokensOut: number };
+
 export type AIGenerateResponse = {
   model: string;
   message: AIMessage;
   history: AIMessage[];
+  /** Token counts reported by the provider. */
+  usage?: AIUsage;
 };
 
 export interface AIProvider {

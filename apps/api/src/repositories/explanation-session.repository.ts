@@ -1,4 +1,4 @@
-import { prisma, type Prisma } from "@algoforge/db";
+import { prisma } from "@algoforge/db";
 import { AppError } from "../utils/app-error";
 import { explanationMessageRowId } from "./explanation-message.repository";
 import { LIMITS } from "@algoforge/contracts";
@@ -70,7 +70,7 @@ export const explanationSessionRepository = {
   /**
    * Appends one question + answer as seq n+1 and n+2. The session row is locked (SELECT ... FOR UPDATE),
    * so two concurrent exchanges are serialized and can never overwrite or interleave (A-08).
-   * The legacy JSON column is mirrored until Phase 9 moves sharing to the rows (verify:phase5 and public shares read it).
+   * The legacy JSON `messages` column is no longer written: the message rows are the only source.
    */
   appendExchange(
     sessionId: string,
@@ -94,14 +94,14 @@ export const explanationSessionRepository = {
         ],
       });
 
-      const rows = await tx.explanationMessage.findMany({ where: { sessionId }, orderBy: { seq: "asc" } });
-      const mirror = rows.map((r) => ({ id: r.id, role: r.role, content: r.content, ...(r.intent ? { intent: r.intent } : {}), createdAt: r.createdAt.toISOString() }));
+      const rows = await tx.explanationMessage.findMany({ where: { sessionId, seq: { gte: last + 1 } }, orderBy: { seq: "asc" } });
+      // Bump updatedAt (the chat sorts by it) and set the title once.
       await tx.explanationSession.updateMany({
         where: { id: sessionId, userId },
-        data: { messages: mirror as unknown as Prisma.InputJsonValue, ...(row.title ? {} : { title: input.title }) },
+        data: { updatedAt: new Date(), ...(row.title ? {} : { title: input.title }) },
       });
 
-      return { userMessage: toMessageRow(rows[rows.length - 2]), assistantMessage: toMessageRow(rows[rows.length - 1]) };
+      return { userMessage: toMessageRow(rows[0]), assistantMessage: toMessageRow(rows[1]) };
     });
   },
 

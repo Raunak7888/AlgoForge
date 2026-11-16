@@ -9,7 +9,11 @@ import { btn, btnPrimary } from "@/components/visualizers/shared/styles";
 import { useAnalysisQuota, useCapabilities } from "@/lib/query";
 import { runAnalysis } from "@/lib/workspace/analysis-run";
 import { useWorkspace } from "@/lib/workspace/store";
-import { ANALYSIS_COPY, ResultsScreen, SampleAnalysisPanel } from "./Analysis";
+import dynamic from "next/dynamic";
+import { ANALYSIS_COPY, ResultsScreen } from "./Analysis";
+
+// Development-only sample report: loaded on demand, never part of the production path.
+const SampleAnalysisPanel = dynamic(() => import("./SampleAnalysis").then((m) => m.SampleAnalysisPanel), { ssr: false });
 
 const LANGUAGE_LABEL = { javascript: "JavaScript", python: "Python" } as const;
 const noop = () => {};

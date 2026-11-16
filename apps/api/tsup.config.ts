@@ -7,7 +7,7 @@ export default defineConfig({
   entry: ["src/server.ts"],
   format: ["cjs"],
   platform: "node",
-  target: "node20",
+  target: "node24",
   outDir: "dist",
   clean: true,
   sourcemap: true,

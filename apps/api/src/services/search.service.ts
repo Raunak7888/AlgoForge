@@ -15,7 +15,7 @@ class SearchService {
         id: a.id,
         title: a.name,
         description: a.description,
-        href: `/algorithms/${encodeURIComponent(a.slug)}`,
+        href: `/algos/${encodeURIComponent(a.slug)}`,
       })),
       ...visualizations.map((v) => ({
         type: "visualization" as const,

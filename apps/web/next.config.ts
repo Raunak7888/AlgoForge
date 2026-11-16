@@ -28,6 +28,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/algorithms", destination: "/algos", permanent: true },
+      { source: "/algorithms/:slug", destination: "/algos/:slug", permanent: true },
       { source: "/share/analysis/:id", destination: "/s/:id", permanent: false },
       { source: "/share/explain/:id", destination: "/s/:id", permanent: false },
     ];

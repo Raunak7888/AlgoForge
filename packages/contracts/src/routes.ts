@@ -9,6 +9,7 @@ import { CreateShareRequestSchema, PublicShareResponseSchema, ShareListQuerySche
 import { CreateExplainSessionRequestSchema, ExplainMessageListQuerySchema, ExplainMessageListResponseSchema, ExplainSessionDetailSchema, ExplainSessionListQuerySchema, ExplainSessionListResponseSchema, ExplainSessionSummarySchema, SendMessageRequestSchema, SendMessageResponseSchema, SharedExplainSessionResponseSchema, UpdateExplainSessionRequestSchema } from "./explain";
 import { HealthResponseSchema, ReadyResponseSchema } from "./health";
 import { CapabilitiesResponseSchema } from "./capabilities";
+import { SaveWorkspaceDraftRequestSchema, SaveWorkspaceDraftResponseSchema, WorkspaceDraftResponseSchema } from "./drafts";
 import { DeviceSessionListResponseSchema, UpdateProfileRequestSchema } from "./users";
 import { SearchQuerySchema, SearchResponseSchema } from "./search";
 import { CreateVisualizationRequestSchema, GenerateVisualizationRequestSchema, GenerateVisualizationResponseSchema, UpdateVisualizationRequestSchema, ValidateScriptRequestSchema, ValidateScriptResponseSchema, VisualizationListQuerySchema, VisualizationListResponseSchema, VisualizationSchema } from "./visualizations";
@@ -105,6 +106,8 @@ export const routes: readonly RouteDef[] = [
   { id: "visualizationsDelete", method: "delete", path: "/api/visualizations/{id}", summary: "Delete one of my visualizations", tag: "Visualizations", auth: "user", csrf: true, rateLimit: "general", params: IdParamsSchema, responses: { 204: "empty" } },
 
   { id: "search", method: "get", path: "/api/search", summary: "Search published algorithms (and my saved visualizations when signed in)", tag: "Search", auth: "optional", csrf: false, rateLimit: "general", query: SearchQuerySchema, responses: { 200: SearchResponseSchema } },
+  { id: "draftsGet", method: "get", path: "/api/drafts/workspace", summary: "My autosaved editor draft", tag: "Drafts", auth: "user", csrf: false, rateLimit: "general", responses: { 200: WorkspaceDraftResponseSchema } },
+  { id: "draftsSave", method: "patch", path: "/api/drafts/workspace", summary: "Save my editor draft (kept only when newer than the stored one)", tag: "Drafts", auth: "user", csrf: true, rateLimit: "general", body: SaveWorkspaceDraftRequestSchema, responses: { 200: SaveWorkspaceDraftResponseSchema } },
   { id: "metaCapabilities", method: "get", path: "/api/meta/capabilities", summary: "What this server can do, and its size limits", tag: "Meta", auth: "none", csrf: false, responses: { 200: CapabilitiesResponseSchema } },
 ];
 

@@ -28,8 +28,8 @@ const features: Feature[] = [
         description: "A report with complexity, bottlenecks and edge cases. The report screen is built; the analysis engine is not connected yet, so it shows a fixed sample. Real analysis will need an account.",
     },
     {
-        id: "explainer", icon: MessageMultiple01Icon, title: "AI Explainer", short: "Plain-English breakdowns", tag: "Learn", index: "03", status: "planned",
-        description: "Plain-language walkthroughs of an algorithm. Not built yet.",
+        id: "explainer", icon: MessageMultiple01Icon, title: "AI Explainer", short: "Plain-English breakdowns", tag: "Learn", index: "03", status: "available",
+        description: "An AI tutor that sees your code, your script and the step on screen. Needs an account.",
     },
     {
         id: "optimization", icon: TrendingUp, title: "Optimization Hints", short: "Suggested rewrites", tag: "Optimize", index: "04", status: "planned",

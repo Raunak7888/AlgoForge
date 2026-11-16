@@ -49,6 +49,11 @@ export class GeminiProvider implements AIProvider {
         model: this.config.model,
         message,
         history: [...request.messages, message],
+        usage: {
+          tokensIn: response.usageMetadata?.promptTokenCount ?? 0,
+          // Thinking tokens are billed as output.
+          tokensOut: (response.usageMetadata?.candidatesTokenCount ?? 0) + (response.usageMetadata?.thoughtsTokenCount ?? 0),
+        },
       };
     } catch (error) {
       if (error instanceof AppError) throw error;

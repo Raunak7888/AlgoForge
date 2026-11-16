@@ -12,7 +12,7 @@ import { aiUsageService } from "./ai-usage.service";
  *    fallback when Redis is down. Minute counters fall back to process memory.
  *  - A reservation is released when the AI call fails, so provider problems never cost quota.
  */
-export type QuotaFeature = "analysis" | "session";
+export type QuotaFeature = "analysis" | "session" | "visualize";
 
 export interface QuotaWindow {
   limit: number;
@@ -98,6 +98,7 @@ interface TakeArgs {
 
 class QuotaService {
   private limits(feature: QuotaFeature): { minute: number; day: number } {
+    if (feature === "visualize") return { minute: env.quotas.visualizePerMinute, day: env.quotas.visualizePerDay };
     return feature === "session"
       ? { minute: env.quotas.assistantPerMinute, day: env.quotas.assistantPerDay }
       : { minute: env.quotas.analysisPerMinute, day: env.quotas.analysisPerDay };
@@ -121,7 +122,7 @@ class QuotaService {
   private exceeded(scope: "minute" | "day", limit: number, resetAtMs: number, now: Date, feature: QuotaFeature = "analysis"): AppError {
     const retryAfterSeconds = Math.max(1, Math.ceil((resetAtMs - now.getTime()) / 1000));
     const quota: QuotaInfo = { scope, limit, remaining: 0, resetAt: new Date(resetAtMs).toISOString() };
-    const what = feature === "session" ? "assistant message" : "analysis";
+    const what = feature === "session" ? "assistant message" : feature === "visualize" ? "visualization" : "analysis";
     const message =
       scope === "day"
         ? `Daily ${what} limit reached (${limit} per day). You can try again at ${quota.resetAt}.`

@@ -6,19 +6,14 @@ import { gsap } from "gsap";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TwitterIcon, Linkedin01Icon, GithubIcon, Facebook01Icon, InstagramIcon } from "@hugeicons/core-free-icons";
 import AlgoForgeLogo from "../Logo";
-import { DASHBOARD_HREF, SITE } from "@/lib/site";
+import { DASHBOARD_HREF, SITE, SOCIAL_LINKS, type SocialLabel } from "@/lib/site";
 import type { IconSvgObject } from "@/lib/types";
 import { prefersReducedMotion } from "@/lib/reducedMotion";
 import { Buddy } from "./shared";
 
-// ✏️ EDIT THESE: put your real profile URLs here.
-const SOCIALS: { label: string; href: string; icon: IconSvgObject }[] = [
-    { label: "GitHub", href: "https://github.com/your-username", icon: GithubIcon },
-    { label: "Instagram", href: "https://instagram.com/your-username", icon: InstagramIcon },
-    { label: "X", href: "https://x.com/your-username", icon: TwitterIcon },
-    { label: "LinkedIn", href: "https://linkedin.com/in/your-username", icon: Linkedin01Icon },
-    { label: "Facebook", href: "https://facebook.com/your-username", icon: Facebook01Icon },
-];
+const SOCIAL_ICONS: Record<SocialLabel, IconSvgObject> = { GitHub: GithubIcon, LinkedIn: Linkedin01Icon, Twitter: TwitterIcon, Facebook: Facebook01Icon, Instagram: InstagramIcon };
+// Real profile URLs live in lib/site.ts (SOCIAL_LINKS). With none listed, the Follow column is hidden.
+const SOCIALS = SOCIAL_LINKS.map((l) => ({ ...l, icon: SOCIAL_ICONS[l.label] }));
 
 const LINK_GROUPS: { title: string; links: { label: string; href: string }[] }[] = [
     {
@@ -36,6 +31,9 @@ const LINK_GROUPS: { title: string; links: { label: string; href: string }[] }[]
         links: [
             { label: "Product tour", href: "#watch" },
             { label: "Open the visualizer", href: DASHBOARD_HREF },
+            { label: "Algorithms", href: "/algos" },
+            { label: "Terms", href: "/terms" },
+            { label: "Privacy", href: "/privacy" },
         ],
     },
 ];
@@ -94,7 +92,7 @@ const Footer = () => {
                         </nav>
                     ))}
 
-                    <div className="footer-item col-span-2 lg:col-span-1">
+                    <div className={`footer-item col-span-2 lg:col-span-1 ${SOCIALS.length === 0 ? "hidden" : ""}`}>
                         <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/45">
                             Follow
                         </h3>

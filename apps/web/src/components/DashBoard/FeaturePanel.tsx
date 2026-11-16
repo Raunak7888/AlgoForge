@@ -3,10 +3,8 @@
 import dynamic from "next/dynamic";
 import { FeatureGate, type FeatureCopy } from "@/components/auth/FeatureGate";
 import AnalysisFeature from "./AnalysisFeature";
-import AnalysisHistory from "./analysis-history";
 import RealHistory from "./AnalysisHistoryFeature";
 import type { FeatureType } from "./DashBoard";
-import { SAMPLE_HISTORY, SAMPLE_META } from "@/data/samples/analysisHistory";
 
 // Loaded only when the Visualizer tab is opened: keeps Monaco, anime.js and the canvas out of the main bundle.
 const VisualizerPanel = dynamic(() => import("../visualizers/ui/VisualizerPanel").then((m) => m.VisualizerPanel), {
@@ -14,7 +12,7 @@ const VisualizerPanel = dynamic(() => import("../visualizers/ui/VisualizerPanel"
     loading: () => <div aria-busy aria-label="Loading visualizer" className="h-full animate-pulse rounded-xl bg-primary-foreground/5" />,
 });
 
-const noop = () => {};
+const SampleHistory = dynamic(() => import("./SampleHistory"), { ssr: false });
 
 const HISTORY_COPY: FeatureCopy = {
     signInTitle: "Sign in to see your history",
@@ -34,7 +32,7 @@ export default function FeaturePanel({ activeFeature }: { activeFeature: Feature
                 <FeatureGate
                     feature="analysis"
                     copy={HISTORY_COPY}
-                    preview={<AnalysisHistory items={SAMPLE_HISTORY} meta={SAMPLE_META} sample onLoadMore={noop} />}
+                    preview={<SampleHistory />}
                     ready={<RealHistory />}
                 />
             )}

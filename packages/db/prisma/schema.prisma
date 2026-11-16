@@ -30,12 +30,7 @@ enum AiFeature {
   analysis
   explain
   session
-}
-
-enum ExplanationContextType {
-  none
-  algorithm
-  visualization
+  visualize
 }
 
 enum ExplanationMessageRole {
@@ -62,6 +57,7 @@ model User {
   shares              Share[]
   aiUsage             AiUsage[]
   auditLogs           AuditLog[]
+  workspaceDraft      WorkspaceDraft?
   createdAlgorithms   Algorithm[]
 
   @@index([email])
@@ -141,8 +137,6 @@ model ExplanationSession {
   isPublic    Boolean                @default(false) @map("is_public")
   messages    Json                   @default("[]") // Array of SessionMessage objects
   // Phase 5 additions
-  contextType ExplanationContextType @default(none) @map("context_type")
-  contextId   String?                @map("context_id")
   createdAt   DateTime               @default(now()) @map("created_at")
   updatedAt   DateTime               @updatedAt @map("updated_at")
 
@@ -348,4 +342,18 @@ model AlgorithmTag {
 
   @@id([algorithmId, tagId])
   @@map("algorithm_tags")
+}
+
+// One autosaved editor draft per user. clientUpdatedAt is the client's edit time: a save only
+// wins when it is newer than what is stored, so an old tab can never overwrite newer work.
+model WorkspaceDraft {
+  userId          String   @id @map("user_id")
+  language        String
+  codes           Json
+  clientUpdatedAt DateTime @map("client_updated_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_drafts")
 }

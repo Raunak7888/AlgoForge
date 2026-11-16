@@ -25,7 +25,7 @@ export default function AlgorithmPage() {
             <PageShell>
                 <h1 className="mb-2 text-2xl font-bold">Algorithm not found</h1>
                 <p className="mb-4 text-foreground/60">It may have been removed, or it is not published.</p>
-                <Link href="/algorithms" className={btn}>Back to the catalog</Link>
+                <Link href="/algos" className={btn}>Back to the catalog</Link>
             </PageShell>
         );
     }
@@ -45,7 +45,7 @@ export default function AlgorithmPage() {
 
     return (
         <PageShell wide>
-            <Link href="/algorithms" className="mb-4 inline-block text-sm text-foreground/60 hover:text-foreground">← All algorithms</Link>
+            <Link href="/algos" className="mb-4 inline-block text-sm text-foreground/60 hover:text-foreground">← All algorithms</Link>
             <QueryBoundary query={query} loadingLabel="Loading…">
                 {a && (
                     <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">

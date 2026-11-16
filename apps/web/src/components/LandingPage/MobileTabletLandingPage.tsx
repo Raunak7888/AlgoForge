@@ -361,8 +361,8 @@ const NAV = [
 const FEATURES: { tag: string; status: FeatureStatus; headline: string; points: string[] }[] = [
     { tag: "Algorithm Visualizer", status: "available", headline: "See operations run.", points: ["Step-by-step execution", "Arrays, stacks, queues, lists, trees, hash maps, graphs", "Play, pause, step back and replay", "Narration you write into the script"] },
     { tag: "AI Code Analysis", status: "preview", headline: "Complexity and bottlenecks.", points: ["Time and space complexity", "Bottlenecks and edge cases", "Needs an account. Today it shows a fixed sample, not based on your code"] },
-    { tag: "AI Explainer", status: "planned", headline: "Ask what a step means.", points: ["Plain-language explanations", "Follow-up questions", "Needs an account"] },
-    { tag: "Shareable Links", status: "planned", headline: "Send a visualization.", points: ["One link per saved visualization", "Needs an account and saved work, not built yet"] },
+    { tag: "AI Explainer", status: "available", headline: "Ask what a step means.", points: ["Sees your code, script and current step", "Follow-up questions in saved chats", "Needs an account"] },
+    { tag: "Shareable Links", status: "available", headline: "Send a visualization.", points: ["One read-only link per saved item", "Viewers need no account", "Creating a link needs an account"] },
 ];
 
 const STEPS = [

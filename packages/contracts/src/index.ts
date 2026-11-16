@@ -13,6 +13,7 @@ export * from "./visualizations";
 export * from "./search";
 export * from "./shares";
 export * from "./capabilities";
+export * from "./drafts";
 export * from "./admin";
 export * from "./health";
 export * from "./registry";

@@ -14,6 +14,7 @@ import { SPLIT, loadSplit, saveSplit } from "@/lib/split";
 import { NAV_EVENT, readDashboardParams } from "@/lib/navEvents";
 import { shareHintFor, targetForFeature } from "@/lib/share/target";
 import { useWorkspace } from "@/lib/workspace/store";
+import { useWorkspaceDraft } from "@/lib/workspace/useWorkspaceDraft";
 
 export type FeatureType = "analysis" | "visualizer" | "history";
 const FEATURE_LABEL: Record<FeatureType, string> = { analysis: "Analysis", visualizer: "Visualizer", history: "History" };
@@ -26,6 +27,7 @@ export default function AlgoforgeDashboard() {
     const [isShareOpen, setShareOpen] = useState(false);
 
     const containerRef = useRef<HTMLElement | null>(null);
+    useWorkspaceDraft();
     const run = useWorkspace((s) => s.run);
     const selectedAnalysisId = useWorkspace((s) => s.selectedAnalysisId);
     const savedVisualization = useWorkspace((s) => s.savedVisualization);

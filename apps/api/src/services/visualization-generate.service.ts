@@ -61,19 +61,21 @@ class VisualizationGenerateService {
       if (analysis.ok) return toResponse(hit.script, analysis, true);
     }
 
-    const reservation = await quotaService.reserve(userId, "analysis");
+    const reservation = await quotaService.reserve(userId, "visualize");
     try {
       let previous: { raw: string; problems: string[] } | undefined;
       let best: Evaluated | null = null;
+      let usage = { tokensIn: 0, tokensOut: 0 };
 
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-        const raw = await aiService.generateText(buildVisualizeMessages({ code: input.code, language: input.language, previous }), {
+        const generated = await aiService.generateTextWithUsage(buildVisualizeMessages({ code: input.code, language: input.language, previous }), {
           timeoutMs: env.ai.visualizeTimeoutMs,
           maxOutputTokens: env.ai.visualizeMaxOutputTokens,
           responseFormat: "json",
           ...(signal ? { signal } : {}),
         });
-        const result = evaluate(raw);
+        usage = { tokensIn: usage.tokensIn + generated.usage.tokensIn, tokensOut: usage.tokensOut + generated.usage.tokensOut };
+        const result = evaluate(generated.content);
         if (result.ok && result.problems.length === 0) {
           best = result;
           break;
@@ -89,7 +91,7 @@ class VisualizationGenerateService {
 
       await layeredCache.set(key, { script: best.script });
       try {
-        await aiUsageService.record(userId, "analysis");
+        await aiUsageService.record(userId, "visualize", usage);
       } catch (error) {
         logger.warn("ai usage could not be recorded", { userId, ...serializeError(error) });
       }

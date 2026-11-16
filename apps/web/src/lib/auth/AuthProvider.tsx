@@ -9,6 +9,7 @@ import { endpoints } from "../api/endpoints";
 import { isApiError } from "../api/errors";
 import { queryKeys } from "../query/keys";
 import { buildLoginUrl, readAuthError, stripAuthError } from "./loginUrl";
+import { clearDraft } from "../workspace/draft-storage";
 import { onSessionExpired } from "./sessionEvents";
 
 export type AuthStatus = "loading" | "guest" | "authed";
@@ -97,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const status: AuthStatus = me.isPending ? "loading" : user ? "authed" : "guest";
 
   const clearSession = useCallback(() => {
+    clearDraft(); // the browser copy of the editor must not outlive the account on a shared computer
     clearPrivateData(queryClient);
     queryClient.setQueryData<AuthUser | null>(queryKeys.me(), null);
   }, [queryClient]);

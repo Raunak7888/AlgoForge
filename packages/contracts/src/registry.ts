@@ -4,6 +4,7 @@ import { AlgorithmDetailResponseSchema, AlgorithmExecutionResponseSchema, Algori
 import { AnalysisQuotaResponseSchema, AnalysisHistoryItemSchema, AnalysisHistoryResponseSchema, AnalysisRecordResponseSchema, AnalysisResultSchema, CreateAnalysisRequestSchema, SharedAnalysisResponseSchema, ShareUrlResponseSchema } from "./analysis";
 import { AuthUserSchema, MeResponseSchema } from "./auth";
 import { CapabilitiesResponseSchema } from "./capabilities";
+import { SaveWorkspaceDraftRequestSchema, SaveWorkspaceDraftResponseSchema, WorkspaceDraftResponseSchema } from "./drafts";
 import { CategoryListResponseSchema, CategorySchema, CreateCategoryRequestSchema, UpdateCategoryRequestSchema } from "./categories";
 import { PageMetaSchema } from "./common";
 import { ErrorResponseSchema } from "./errors";
@@ -62,6 +63,9 @@ export const SCHEMA_REGISTRY = {
   CreateShareRequest: CreateShareRequestSchema,
   PublicShareResponse: PublicShareResponseSchema,
   CapabilitiesResponse: CapabilitiesResponseSchema,
+  WorkspaceDraftResponse: WorkspaceDraftResponseSchema,
+  SaveWorkspaceDraftRequest: SaveWorkspaceDraftRequestSchema,
+  SaveWorkspaceDraftResponse: SaveWorkspaceDraftResponseSchema,
   AdminUser: AdminUserSchema,
   AdminUserListResponse: AdminUserListResponseSchema,
   AdminRoleChangeRequest: AdminRoleChangeRequestSchema,

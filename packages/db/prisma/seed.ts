@@ -308,7 +308,6 @@ async function main() {
   const sessions = [
     {
       id: "seed_session_1", title: "How does bubble sort work?", shareId: "seedshare002" as string | null,
-      contextType: "algorithm" as const, contextId: bubble?.id ?? null,
       messages: [
         { role: "user" as const, content: "How does bubble sort work?" },
         { role: "assistant" as const, content: "It repeatedly swaps neighbouring elements that are out of order.", intent: "explain_algorithm" },
@@ -318,7 +317,6 @@ async function main() {
     },
     {
       id: "seed_session_2", title: "Binary search edge cases", shareId: null,
-      contextType: "none" as const, contextId: null,
       messages: [
         { role: "user" as const, content: "What breaks binary search?" },
         { role: "assistant" as const, content: "Unsorted input and overflow in (lo + hi) / 2.", intent: "general" },
@@ -332,7 +330,6 @@ async function main() {
       where: { id: s.id }, update: {},
       create: {
         id: s.id, userId: learner.id, title: s.title, shareId: s.shareId, isPublic: s.shareId !== null,
-        contextType: s.contextType, contextId: s.contextId,
         messages: json(rows.map((r) => ({ id: r.id, role: r.role, content: r.content, ...(r.intent ? { intent: r.intent } : {}), createdAt: r.createdAt.toISOString() }))),
       },
     });

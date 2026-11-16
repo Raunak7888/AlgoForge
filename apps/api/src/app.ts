@@ -22,6 +22,7 @@ import visualizationRouter from "./routes/visualizations";
 import searchRouter from "./routes/search";
 import explanationSessionRouter from "./routes/explanation-session";
 import shareManageRouter from "./routes/shares";
+import draftRouter from "./routes/drafts";
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use("/api/analysis",  generalRateLimiter({ scope: "analysis", limitPerMinute
 app.use("/api/explain-sessions", explanationSessionRouter);
 
 app.use("/api/shares", shareManageRouter); // owner: create / revoke / list
+app.use("/api/drafts", draftRouter);
 app.use("/api/share", shareRouter);        // public: resolve
 app.use("/api/admin", adminRouter);
 

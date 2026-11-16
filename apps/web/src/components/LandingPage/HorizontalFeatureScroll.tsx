@@ -42,19 +42,19 @@ const features: Feature[] = [
         points: ["Time and space complexity", "Bottlenecks and edge cases", "Needs an account. Today it shows a sample report, not based on your code"],
     },
     {
-        id: "ai-explainer", tag: "Learning", index: "03", status: "planned", title: "AI Explainer",
-        description: "Plain-language explanations of an algorithm or snippet.",
-        points: ["Explain an algorithm in plain English", "Answer follow-up questions", "Needs an account"],
+        id: "ai-explainer", tag: "Learning", index: "03", status: "available", title: "AI Explainer",
+        description: "A tutor that sees your code, your visualizer script and the step on screen. Ask it to explain, optimize or write code.",
+        points: ["Explain an algorithm in plain English", "Answers follow-up questions in saved chats", "Needs an account. A daily limit applies"],
     },
     {
-        id: "dashboard", tag: "Productivity", index: "04", status: "planned", title: "Saved Work",
-        description: "Keep and revisit your past work in one place.",
-        points: ["History of saved visualizations", "Needs accounts and storage, not built yet"],
+        id: "dashboard", tag: "Productivity", index: "04", status: "available", title: "Saved Work",
+        description: "Save visualizations and analyses to your account and reopen them later.",
+        points: ["Saved visualizations and analysis history", "Your editor draft survives a refresh", "Needs an account"],
     },
     {
-        id: "share", tag: "Collaboration", index: "05", status: "planned", title: "Shareable Links",
-        description: "A link to a visualization that anyone can open.",
-        points: ["One link per saved visualization", "Needs an account and saved work, not built yet"],
+        id: "share", tag: "Collaboration", index: "05", status: "available", title: "Shareable Links",
+        description: "A read-only link to a visualization, an analysis or a chat that anyone can open.",
+        points: ["One link per saved item, turned off with one click", "Viewers need no account", "Creating a link needs an account"],
     },
 ];
 

@@ -34,9 +34,10 @@ const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
 const apiBaseUrl = process.env.API_BASE_URL ?? `http://localhost:${port}`;
 
-const geminiApiKey = requireEnv("GEMINI_API_KEY");
+// Optional: without both, analysis and the assistant are reported as unavailable by /api/meta/capabilities.
+const geminiApiKey = (process.env.GEMINI_API_KEY ?? "").trim();
 // No hard-coded model: it must be chosen explicitly.
-const aiModel = requireEnv("AI_MODEL");
+const aiModel = (process.env.AI_MODEL ?? "").trim();
 
 export const env = {
   nodeEnv,
@@ -76,6 +77,9 @@ export const env = {
     /** Assistant messages (AiUsage feature "session"). */
     assistantPerMinute: parseInteger("AI_ASSISTANT_PER_MINUTE", 10),
     assistantPerDay: parseInteger("AI_ASSISTANT_PER_DAY", 100),
+    /** Code -> visualization (AiUsage feature "visualize"). Its own pool, separate from analysis. */
+    visualizePerMinute: parseInteger("AI_VISUALIZE_PER_MINUTE", 3),
+    visualizePerDay: parseInteger("AI_VISUALIZE_PER_DAY", 30),
   },
   session: {
     /** A session's lastUsedAt is written at most this often. */
@@ -88,13 +92,13 @@ export const env = {
   redis: {
     url: process.env.REDIS_URL ?? "redis://localhost:6379",
     ttlSeconds: parseInteger("REDIS_CACHE_TTL_SECONDS", 3600),
-    aiRateLimitPerHour: parseInteger("AI_RATE_LIMIT_PER_HOUR", 5),
     defaultRateLimitPerMinute: parseInteger("DEFAULT_RATE_LIMIT_PER_MINUTE", 10),
     /** Catalog and search are cheap, cached reads: a dashboard plus a catalog page must not hit the analysis limit (A-13). */
     catalogRateLimitPerMinute: parseInteger("CATALOG_RATE_LIMIT_PER_MINUTE", 120),
     visualizationRateLimitPerMinute: parseInteger("VISUALIZATION_RATE_LIMIT_PER_MINUTE", 60),
     shareRateLimitPerMinute: parseInteger("SHARE_RATE_LIMIT_PER_MINUTE", 30),
     publicShareRateLimitPerMinute: parseInteger("PUBLIC_SHARE_RATE_LIMIT_PER_MINUTE", 60),
+    draftRateLimitPerMinute: parseInteger("DRAFT_RATE_LIMIT_PER_MINUTE", 60),
   },
 };
 

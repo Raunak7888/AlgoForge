@@ -55,7 +55,7 @@ export default function AlgorithmsPage() {
                     <ul className="grid gap-4 sm:grid-cols-2">
                         {items.map((a) => (
                             <li key={a.id}>
-                                <Link href={`/algorithms/${a.slug}`} className="flex h-full flex-col gap-2 rounded-2xl border border-foreground/10 bg-foreground/[.03] p-5 transition hover:border-accent/40">
+                                <Link href={`/algos/${a.slug}`} className="flex h-full flex-col gap-2 rounded-2xl border border-foreground/10 bg-foreground/[.03] p-5 transition hover:border-accent/40">
                                     <div className="flex items-center justify-between gap-3">
                                         <h2 className="text-lg font-semibold">{a.name}</h2>
                                         <span className="rounded-full border border-foreground/15 px-2 py-0.5 font-mono text-[11px] uppercase text-foreground/60">{a.difficulty}</span>

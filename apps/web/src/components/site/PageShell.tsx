@@ -15,7 +15,7 @@ export function PageShell({ children, wide = false }: { children: ReactNode; wid
                         </span>
                     </Link>
                     <nav className="flex items-center gap-5 text-sm text-foreground/70">
-                        <Link href="/algorithms" className="hover:text-foreground">Algorithms</Link>
+                        <Link href="/algos" className="hover:text-foreground">Algorithms</Link>
                         <Link href="/dashboard" className="hover:text-foreground">Open app</Link>
                     </nav>
                 </div>

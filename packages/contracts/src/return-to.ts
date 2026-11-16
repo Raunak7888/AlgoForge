@@ -9,7 +9,7 @@ export const DEFAULT_RETURN_TO = "/dashboard";
 export const RETURN_TO_MAX_LENGTH = 512;
 
 const PLACEHOLDER_ORIGIN = "http://internal.invalid";
-const ALLOWED_ROOTS: ReadonlySet<string> = new Set(["dashboard", "visualizer", "algorithms", "s", "terms", "privacy"]);
+const ALLOWED_ROOTS: ReadonlySet<string> = new Set(["dashboard", "visualizer", "algos", "algorithms", "s", "terms", "privacy"]);
 
 /** Control characters and backslashes can turn a path into something else in some browsers. */
 function hasUnsafeChars(text: string): boolean {

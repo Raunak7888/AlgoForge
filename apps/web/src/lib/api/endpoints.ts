@@ -45,6 +45,11 @@ import {
   type Visualization,
   type VisualizationListResponse,
   PublicShareResponseSchema,
+  SaveWorkspaceDraftResponseSchema,
+  WorkspaceDraftResponseSchema,
+  type SaveWorkspaceDraftRequest,
+  type SaveWorkspaceDraftResponse,
+  type WorkspaceDraftResponse,
   ShareListResponseSchema,
   ShareSchema,
   type CreateShareRequest,
@@ -121,6 +126,8 @@ export function createEndpoints(client: ApiClient) {
     revokeShare: (shareId: string): Promise<void> => client.delete(`/api/shares/${seg(shareId)}`),
     publicShare: (shareId: string, signal?: AbortSignal): Promise<PublicShareResponse> =>
       client.get(`/api/share/${seg(shareId)}`, PublicShareResponseSchema, opt(signal)),
+    workspaceDraft: (signal?: AbortSignal): Promise<WorkspaceDraftResponse> => client.get("/api/drafts/workspace", WorkspaceDraftResponseSchema, opt(signal)),
+    saveWorkspaceDraft: (body: SaveWorkspaceDraftRequest): Promise<SaveWorkspaceDraftResponse> => client.patch("/api/drafts/workspace", SaveWorkspaceDraftResponseSchema, body),
   };
 }
 

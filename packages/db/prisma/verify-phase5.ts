@@ -20,10 +20,6 @@ const checks: { name: string; sql: string }[] = [
     sql: `SELECT count(*)::int AS n FROM shares s WHERE (s.type = 'analysis' AND NOT EXISTS (SELECT 1 FROM analyses a WHERE a.id = s.target_id)) OR (s.type = 'explain' AND NOT EXISTS (SELECT 1 FROM explanation_sessions e WHERE e.id = s.target_id)) OR (s.type = 'visualization' AND NOT EXISTS (SELECT 1 FROM visualizations v WHERE v.id = s.target_id))`,
   },
   {
-    name: "sessions whose valid JSON messages differ in number from explanation_messages rows",
-    sql: `SELECT count(*)::int AS n FROM explanation_sessions s WHERE (SELECT count(*) FROM jsonb_array_elements(CASE WHEN jsonb_typeof(s.messages) = 'array' THEN s.messages ELSE '[]'::jsonb END) e WHERE jsonb_typeof(e) = 'object' AND (e ->> 'role') IN ('user', 'assistant')) <> (SELECT count(*) FROM explanation_messages m WHERE m.session_id = s.id)`,
-  },
-  {
     name: "sessions whose message seq numbers are not 1..n without gaps",
     sql: `SELECT count(*)::int AS n FROM (SELECT session_id FROM explanation_messages GROUP BY session_id HAVING MIN(seq) <> 1 OR MAX(seq) <> COUNT(*)) t`,
   },

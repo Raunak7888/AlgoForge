@@ -22,6 +22,7 @@ import { logger, serializeError } from "../utils/logger";
 import { paginate } from "../utils/pagination";
 import { encodeAnalysisCursor, type AnalysisHistoryQuery, type AnalysisInput } from "../validation/analysis";
 import { aiService } from "./ai.service";
+import type { AIUsage } from "./providers/ai-provider";
 import { aiUsageService } from "./ai-usage.service";
 import { layeredCache } from "./lib/layered-cache";
 import { quotaService } from "./quota.service";
@@ -42,17 +43,19 @@ class AnalysisService {
     let entry = await layeredCache.get<CachedAnalysis>(key);
 
     if (!entry) {
+      let usage: AIUsage = { tokensIn: 0, tokensOut: 0 };
       const reservation = await quotaService.reserve(userId, "analysis");
       try {
         const out = await aiService.analyzeCode({ code: input.code, language: input.language });
         entry = { result: out.result, model: out.model };
+        usage = out.usage;
       } catch (error) {
         await reservation.release();
         throw error;
       }
       await layeredCache.set(key, entry);
       try {
-        await aiUsageService.record(userId, "analysis");
+        await aiUsageService.record(userId, "analysis", usage);
       } catch (error) {
         logger.warn("ai usage could not be recorded", { userId, ...serializeError(error) });
       }

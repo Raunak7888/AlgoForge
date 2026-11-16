@@ -84,10 +84,13 @@ export interface WorkspaceStore {
   lastOpenedId: string | null;
   /** The history row the person selected (what Share targets on the History tab). */
   selectedAnalysisId: string | null;
+  /** When the editor content last changed (epoch ms). Null until the person edits, opens something or a draft is restored. */
+  draftAt: number | null;
   /** The saved visualization the editor is bound to (what Share targets on the Visualizer tab). */
   savedVisualization: { id: string; title: string } | null;
 
   setCode: (code: string) => void;
+  restoreDraft: (draft: { language: AnalysisLanguage; codes: Record<AnalysisLanguage, string>; updatedAt: number }) => void;
   setLanguage: (language: AnalysisLanguage) => void;
   openAnalysis: (analysis: OpenedAnalysis) => void;
   startRun: () => void;
@@ -107,6 +110,7 @@ const initial = () => ({
   lastOpenedId: null as string | null,
   selectedAnalysisId: null as string | null,
   savedVisualization: null as { id: string; title: string } | null,
+  draftAt: null as number | null,
 });
 
 const completed = (a: Omit<OpenedAnalysis, "code">): RunState => ({
@@ -122,14 +126,16 @@ const completed = (a: Omit<OpenedAnalysis, "code">): RunState => ({
 export const useWorkspace = create<WorkspaceStore>()((set) => ({
   ...initial(),
 
-  setCode: (code) => set((s) => ({ codes: { ...s.codes, [s.language]: code } })),
-  setLanguage: (language) => set({ language }),
+  setCode: (code) => set((s) => ({ codes: { ...s.codes, [s.language]: code }, draftAt: Date.now() })),
+  setLanguage: (language) => set({ language, draftAt: Date.now() }),
+  restoreDraft: (d) => set({ language: d.language, codes: { ...d.codes }, draftAt: d.updatedAt }),
 
   openAnalysis: (a) =>
     set((s) => ({
       language: a.language,
       codes: { ...s.codes, [a.language]: a.code },
       lastOpenedId: a.id,
+      draftAt: Date.now(),
       run: completed(a),
     })),
 
